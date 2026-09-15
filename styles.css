@@ -22,15 +22,30 @@ header .secondary{background:rgba(255,255,255,.14);border-color:rgba(255,255,255
 #authEmail{background:rgba(255,255,255,.12)!important;border-color:rgba(255,255,255,.3)!important;color:#fff}
 #authEmail::placeholder{color:rgba(255,255,255,.6)}
 
-/* Section-tinted glass cards */
+/* Section-tinted glass cards — stronger layout presence */
 .section[data-section="home"] .card,
-.section[data-section="home"] .hero .flowbar{box-shadow:0 12px 30px rgba(255,184,77,.18),inset 0 1px 0 rgba(255,255,255,.1)}
-.section[data-section="discover"] .card{box-shadow:0 12px 30px rgba(232,93,117,.18),inset 0 1px 0 rgba(255,255,255,.1)}
-.section[data-section="trips"] .card{box-shadow:0 12px 30px rgba(78,205,196,.18),inset 0 1px 0 rgba(255,255,255,.1)}
-.section[data-section="messages"] .card{box-shadow:0 12px 30px rgba(168,119,255,.18),inset 0 1px 0 rgba(255,255,255,.1)}
-.section[data-section="profile"] .card{box-shadow:0 12px 30px rgba(255,123,42,.18),inset 0 1px 0 rgba(255,255,255,.1)}
+.section[data-section="home"] .hero .flowbar{
+  box-shadow:0 12px 30px rgba(255,184,77,.22),inset 0 1px 0 rgba(255,255,255,.12);
+  border-left:4px solid var(--home);
+}
+.section[data-section="discover"] .card{
+  box-shadow:0 12px 30px rgba(232,93,117,.22),inset 0 1px 0 rgba(255,255,255,.12);
+  border-left:4px solid var(--discover);
+}
+.section[data-section="trips"] .card{
+  box-shadow:0 12px 30px rgba(78,205,196,.22),inset 0 1px 0 rgba(255,255,255,.12);
+  border-left:4px solid var(--trips);
+}
+.section[data-section="messages"] .card{
+  box-shadow:0 12px 30px rgba(168,119,255,.22),inset 0 1px 0 rgba(255,255,255,.12);
+  border-left:4px solid var(--messages);
+}
+.section[data-section="profile"] .card{
+  box-shadow:0 12px 30px rgba(255,123,42,.22),inset 0 1px 0 rgba(255,255,255,.12);
+  border-left:4px solid var(--profile);
+}
 
-/* Section accent lines on panel headers */
+/* Section accent bar — thicker, more visible */
 .section[data-section="home"] .panel::before,
 .section[data-section="home"] .eyebrow{color:var(--home)}
 .section[data-section="discover"] .panel::before,
@@ -41,18 +56,26 @@ header .secondary{background:rgba(255,255,255,.14);border-color:rgba(255,255,255
 .section[data-section="messages"] .eyebrow{color:var(--messages)}
 .section[data-section="profile"] .panel::before,
 .section[data-section="profile"] .eyebrow{color:var(--profile)}
-.section .panel::before{content:'';display:block;width:40px;height:3px;margin-bottom:10px;border-radius:2px;background:currentColor;opacity:.7}
+.section .panel::before{
+  content:'';display:block;width:60px;height:4px;margin-bottom:12px;border-radius:2px;
+  background:currentColor;opacity:.85;box-shadow:0 0 12px currentColor
+}
+
+/* Larger, clearer headings */
+.panel h2{font-size:clamp(28px,4.5vw,40px);letter-spacing:-.03em;margin:2px 0 10px;line-height:1.15}
+.panel h3{font-size:clamp(18px,2.5vw,22px);margin:24px 0 10px;color:rgba(255,255,255,.95);text-shadow:0 1px 4px rgba(0,0,0,.3)}
+.hero h1{font-size:clamp(48px,8vw,88px);line-height:.9;letter-spacing:-.06em;max-width:880px;margin:18px 0}
+.hero .eyebrow{color:var(--home);font-size:12px;letter-spacing:.18em}
 
 .hero{background:transparent;padding:56px 8px 26px;margin-top:6px}
-.hero .eyebrow{color:var(--home)}
 .hero h1{color:#fff;text-shadow:0 2px 24px rgba(0,0,0,.45)}
-.hero p{color:rgba(255,255,255,.88)}
+.hero p{color:rgba(255,255,255,.88);font-size:20px}
 .hero .flowbar{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
 .hero .flow-step{background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.18)}
 .hero .flow-step.active{background:#fff;color:#171717;border-color:#fff}
 .role{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.35);color:#fff}
 .role.active{background:#fff;color:#171717;border-color:#fff}
-.card{background:rgba(255,255,255,.94);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.card{background:rgba(255,255,255,.94);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:22px}
 .footer{color:rgba(255,255,255,.65)}
 
 /* Nav active state gets section color */

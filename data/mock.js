@@ -16,7 +16,8 @@ window.ETIE_MOCKS = {
     id: "trip-lisbon-1",
     destination: "Lisbon",
     dates: "12–18 September",
-    status: "planning"
+    status: "planning",
+    country: "PT"
   },
   locals: [
     {
@@ -24,6 +25,7 @@ window.ETIE_MOCKS = {
       name: "Marta",
       age: 28,
       city: "Lisbon",
+      nationality: "PT",
       interests: ["Salsa", "Cooking", "Tennis", "Surfing"],
       personality: { social: 5, spontaneous: 5, curious: 5 },
       offer: "I love showing visitors the Lisbon I actually live in — small salsa nights, neighbourhood markets and home cooking.",
@@ -36,6 +38,7 @@ window.ETIE_MOCKS = {
       name: "Javier",
       age: 30,
       city: "Lisbon",
+      nationality: "ES",
       interests: ["Football", "Cooking", "Music"],
       personality: { social: 4, spontaneous: 4, curious: 4 },
       offer: "I'll get you into our Sunday 5-a-side and cook together after.",
@@ -49,6 +52,7 @@ window.ETIE_MOCKS = {
       name: "Sofia",
       age: 26,
       city: "Lisbon",
+      nationality: "PT",
       interests: ["Photography", "Food", "Salsa"],
       personality: { social: 4, spontaneous: 4, curious: 5 },
       offer: "My Lisbon is neighbourhood markets, photo walks and late dinners.",

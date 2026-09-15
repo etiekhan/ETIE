@@ -13,14 +13,28 @@
 }
 body{background:#14101c url('hk-bar.jpg') center top/cover no-repeat fixed}
 .app{position:relative;min-height:100vh;background:linear-gradient(180deg,rgba(12,9,22,.60),rgba(12,9,22,.52) 40%,var(--overlay))}
-header{background:rgba(18,13,26,.68);border-bottom:1px solid rgba(255,255,255,.16);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
-.logo{color:#fff}
-.nav-btn,.ghost{color:rgba(255,255,255,.88);position:relative}
-.nav-btn::after{content:'';position:absolute;bottom:-4px;left:50%;width:0;height:2px;background:currentColor;transition:width .2s ease,left .2s ease}
+header{background:rgba(18,13,26,.68);border-bottom:1px solid rgba(255,255,255,.16);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);position:sticky;top:0;z-index:20}
+.logo{color:#fff;font-size:22px;font-weight:850;letter-spacing:-.05em}
+.nav-btn,.ghost{color:rgba(255,255,255,.88);position:relative;padding:8px 10px;font-size:14px}
+.nav-btn::after{content:'';position:absolute;bottom:4px;left:50%;width:0;height:2px;background:currentColor;transition:width .2s ease,left .2s ease}
 .nav-btn:hover::after,.nav-btn.active::after{width:100%;left:0}
-header .secondary{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.32);color:#fff}
-#authEmail{background:rgba(255,255,255,.12)!important;border-color:rgba(255,255,255,.3)!important;color:#fff}
+header .secondary{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.32);color:#fff;padding:8px 12px;font-size:13px}
+#authEmail{background:rgba(255,255,255,.12)!important;border-color:rgba(255,255,255,.3)!important;color:#fff;padding:8px 10px;font-size:13px}
 #authEmail::placeholder{color:rgba(255,255,255,.6)}
+
+/* Mobile hamburger */
+.nav-toggle{display:none;background:none;border:none;color:#fff;font-size:22px;padding:8px;cursor:pointer}
+@media(max-width:640px){
+  header{padding:10px 14px}
+  nav{position:absolute;top:100%;left:0;right:0;background:rgba(18,13,26,.96);backdrop-filter:blur(12px);border-bottom:1px solid rgba(255,255,255,.12);display:none;flex-direction:column;padding:10px 14px;gap:6px}
+  nav.open{display:flex}
+  .nav-btn{width:100%;text-align:left;padding:12px 0;border-radius:8px;background:rgba(255,255,255,.06)}
+  .nav-btn:hover{background:rgba(255,255,255,.12)}
+  .nav-btn::after{display:none}
+  .nav-btn.active{background:rgba(255,255,255,.15)}
+  header .secondary,#authEmail{width:100%;margin-top:6px}
+  .nav-toggle{display:block}
+}
 
 /* Section-tinted glass cards — stronger layout presence */
 .section[data-section="home"] .card,

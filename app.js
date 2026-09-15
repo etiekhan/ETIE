@@ -5,19 +5,19 @@ var ETIE_KEY = 'etie-v1';
 function etieDefaults() {
   var m = (window.ETIE_MOCKS || {});
   return {
-    trip: { destination: (m.trip && m.trip.destination) || 'Lisbon', dates: (m.trip && m.trip.dates) || '12–18 September' },
+    trip: { destination: (m.trip && m.trip.destination) || 'Lisbon', dates: (m.trip && m.trip.dates) || '12–18 September', country: (m.trip && m.trip.country) || 'PT' },
     traveller: {
       interests: (m.traveller && m.traveller.interests) || ['Football', 'Salsa', 'Cooking', 'Thrift shopping'],
       personality: { social: 4, spontaneous: 4, curious: 5 },
       lookingFor: ['Meet someone local'],
       hook: (m.traveller && m.traveller.hook) || '',
       photo: null,
-      tier: 'Rookie',           // Rookie | Trusted
+      tier: 'Rookie',
       completedTrips: 0,
       avgRatingReceived: 0
     },
     local: {
-      city: 'Lisbon', age: '28',
+      city: 'Lisbon', age: '28', nationality: 'PT',
       verificationMethods: [],
       interests: ['Salsa', 'Cooking'],
       personality: { social: 5, spontaneous: 5, curious: 5 },
@@ -29,11 +29,11 @@ function etieDefaults() {
         { label: 'Other times', status: 'Ask me' }
       ],
       photo: null,
-      tier: 'Rookie',           // Rookie | Verified | Host
+      tier: 'Rookie',
       hostedCount: 0,
       avgHostRating: 0,
       references: [],
-      activities: []            // Host-created activities
+      activities: []
     },
     requests: {},
     messages: {},
@@ -104,8 +104,12 @@ function getDiscoverLocals(){
   var all=(window.ETIE_MOCKS&&window.ETIE_MOCKS.locals)||[];
   var ranked=window.EtieMatch?window.EtieMatch.rank(ETIE.traveller, ETIE.trip, all, ETIE.local.availability, ETIE.reviews):all;
   if(canSeeFullDiscover())return ranked;
-  return ranked.slice(0,3); // Rookie sees top 3 only
+  return ranked.slice(0,3);
 }
+
+// Flag helpers
+function flagEmoji(code){if(!code)return '';return String.fromCodePoint(...code.toUpperCase().split('').map(c=>127397+c.charCodeAt(0)));}
+function flagForCountry(countryCode){var map={'PT':'🇵🇹','ES':'🇪🇸','FR':'🇫🇷','IT':'🇮🇹','JP':'🇯🇵','TH':'🇹🇭','US':'🇺🇸','AU':'🇦🇺','HK':'🇭🇰','SG':'🇸🇬'};return map[countryCode]||'🌍';}
 
 function toast(msg){var t=document.getElementById('toast');if(!t){alert(msg);return;}t.textContent=msg;t.style.display='block';clearTimeout(t._h);t._h=setTimeout(function(){t.style.display='none';},2200);}
 function showScreen(id){var el=document.getElementById(id);if(id==='profile')renderProfiles();if(id==='messages')renderMessagesList();if(id==='trips'){renderTrips();renderMeetup();}if(el&&el.scrollIntoView)el.scrollIntoView({behavior:'smooth',block:'start'});}
@@ -187,12 +191,12 @@ function syncAvailUI(){
 function currentTravStep(){for(var i=1;i<=15;i++){var e=document.getElementById('trav'+i);if(e&&!e.classList.contains('hidden'))return i;}return 1;}
 function currentLocalStep(){for(var i=1;i<=11;i++){var e=document.getElementById('local'+i);if(e&&!e.classList.contains('hidden'))return i;}return 1;}
 
-function saveTrav1(){ETIE.trip.destination=document.getElementById('travCity').value.trim();ETIE.trip.dates=document.getElementById('travDates').value.trim();}
+function saveTrav1(){ETIE.trip.destination=document.getElementById('travCity').value.trim();ETIE.trip.dates=document.getElementById('travDates').value.trim();ETIE.trip.country=document.getElementById('travCountry').value;}
 function saveTrav2(){ETIE.traveller.interests=getChips('travInterests');}
 function saveTrav3(){ETIE.traveller.personality={social:+document.getElementById('travSocial').value,spontaneous:+document.getElementById('travSpont').value,curious:+document.getElementById('travCurious').value};}
 function saveTrav4(){ETIE.traveller.lookingFor=getChips('travLookingFor');}
 function saveTrav5(){ETIE.traveller.hook=document.getElementById('travHook').value.trim();}
-function saveLocal3(){ETIE.local.city=document.getElementById('localCity').value.trim();ETIE.local.age=document.getElementById('localAge').value.trim();}
+function saveLocal3(){ETIE.local.city=document.getElementById('localCity').value.trim();ETIE.local.age=document.getElementById('localAge').value.trim();ETIE.local.nationality=document.getElementById('localNationality').value;}
 function saveLocal4(){ETIE.local.interests=getChips('localInterests');}
 function saveLocal5(){ETIE.local.personality={social:+document.getElementById('localSocial').value,spontaneous:+document.getElementById('localSpont').value,curious:+document.getElementById('localCurious').value};}
 function saveLocal6(){ETIE.local.offer=document.getElementById('localOffer').value.trim();ETIE.local.offerTags=getChips('localOfferTags');}
@@ -254,6 +258,7 @@ function travRestart(){showScreen('trav1');travNext(1);}
 function openAdmin(){try{var o=document.getElementById('adminOverlay');if(o)o.classList.remove('hidden');}catch(e){}}
 function closeAdmin(){try{var o=document.getElementById('adminOverlay');if(o)o.classList.add('hidden');}catch(e){}}
 function toggleAdmin(){try{var o=document.getElementById('adminOverlay');if(!o)return;if(o.classList.contains('hidden'))openAdmin();else closeAdmin();}catch(e){}}
+function toggleNav(){try{var n=document.getElementById('mainNav');var t=document.querySelector('.nav-toggle');if(n&&t){n.classList.toggle('open');t.textContent=n.classList.contains('open')?'✕':'☰';}}catch(e){}}
 function setRole(role){document.getElementById('travRole').classList.toggle('active',role==='traveller');document.getElementById('localRole').classList.toggle('active',role==='local');document.getElementById('travellerFlow').classList.toggle('hidden',role!=='traveller');document.getElementById('localFlow').classList.toggle('hidden',role!=='local');saveState();if(role==='traveller')travNext(1);else localNext(1);showScreen('home');}
 
 // Demo personas — permanent test individuals for solo testing (same browser, no second phone).
@@ -295,7 +300,8 @@ function exitDemo(){
 function renderProfiles(){
   try{
     var tripEl=document.getElementById('profTrip');
-    if(tripEl)tripEl.textContent=(ETIE.trip.destination||'—')+' · '+(ETIE.trip.dates||'—')+' · Traveller';
+    var flag=flagForCountry(ETIE.trip.country);
+    if(tripEl)tripEl.textContent=flag+' '+(ETIE.trip.destination||'—')+' · '+(ETIE.trip.dates||'—')+' · Traveller';
     var pi=document.getElementById('profInterests');
     if(pi){pi.innerHTML='';ETIE.traveller.interests.forEach(function(x){var s=document.createElement('span');s.className='chip active';s.textContent=x;pi.appendChild(s);});}
     var pp=document.getElementById('profPersonality');
@@ -308,7 +314,8 @@ function renderProfiles(){
     var tp=document.getElementById('profTravPhoto');
     if(tp){tp.innerHTML=ETIE.traveller.photo?('<img src="'+ETIE.traveller.photo+'" style="width:60px;height:60px;border-radius:50%;object-fit:cover;">'):'<span style="color:rgba(255,255,255,.5);font-size:24px;">+</span>';}
     var ln=document.getElementById('localDashName');
-    if(ln)ln.textContent='You · '+(ETIE.local.city||'—');
+    var lflag=flagForCountry(ETIE.local.nationality);
+    if(ln)ln.textContent=lflag+' You · '+(ETIE.local.city||'—');
     var ls=document.getElementById('localDashSub');
     if(ls)ls.textContent='Local · '+(ETIE.local.age||'—')+' · Social '+ETIE.local.personality.social;
     var li=document.getElementById('localDashInterests');
@@ -334,8 +341,9 @@ function renderMatches(){
   var r=getRanked();if(!r.length)return;
   var m=currentMatch();var L=m.local;
   try{
+    var lflag=flagForCountry(L.nationality||ETIE.trip.country);
     document.getElementById('matchAvatar').textContent=(L.name||'?').charAt(0);
-    document.getElementById('matchName').textContent=L.name;
+    document.getElementById('matchName').textContent=lflag+' '+L.name;
     document.getElementById('matchMeta').textContent=(L.city||ETIE.trip.destination)+' · Local · '+(L.age||'');
     document.getElementById('matchScore').textContent=m.label+' · '+m.score+'/100 (internal)';
     document.getElementById('matchRankNote').textContent='Top '+(ETIE_MATCH_INDEX+1)+' of '+r.length+' · '+r.map(function(x){return x.local.name+':'+x.score;}).join(' ');
@@ -399,8 +407,9 @@ function renderMatches(){
       g.innerHTML=tierMsg;
       discoverLocals.forEach(function(x){
         var d=document.createElement('div');d.className='match-card card';
+        var lflag=flagForCountry(x.local.nationality);
         d.innerHTML='<strong></strong><p class="muted"></p>';
-        d.querySelector('strong').textContent=x.local.name+' · '+x.score+(x.repCount?(' · '+x.rep+'★'):'');
+        d.querySelector('strong').textContent=lflag+' '+x.local.name+' · '+x.score+(x.repCount?(' · '+x.rep+'★'):'');
         d.querySelector('.muted').textContent=(x.shared.join(' · ')||'No overlap yet')+' — '+x.label+(x.tagBonus?(' · loved by people like you'): '');
         var st=document.createElement('span');st.className='status';st.textContent='Local';d.appendChild(st);
         var vb=document.createElement('button');vb.className='secondary';vb.textContent='View';vb.style.marginTop='8px';
@@ -754,6 +763,7 @@ function restoreAll(){
   try{
     document.getElementById('travCity').value=ETIE.trip.destination;
     document.getElementById('travDates').value=ETIE.trip.dates;
+    document.getElementById('travCountry').value=ETIE.trip.country||'PT';
     setChips('travInterests',ETIE.traveller.interests);
     document.getElementById('travSocial').value=ETIE.traveller.personality.social;
     document.getElementById('travSpont').value=ETIE.traveller.personality.spontaneous;
@@ -762,6 +772,7 @@ function restoreAll(){
     document.getElementById('travHook').value=ETIE.traveller.hook;
     document.getElementById('localCity').value=ETIE.local.city;
     document.getElementById('localAge').value=ETIE.local.age;
+    document.getElementById('localNationality').value=ETIE.local.nationality||'PT';
     setChips('localInterests',ETIE.local.interests);
     document.getElementById('localSocial').value=ETIE.local.personality.social;
     document.getElementById('localSpont').value=ETIE.local.personality.spontaneous;

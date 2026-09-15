@@ -35,7 +35,7 @@
   </div>
 </section>
 
-<section class="section">
+<section class="section" data-section="home">
   <div class="role-switch">
     <button class="role active" id="travRole" onclick="setRole('traveller')">Traveller flow</button>
     <button class="role" id="localRole" onclick="setRole('local')">Local flow</button>
@@ -117,10 +117,10 @@
 </section>
 
 <!-- Supporting product views -->
-<section class="section" id="discover"><div class="card panel"><div class="eyebrow">Supporting product · signed in · ranked live</div><h2>Discover</h2><p class="muted">Secondary browsing exists, but recommendations remain the primary path. Sorted by match score.</p><p id="discoverTierNote" class="small muted"></p><div class="grid3" id="discoverGrid"></div></div></section>
-<section class="section" id="trips"><div class="card panel"><div class="eyebrow">Account · My trips · live</div><h2>My trips</h2><div class="list" id="tripsList"></div></div></section>
-<section class="section" id="messages"><div class="card panel"><div class="eyebrow">Account · Messages · live</div><h2>Messages</h2><div class="list" id="messagesList"></div><div style="margin-top:10px;"><button class="secondary" onclick="resetDemo()">Reset demo requests + chat</button></div></div></section>
-<section class="section" id="profile"><div class="card panel"><div class="eyebrow">Account · Profile · live from onboarding</div><h2>Etie's profile</h2><div class="grid2"><div><p><strong id="profTrip">Lisbon · 12–18 September · Traveller</strong></p><div class="chips" id="profInterests"></div><h3>Personality</h3><p class="muted" id="profPersonality">Social · Spontaneous · Curious</p><h3>What I'm looking for</h3><p class="muted" id="profLookingFor">Meet someone local</p><h3>My hook</h3><p class="muted" id="profHook"></p><div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;"><button class="secondary" onclick="travNext(1);showScreen('home')">Edit trip</button><button class="secondary" onclick="travNext(2);showScreen('home')">Edit interests</button><button class="secondary" onclick="travNext(5);showScreen('home')">Edit hook</button></div></div><div class="sidebar-note"><strong>Reputation (demo)</strong><p class="muted" id="profStats">Trips: 3 · Meetups: 5 · Rating: 5.0 ★</p><strong>Verification (demo)</strong><p class="muted">Identity: demo · Local: demo — real checks in Phase 9</p><div class="trust"><span>✓ Demo identity</span><span>✓ Demo local</span><span>5.0 ★ (demo)</span></div></div></div></div></section>
+<section class="section" id="discover" data-section="discover"><div class="card panel"><div class="eyebrow">Supporting product · signed in · ranked live</div><h2>Discover</h2><p class="muted">Secondary browsing exists, but recommendations remain the primary path. Sorted by match score.</p><p id="discoverTierNote" class="small muted"></p><div class="grid3" id="discoverGrid"></div></div></section>
+<section class="section" id="trips" data-section="trips"><div class="card panel"><div class="eyebrow">Account · My trips · live</div><h2>My trips</h2><div class="list" id="tripsList"></div></div></section>
+<section class="section" id="messages" data-section="messages"><div class="card panel"><div class="eyebrow">Account · Messages · live</div><h2>Messages</h2><div class="list" id="messagesList"></div><div style="margin-top:10px;"><button class="secondary" onclick="resetDemo()">Reset demo requests + chat</button></div></div></section>
+<section class="section" id="profile" data-section="profile"><div class="card panel"><div class="eyebrow">Account · Profile · live from onboarding</div><h2>Etie's profile</h2><div class="grid2"><div><p><strong id="profTrip">Lisbon · 12–18 September · Traveller</strong></p><div class="chips" id="profInterests"></div><h3>Personality</h3><p class="muted" id="profPersonality">Social · Spontaneous · Curious</p><h3>What I'm looking for</h3><p class="muted" id="profLookingFor">Meet someone local</p><h3>My hook</h3><p class="muted" id="profHook"></p><div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;"><button class="secondary" onclick="travNext(1);showScreen('home')">Edit trip</button><button class="secondary" onclick="travNext(2);showScreen('home')">Edit interests</button><button class="secondary" onclick="travNext(5);showScreen('home')">Edit hook</button></div></div><div class="sidebar-note"><strong>Reputation (demo)</strong><p class="muted" id="profStats">Trips: 3 · Meetups: 5 · Rating: 5.0 ★</p><strong>Verification (demo)</strong><p class="muted">Identity: demo · Local: demo — real checks in Phase 9</p><div class="trust"><span>✓ Demo identity</span><span>✓ Demo local</span><span>5.0 ★ (demo)</span></div></div></div></div></section>
 
 
 

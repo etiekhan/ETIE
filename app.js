@@ -1,0 +1,758 @@
+// Etie Phase 6 — onboarding + requests + meetup + reviews (vanilla JS + localStorage)
+// Plain English: plan → complete → both review. Trips shows live status.
+var ETIE_KEY = 'etie-v1';
+
+function etieDefaults() {
+  var m = (window.ETIE_MOCKS || {});
+  return {
+    trip: { destination: (m.trip && m.trip.destination) || 'Lisbon', dates: (m.trip && m.trip.dates) || '12–18 September' },
+    traveller: {
+      interests: (m.traveller && m.traveller.interests) || ['Football', 'Salsa', 'Cooking', 'Thrift shopping'],
+      personality: { social: 4, spontaneous: 4, curious: 5 },
+      lookingFor: ['Meet someone local'],
+      hook: (m.traveller && m.traveller.hook) || '',
+      tier: 'Rookie',           // Rookie | Trusted
+      completedTrips: 0,
+      avgRatingReceived: 0
+    },
+    local: {
+      city: 'Lisbon', age: '28',
+      verificationMethods: [],
+      interests: ['Salsa', 'Cooking'],
+      personality: { social: 5, spontaneous: 5, curious: 5 },
+      offer: 'I know the small salsa nights tourists never find, and I love cooking Portuguese food for friends.',
+      offerTags: ['Salsa night', 'Cooking'],
+      availability: [
+        { label: 'Weekday evenings', status: 'Available' },
+        { label: 'Weekend afternoons', status: 'Available' },
+        { label: 'Other times', status: 'Ask me' }
+      ],
+      tier: 'Rookie',           // Rookie | Verified | Host
+      hostedCount: 0,
+      avgHostRating: 0,
+      references: [],
+      activities: []            // Host-created activities
+    },
+    requests: {},
+    messages: {},
+    meetups: {},
+    reviews: {},
+    reports: [],
+    _travStars: 0,
+    _localStars: 0
+  };
+}
+
+function etieNorm15(v){v=+v;if(isNaN(v))return 3;if(v>5)return Math.min(5,Math.max(1,Math.round(v/20)));return Math.min(5,Math.max(1,Math.round(v)));}
+function etieNormPers(p){try{return {social:etieNorm15(p.social),spontaneous:etieNorm15(p.spontaneous),curious:etieNorm15(p.curious)};}catch(e){return {social:3,spontaneous:3,curious:3};}}
+function loadState() {
+  try {
+    var raw = localStorage.getItem(ETIE_KEY);
+    if (!raw) { var d = etieDefaults(); localStorage.setItem(ETIE_KEY, JSON.stringify(d)); return d; }
+    var s = JSON.parse(raw);
+    var def = etieDefaults();
+    s.trip = Object.assign(def.trip, s.trip || {});
+    s.traveller = Object.assign(def.traveller, s.traveller || {});
+    s.local = Object.assign(def.local, s.local || {});
+    // migrate old 0-100 slider values to 1-5
+    try{ if(s.traveller&&s.traveller.personality)s.traveller.personality=etieNormPers(s.traveller.personality); }catch(e){}
+    try{ if(s.local&&s.local.personality)s.local.personality=etieNormPers(s.local.personality); }catch(e){}
+    if(!s.requests)s.requests={};
+    if(!s.messages)s.messages={};
+    if(!s.meetups)s.meetups={};
+    if(!s.reviews)s.reviews={};
+    if(!s.reports)s.reports=[];
+    return s;
+  } catch (e) { return etieDefaults(); }
+}
+var ETIE = loadState();
+function saveState() { try { localStorage.setItem(ETIE_KEY, JSON.stringify(ETIE)); } catch (e) {} try { if (typeof window!=='undefined' && window.EtieCloud && window.EtieCloud.push) window.EtieCloud.push(); } catch (e) {} }
+
+// Tier helpers
+function getLocalTier(){return ETIE.local.tier||'Rookie';}
+function getTravellerTier(){return ETIE.traveller.tier||'Rookie';}
+function canSeeFullDiscover(){
+  var lt=getLocalTier(), tt=getTravellerTier();
+  return lt==='Verified'||lt==='Host'||tt==='Trusted';
+}
+function canCreateActivities(){return getLocalTier()==='Host';}
+function getDiscoverLocals(){
+  var all=(window.ETIE_MOCKS&&window.ETIE_MOCKS.locals)||[];
+  var ranked=window.EtieMatch?window.EtieMatch.rank(ETIE.traveller, ETIE.trip, all, ETIE.local.availability, ETIE.reviews):all;
+  if(canSeeFullDiscover())return ranked;
+  return ranked.slice(0,3); // Rookie sees top 3 only
+}
+
+function toast(msg){var t=document.getElementById('toast');if(!t){alert(msg);return;}t.textContent=msg;t.style.display='block';clearTimeout(t._h);t._h=setTimeout(function(){t.style.display='none';},2200);}
+function showScreen(id){var el=document.getElementById(id);if(id==='profile')renderProfiles();if(id==='messages')renderMessagesList();if(id==='trips'){renderTrips();renderMeetup();}if(el&&el.scrollIntoView)el.scrollIntoView({behavior:'smooth',block:'start'});}
+function hideGroup(prefix){for(var i=1;i<=15;i++){var e=document.getElementById(prefix+i);if(e)e.classList.add('hidden');}}
+
+function getChips(containerId){
+  var c=document.getElementById(containerId);if(!c)return [];
+  return Array.prototype.map.call(c.querySelectorAll('.chip.active'),function(el){return el.textContent.trim();});
+}
+function setChips(containerId, values){
+  var c=document.getElementById(containerId);if(!c)return;
+  Array.prototype.forEach.call(c.querySelectorAll('.chip'),function(el){
+    el.classList.toggle('active', values.indexOf(el.textContent.trim())!==-1);
+  });
+}
+function updateCounts(){
+  var tc=document.getElementById('travInterestCount');if(tc)tc.textContent=getChips('travInterests').length+' / 4 selected';
+  var lc=document.getElementById('localInterestCount');if(lc)lc.textContent=getChips('localInterests').length+' selected';
+}
+
+function toggleChip(el){
+  var parent=el.parentElement;var pid=parent&&parent.id;
+  var limited=(pid==='travInterests'||pid==='localInterests');
+  if(limited&&!el.classList.contains('active')){
+    var cur=parent.querySelectorAll('.chip.active').length;
+    if(cur>=4){toast('Pick up to 4 — unselect one to change.');return;}
+  }
+  el.classList.toggle('active');
+  saveCurrentVisible(true);
+  updateCounts();renderProfiles();
+}
+
+function filterInterests(containerId,q){
+  try{
+    var c=document.getElementById(containerId);if(!c)return;
+    q=(q||'').toLowerCase().trim();
+    Array.prototype.forEach.call(c.querySelectorAll('.chip'),function(el){
+      var t=el.textContent.toLowerCase();
+      el.style.display=(!q||t.indexOf(q)!==-1)?'':'none';
+    });
+  }catch(e){}
+}
+function toggleVerify(el){
+  try{
+    el.classList.toggle('selected');
+    var st=el.querySelector('.status');
+    if(st)st.textContent=el.classList.contains('selected')?'Selected':'Tap to select';
+    saveLocal2();saveState();
+  }catch(e){}
+}
+function saveLocal2(){
+  try{
+    var c=document.getElementById('localVerify');if(!c)return;
+    ETIE.local.verificationMethods=Array.prototype.map.call(
+      c.querySelectorAll('.list-item.selected'),function(row){return row.getAttribute('data-method');});
+  }catch(e){}
+}
+function toggleAvail(el){
+  var st=el.querySelector('.status');if(!st)return;
+  var cur=st.textContent.trim();
+  var nxt=cur==='Available'?'Ask me':(cur==='Ask me'?'Unavailable':'Available');
+  st.textContent=nxt;
+  saveLocal7();saveState();renderProfiles();renderLocalDashboard();toast('Availability saved: '+nxt);
+}
+function toggleDashAvail(i){
+  var a=ETIE.local.availability[i];if(!a)return;
+  a.status=a.status==='Available'?'Ask me':(a.status==='Ask me'?'Unavailable':'Available');
+  saveState();syncAvailUI();renderProfiles();renderLocalDashboard();toast('Availability saved: '+a.label+' → '+a.status);
+}
+function syncAvailUI(){
+  try{
+    var c=document.getElementById('localAvailability');
+    if(c)Array.prototype.forEach.call(c.querySelectorAll('.list-item'),function(row,i){
+      if(ETIE.local.availability[i])row.querySelector('.status').textContent=ETIE.local.availability[i].status;
+    });
+  }catch(e){}
+}
+
+function currentTravStep(){for(var i=1;i<=15;i++){var e=document.getElementById('trav'+i);if(e&&!e.classList.contains('hidden'))return i;}return 1;}
+function currentLocalStep(){for(var i=1;i<=10;i++){var e=document.getElementById('local'+i);if(e&&!e.classList.contains('hidden'))return i;}return 1;}
+
+function saveTrav1(){ETIE.trip.destination=document.getElementById('travCity').value.trim();ETIE.trip.dates=document.getElementById('travDates').value.trim();}
+function saveTrav2(){ETIE.traveller.interests=getChips('travInterests');}
+function saveTrav3(){ETIE.traveller.personality={social:+document.getElementById('travSocial').value,spontaneous:+document.getElementById('travSpont').value,curious:+document.getElementById('travCurious').value};}
+function saveTrav4(){ETIE.traveller.lookingFor=getChips('travLookingFor');}
+function saveTrav5(){ETIE.traveller.hook=document.getElementById('travHook').value.trim();}
+function saveLocal3(){ETIE.local.city=document.getElementById('localCity').value.trim();ETIE.local.age=document.getElementById('localAge').value.trim();}
+function saveLocal4(){ETIE.local.interests=getChips('localInterests');}
+function saveLocal5(){ETIE.local.personality={social:+document.getElementById('localSocial').value,spontaneous:+document.getElementById('localSpont').value,curious:+document.getElementById('localCurious').value};}
+function saveLocal6(){ETIE.local.offer=document.getElementById('localOffer').value.trim();ETIE.local.offerTags=getChips('localOfferTags');}
+function saveLocal7(){
+  var c=document.getElementById('localAvailability');if(!c)return;
+  ETIE.local.availability=Array.prototype.map.call(c.querySelectorAll('.list-item'),function(row){
+    return {label:row.querySelector('strong').textContent.trim(),status:row.querySelector('.status').textContent.trim()};
+  });
+}
+
+function validTrav(step){
+  if(step===1){if(!ETIE.trip.destination){toast('Add a destination (e.g. Lisbon).');return false;}if(!ETIE.trip.dates){toast('Add your travel dates.');return false;}}
+  if(step===2){if(ETIE.traveller.interests.length===0){toast('Pick at least 1 interest.');return false;}if(ETIE.traveller.interests.length>4){toast('Pick up to 4.');return false;}}
+  if(step===4){if(ETIE.traveller.lookingFor.length===0){toast('Pick at least 1 option.');return false;}}
+  if(step===5){if(ETIE.traveller.hook.length<10){toast('Add a short hook (10+ characters) so locals get you.');return false;}}
+  return true;
+}
+function validLocal(step){
+  if(step===2){if(!(ETIE.local.verificationMethods&&ETIE.local.verificationMethods.length)){toast('Pick at least 1 verification method to continue.');return false;}}
+  if(step===3){if(!ETIE.local.city){toast('Add your home city.');return false;}var a=parseInt(ETIE.local.age,10);if(isNaN(a)||a<18){toast('Age must be 18+.');return false;}}
+  if(step===4){if(ETIE.local.interests.length===0){toast('Pick at least 1 interest.');return false;}if(ETIE.local.interests.length>4){toast('Pick up to 4.');return false;}}
+  if(step===6){if(ETIE.local.offer.length<10){toast('Add what you can offer (10+ characters).');return false;}}
+  return true;
+}
+
+function saveCurrentVisible(silent){
+  var t=currentTravStep();var l=document.getElementById('localFlow');
+  var localVisible=l&&!l.classList.contains('hidden');
+  if(!localVisible){try{
+    if(t===1)saveTrav1();if(t===2)saveTrav2();if(t===3)saveTrav3();if(t===4)saveTrav4();if(t===5)saveTrav5();
+  }catch(e){}}
+  else{var s=currentLocalStep();try{
+    if(s===2)saveLocal2();if(s===3)saveLocal3();if(s===4)saveLocal4();if(s===5)saveLocal5();if(s===6)saveLocal6();if(s===7)saveLocal7();
+  }catch(e){}}
+  saveState();if(!silent)updateCounts();
+}
+
+function travNext(n){
+  var cur=currentTravStep();
+  try{
+    if(cur===1)saveTrav1();if(cur===2)saveTrav2();if(cur===3)saveTrav3();if(cur===4)saveTrav4();if(cur===5)saveTrav5();
+    saveState();
+    if(n>cur&&!validTrav(cur))return;
+  }catch(e){}
+  hideGroup('trav');var e=document.getElementById('trav'+n);if(e)e.classList.remove('hidden');updateCounts();renderProfiles();if(n===6||n===7||n===8)renderMatches();if(n===9||n===10||n===11){renderRequests();renderChat();renderMessagesList();}if(n>=12&&n<=15){renderMeetup();renderTrips();renderThanks();paintStars('travStars',ETIE._travStars||0);}showScreen('trav'+n);
+}
+function localNext(n){
+  var cur=currentLocalStep();
+  try{
+    if(cur===2)saveLocal2();if(cur===3)saveLocal3();if(cur===4)saveLocal4();if(cur===5)saveLocal5();if(cur===6)saveLocal6();if(cur===7)saveLocal7();
+    saveState();
+    if(n>cur&&!validLocal(cur))return;
+  }catch(e){}
+  for(var i=1;i<=10;i++){var e=document.getElementById('local'+i);if(e)e.classList.add('hidden');}
+  var t=document.getElementById('local'+n);if(t)t.classList.remove('hidden');updateCounts();renderProfiles();syncAvailUI();if(n===7){renderLocalDashboard();}if(n===8||n===9){renderRequests();renderChat();renderMessagesList();renderMeetup();renderLocalDashboard();}if(n===10){renderMeetup();paintStars('localStars',ETIE._localStars||0);renderLocalDashboard();}showScreen('local'+n);
+}
+function findMatch(){try{saveTrav5();saveState();if(!validTrav(5))return;}catch(e){}ETIE_MATCH_INDEX=0;renderMatches();travNext(6);}
+function travRestart(){showScreen('trav1');travNext(1);}
+function openAdmin(){try{var o=document.getElementById('adminOverlay');if(o)o.classList.remove('hidden');}catch(e){}}
+function closeAdmin(){try{var o=document.getElementById('adminOverlay');if(o)o.classList.add('hidden');}catch(e){}}
+function toggleAdmin(){try{var o=document.getElementById('adminOverlay');if(!o)return;if(o.classList.contains('hidden'))openAdmin();else closeAdmin();}catch(e){}}
+function setRole(role){document.getElementById('travRole').classList.toggle('active',role==='traveller');document.getElementById('localRole').classList.toggle('active',role==='local');document.getElementById('travellerFlow').classList.toggle('hidden',role!=='traveller');document.getElementById('localFlow').classList.toggle('hidden',role!=='local');saveState();if(role==='traveller')travNext(1);else localNext(1);showScreen('home');}
+
+// Demo personas — permanent test individuals for solo testing (same browser, no second phone).
+// Cloud sync pauses while a persona is active so demo play never pollutes real tables.
+function assumePersona(id){
+  try{
+    try{localStorage.setItem('etie-v1-user-backup',localStorage.getItem('etie-v1')||'');}catch(e){}
+    window.ETIE_DEMO=id;
+    var M=(window.ETIE_MOCKS||{});
+    if(id==='trav-etie'){
+      var t=M.traveller||{};
+      ETIE.trip={destination:(M.trip&&M.trip.destination)||'Lisbon',dates:(M.trip&&M.trip.dates)||'12–18 September'};
+      ETIE.traveller={interests:((t.interests)||['Football','Salsa','Cooking','Thrift shopping']).slice(),personality:Object.assign({social:4,spontaneous:4,curious:5},t.personality||{}),lookingFor:((t.lookingFor)||['Meet someone local']).slice(),hook:t.hook||''};
+      try{document.getElementById('cloudStatus').textContent='Demo: Etie (offline)';}catch(e){}
+      try{document.getElementById('demoPersonaLine').textContent='Acting as Etie · traveller — Exit demo to return to your account.';}catch(e){}
+      saveState();setRole('traveller');
+    } else {
+      var L=null;((M.locals)||[]).forEach(function(x){if(x.id===id)L=x;});
+      if(!L){toast('Unknown persona');return;}
+      ETIE.local={city:L.city||'Lisbon',age:String(L.age||28),verificationMethods:['Social media'],interests:(L.interests||[]).slice(0,4),personality:Object.assign({social:5,spontaneous:5,curious:5},L.personality||{}),offer:L.offer||'',offerTags:((L.offerTags||L.interests)||[]).slice(0,4),availability:(L.availability||[]).map(function(a){return (typeof a==='string')?{label:a,status:'Available'}:a;})};
+      try{document.getElementById('cloudStatus').textContent='Demo: '+L.name+' (offline)';}catch(e){}
+      try{document.getElementById('demoPersonaLine').textContent='Acting as '+L.name+' · local — Exit demo to return to your account.';}catch(e){}
+      saveState();setRole('local');localNext(8);
+    }
+    toast('Demo persona active — cloud sync paused.');
+  }catch(e){toast('Demo switch failed.');}
+}
+function exitDemo(){
+  try{
+    window.ETIE_DEMO=null;
+    try{var raw=localStorage.getItem('etie-v1-user-backup');if(raw){localStorage.setItem(ETIE_KEY,raw);ETIE=loadState();}}catch(e){}
+    try{document.getElementById('cloudStatus').textContent='Cloud: offline demo';}catch(e){}
+    try{document.getElementById('demoPersonaLine').textContent='';}catch(e){}
+    if(typeof restoreAll==='function')restoreAll();
+    toast('Back to your account.');
+  }catch(e){}
+}
+
+function renderProfiles(){
+  try{
+    var tripEl=document.getElementById('profTrip');
+    if(tripEl)tripEl.textContent=(ETIE.trip.destination||'—')+' · '+(ETIE.trip.dates||'—')+' · Traveller';
+    var pi=document.getElementById('profInterests');
+    if(pi){pi.innerHTML='';ETIE.traveller.interests.forEach(function(x){var s=document.createElement('span');s.className='chip active';s.textContent=x;pi.appendChild(s);});}
+    var pp=document.getElementById('profPersonality');
+    if(pp)pp.textContent='Social '+ETIE.traveller.personality.social+'/5 · Spontaneous '+ETIE.traveller.personality.spontaneous+'/5 · Curious '+ETIE.traveller.personality.curious+'/5';
+    var pl=document.getElementById('profLookingFor');
+    if(pl)pl.textContent=ETIE.traveller.lookingFor.join(' · ')||'—';
+    var ph=document.getElementById('profHook');
+    if(ph)ph.textContent='“'+(ETIE.traveller.hook||'—')+'”';
+    var ln=document.getElementById('localDashName');
+    if(ln)ln.textContent='You · '+(ETIE.local.city||'—');
+    var ls=document.getElementById('localDashSub');
+    if(ls)ls.textContent='Local · '+(ETIE.local.age||'—')+' · Social '+ETIE.local.personality.social;
+    var li=document.getElementById('localDashInterests');
+    if(li){li.innerHTML='';ETIE.local.interests.forEach(function(x){var s=document.createElement('span');s.className='chip active';s.textContent=x;li.appendChild(s);});ETIE.local.offerTags.forEach(function(x){if(ETIE.local.interests.indexOf(x)===-1){var s=document.createElement('span');s.className='chip';s.textContent=x;li.appendChild(s);}});}
+    var lo=document.getElementById('localDashOffer');
+    if(lo)lo.textContent='“'+(ETIE.local.offer||'—')+'”';
+    var la=document.getElementById('localDashAvail');
+    if(la)la.textContent='Available: '+ETIE.local.availability.filter(function(a){return a.status==='Available';}).map(function(a){return a.label;}).join(', ')+' · Other: '+ETIE.local.availability.filter(function(a){return a.status!=='Available';}).map(function(a){return a.label+' ('+a.status+')';}).join(', ');
+  }catch(e){}
+}
+
+var ETIE_MATCH_INDEX=0;
+function getRanked(){
+  try{return window.EtieMatch.rank(ETIE.traveller, ETIE.trip, window.ETIE_MOCKS.locals, ETIE.local.availability, ETIE.reviews);}
+  catch(e){return [];}
+}
+function currentMatch(){var r=getRanked();if(!r.length)return null;return r[Math.min(ETIE_MATCH_INDEX,r.length-1)];}
+function cycleMatch(){var r=getRanked();if(!r.length)return;ETIE_MATCH_INDEX=(ETIE_MATCH_INDEX+1)%r.length;renderMatches();}
+function renderMatches(){
+  var r=getRanked();if(!r.length)return;
+  var m=currentMatch();var L=m.local;
+  try{
+    document.getElementById('matchAvatar').textContent=(L.name||'?').charAt(0);
+    document.getElementById('matchName').textContent=L.name;
+    document.getElementById('matchMeta').textContent=(L.city||ETIE.trip.destination)+' · Local · '+(L.age||'');
+    document.getElementById('matchScore').textContent=m.label+' · '+m.score+'/100 (internal)';
+    document.getElementById('matchRankNote').textContent='Top '+(ETIE_MATCH_INDEX+1)+' of '+r.length+' · '+r.map(function(x){return x.local.name+':'+x.score;}).join(' ');
+    var mc=document.getElementById('matchChips');mc.innerHTML='';
+    (L.interests||[]).forEach(function(x){var s=document.createElement('span');s.className='chip'+(m.shared.indexOf(x)!==-1?' active':'');s.textContent=x;mc.appendChild(s);});
+    var mt=document.getElementById('matchTrust');
+    mt.innerHTML='';
+    var trustItems=[];
+    if(m.repCount)trustItems.push(['★ '+m.rep+' ('+m.repCount+') live'+(m.myRating?(' · you: '+m.myRating+'★'):'')]);
+    trustItems.push(['✓ Demo identity'],['✓ Demo local'],[(L.stats&&L.stats.rating?L.stats.rating:'—')+' ★ (demo)'],[(L.stats&&L.stats.travellersMet?L.stats.travellersMet:'—')+' met (demo)']);
+    trustItems.forEach(function(a){var s=document.createElement('span');s.textContent=a[0];mt.appendChild(s);});
+    document.getElementById('matchWhy').textContent='You share '+(m.shared.join(' + ')||'no direct interests yet')+', personality fit '+m.pers+'/100, local value '+(L.offer||'').slice(0,80)+'…, available '+(L.availability||[]).join(', ')+'.';
+    document.getElementById('whyInterestsTitle').textContent=m.shared.length+' shared interest'+(m.shared.length===1?'':'s');
+    document.getElementById('whyInterests').textContent=(m.shared.join(' · ')||'None yet — try adding Salsa/Cooking/Football/Photography')+' ('+m.interestScore+'/100)';
+    document.getElementById('whyInterestsBadge').textContent=m.interestScore>=70?'Strong':(m.interestScore>=40?'Okay':'Low');
+    document.getElementById('whyPersonality').textContent='You '+ETIE.traveller.personality.social+'/'+ETIE.traveller.personality.spontaneous+'/'+ETIE.traveller.personality.curious+' vs '+L.name+' '+L.personality.social+'/'+L.personality.spontaneous+'/'+L.personality.curious+' ('+m.pers+'/100)';
+    document.getElementById('whyPersonalityBadge').textContent=m.pers>=75?'Strong':(m.pers>=55?'Good':'Low');
+    document.getElementById('whyValue').textContent=(L.offer||'—')+' ('+m.value+'/100)';
+    document.getElementById('whyValueBadge').textContent=m.value>=70?'High':(m.value>=50?'Okay':'Low');
+    document.getElementById('whyAvail').textContent=(L.availability||[]).join(', ')+' during '+ETIE.trip.dates;
+    document.getElementById('whyAvailBadge').textContent=m.avail>=80?'Available':'Check';
+    try{
+      var wr=document.getElementById('whyReputation'),wb=document.getElementById('whyReputationBadge');
+      if(window.ETIE_REVIEWS_V2===false){if(wr)wr.textContent='Reviews v2 off (original ranking).';if(wb)wb.textContent='Off';}
+      else if(m.repCount){var adj=[];if(m.repBonus)adj.push((m.repBonus>0?'+':'')+m.repBonus);if(m.tagBonus)adj.push('+'+m.tagBonus+' taste');if(wr)wr.textContent=m.rep+'★ across '+m.repCount+' reviews'+(adj.length?(' ('+adj.join(', ')+')'):'');if(wb)wb.textContent=m.rep>=4.7?'Proven':(m.rep>=4?'Good':'Mixed');}
+      else{if(wr)wr.textContent='No reviews yet — be the first to review after you meet.';if(wb)wb.textContent='New';}
+    }catch(e){}
+    document.getElementById('prof8Name').textContent=L.name+"'s profile";
+    document.getElementById('prof8Avatar').textContent=(L.name||'?').charAt(0);
+    document.getElementById('prof8Title').textContent=L.name+', '+(L.age||'');
+    document.getElementById('prof8Meta').textContent=(L.city||'')+' · Local';
+    var p8t=document.getElementById('prof8Trust');p8t.innerHTML='';
+    var p8items=[];
+    if(m.repCount)p8items.push('★ '+m.rep+' ('+m.repCount+') live'+(m.myRating?(' · you: '+m.myRating+'★'):''));
+    p8items.push('✓ Demo identity','✓ Demo local',(L.stats.rating+' ★ (demo)'));
+    p8items.forEach(function(t){var s=document.createElement('span');s.textContent=t;p8t.appendChild(s);});
+    var p8i=document.getElementById('prof8Interests');p8i.innerHTML='';
+    (L.interests||[]).forEach(function(x){var s=document.createElement('span');s.className='chip'+(m.shared.indexOf(x)!==-1?' active':'');s.textContent=x;p8i.appendChild(s);});
+    document.getElementById('prof8Offer').textContent='“'+(L.offer||'—')+'”';
+    document.getElementById('prof8Stats').textContent=(L.stats.travellersMet||'—')+' travellers met · '+(L.stats.reviews||'—')+' reviews · '+(L.stats.references||'—')+' references (demo)'+(m.repCount?(' · live: '+m.rep+'★ ('+m.repCount+')'):'');
+    var g=document.getElementById('discoverGrid');if(g){
+      g.innerHTML='';
+      var discoverLocals=getDiscoverLocals();
+      var tierMsg='';
+      var lt=getLocalTier(), tt=getTravellerTier();
+      if(!canSeeFullDiscover()){
+        tierMsg='<p class="small muted" style="margin-bottom:12px;">Discover shows top 3 matches. Complete 3 trips @ 4★+ to unlock <strong>Trusted</strong> (traveller) or host 3 meetups @ 4★+ for <strong>Verified</strong> (local) and see the full list + Host activities.</p>';
+      }
+      g.innerHTML=tierMsg;
+      discoverLocals.forEach(function(x){
+        var d=document.createElement('div');d.className='match-card card';
+        d.innerHTML='<strong></strong><p class="muted"></p>';
+        d.querySelector('strong').textContent=x.local.name+' · '+x.score+(x.repCount?(' · '+x.rep+'★'):'');
+        d.querySelector('.muted').textContent=(x.shared.join(' · ')||'No overlap yet')+' — '+x.label+(x.tagBonus?(' · loved by people like you'): '');
+        var st=document.createElement('span');st.className='status';st.textContent='Local';d.appendChild(st);
+        var vb=document.createElement('button');vb.className='secondary';vb.textContent='View';vb.style.marginTop='8px';
+        vb.onclick=(function(id){return function(){
+          document.getElementById('travRole').classList.add('active');document.getElementById('localRole').classList.remove('active');
+          document.getElementById('travellerFlow').classList.remove('hidden');document.getElementById('localFlow').classList.add('hidden');
+          focusMatch(id);travNext(8);
+        };})(x.local.id);
+        d.appendChild(vb);
+        g.appendChild(d);
+      });
+      // Host activities section for Verified/Host
+      if(canSeeFullDiscover() && getLocalTier()==='Host'){
+        var hostActivities=ETIE.local.activities||[];
+        if(hostActivities.length){
+          var ha=document.createElement('div');ha.style.marginTop='24px';
+          ha.innerHTML='<h3>Host Activities <span class="small muted">(create your own)</span></h3>';
+          hostActivities.forEach(function(act){
+            var ac=document.createElement('div');ac.className='match-card card';ac.style.marginTop='10px';
+            ac.innerHTML='<strong></strong><p class="muted small"></p>';
+            ac.querySelector('strong').textContent=act.title;
+            ac.querySelector('.muted').textContent=act.description+' · '+act.when+' · '+act.where+' · '+act.capacity+' spots';
+            ha.appendChild(ac);
+          });
+          g.appendChild(ha);
+        }else{
+          var ha=document.createElement('div');ha.style.marginTop='24px';
+          ha.innerHTML='<h3>Host Activities</h3><p class="muted">No activities created yet. <button class="secondary" onclick="alert(\'Activity creation coming in Phase 10\')">Create activity</button></p>';
+          g.appendChild(ha);
+        }
+      }
+    }
+  }catch(e){}
+}
+
+function reqKey(){var m=currentMatch();return m?m.local.id:'local-marta';}
+function reqStatus(k){k=k||reqKey();return (ETIE.requests[k]&&ETIE.requests[k].status)||'none';}
+function ensureChat(k){
+  if(!ETIE.messages[k])ETIE.messages[k]=[];
+  if(!ETIE.messages[k].length){
+    var m=currentMatch();
+    var lname=m?m.local.name:'Local';
+    ETIE.messages[k].push({from:'local',text:'Hey! Excited to meet you. What are you most looking forward to in Lisbon ('+lname+' here)?',ts:Date.now()-7200000});
+  }
+}
+function sendRequest(){
+  var m=currentMatch();if(!m){toast('Find a match first.');return;}
+  var k=m.local.id;var msg=document.getElementById('reqMessage').value.trim();
+  if(ETIE.requests[k]&&ETIE.requests[k].status==='pending'){travNext(10);return;}
+  ETIE.requests[k]={status:'pending',message:msg,updatedAt:Date.now(),localName:m.local.name};
+  ensureChat(k);
+  ETIE.messages[k].push({from:'traveller',text:'Request: '+(msg||'(no message)'),ts:Date.now()});
+  saveState();renderRequests();renderChat();renderMessagesList();
+  try{ if(window.EtieCloud&&window.EtieCloud.pushSharedRequest) window.EtieCloud.pushSharedRequest(k); }catch(e){}
+  try{ if(window.EtieCloud&&window.EtieCloud.pushSharedMessage) window.EtieCloud.pushSharedMessage(k, 'Request: '+(msg||'(no message)'), 'traveller'); }catch(e){}
+  travNext(10);
+}
+function acceptCurrent(){var k=reqKey();if(reqStatus(k)==='none'){toast('No pending request — send one as Traveller first.');return;}ETIE.requests[k].status='accepted';ETIE.requests[k].updatedAt=Date.now();ensureChat(k);ETIE.messages[k].push({from:'local',text:'Accepted! Looking forward to meeting. When suits you?',ts:Date.now()});saveState();renderRequests();renderChat();renderMessagesList();renderLocalDashboard();
+  try{ if(window.EtieCloud&&window.EtieCloud.pushSharedRequest) window.EtieCloud.pushSharedRequest(k); }catch(e){}
+  try{ if(window.EtieCloud&&window.EtieCloud.pushSharedMessage) window.EtieCloud.pushSharedMessage(k, 'Accepted! Looking forward to meeting. When suits you?', 'local'); }catch(e){}
+  toast('Accepted — chat unlocked.');try{openChatPopup();}catch(e){}localNext(9);}
+function declineCurrent(){var k=reqKey();if(reqStatus(k)==='none'){toast('No pending request.');return;}ETIE.requests[k].status='declined';ETIE.requests[k].updatedAt=Date.now();saveState();renderRequests();renderChat();renderMessagesList();renderLocalDashboard();
+  try{ if(window.EtieCloud&&window.EtieCloud.pushSharedRequest) window.EtieCloud.pushSharedRequest(k); }catch(e){}
+  toast('Declined — chat stays locked.');}
+function openSafetyReport(role){
+  var k=meetKey();var m=currentMatch();var other=role==='traveller'?m.local.name:'Etie';
+  var html='<div style="padding:16px;max-width:400px;"><h3 style="margin:0 0 12px;color:#b00020;">Report / Safety concern</h3><p class="muted small" style="margin-bottom:12px;">This goes to Etie safety team only. '+other+' will not see this.</p><div class="field"><label>Category</label><select id="reportCategory" style="width:100%;padding:12px;border:1px solid #d9d3ca;border-radius:10px;"><option value="harassment">Harassment / inappropriate behavior</option><option value="unsafe">I felt unsafe / threatened</option><option value="no-show">No-show / ghosted after accept</option><option value="fake">Fake profile / misrepresentation</option><option value="other">Other</option></select></div><div class="field"><label>Details (required)</label><textarea id="reportDetails" placeholder="What happened? Be specific — helps us act fast." style="min-height:100px;padding:12px;border:1px solid #d9d3ca;border-radius:10px;"></textarea></div><div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;"><button class="secondary" onclick="closeSafetyReport()">Cancel</button><button class="primary" style="background:#b00020;border-color:#b00020;" onclick="submitSafetyReport(\''+role+'\')">Send report</button></div></div>';
+  var ov=document.createElement('div');ov.className='chat-overlay';ov.onclick=function(e){if(e.target===this)closeSafetyReport();};ov.innerHTML='<div class="chat-popup" role="dialog" aria-modal="true" style="width:100%;max-width:440px;">'+html+'</div>';ov.id='safetyReportOverlay';document.body.appendChild(ov);
+  try{document.getElementById('reportDetails').focus();}catch(e){}
+}
+function closeSafetyReport(){try{var ov=document.getElementById('safetyReportOverlay');if(ov)ov.remove();}catch(e){}}
+function submitSafetyReport(role){
+  var cat=document.getElementById('reportCategory').value;
+  var details=document.getElementById('reportDetails').value.trim();
+  if(!details){toast('Add details before sending.');return;}
+  var k=meetKey();var m=currentMatch();
+  var report={role:role,category:cat,details:details,at:Date.now(),requestId:k,otherName:role==='traveller'?m.local.name:'Etie'};
+  try{ETIE.reports=ETIE.reports||[];ETIE.reports.push(report);saveState();}catch(e){}
+  try{ if(window.EtieCloud&&window.EtieCloud.pushSharedReport) window.EtieCloud.pushSharedReport(report); }catch(e){}
+  closeSafetyReport();toast('Report sent — safety team will review.');
+}
+function sendChat(who,inputId){
+  var k=reqKey();
+  var input=null;
+  if(inputId)input=document.getElementById(inputId);
+  if(!input){
+    if(who==='local'){
+      input=document.getElementById('localChatInput9')&&document.getElementById('localChatInput9').value?document.getElementById('localChatInput9'):document.getElementById('localChatInput');
+      // if both exist and 9 is visible, prefer it
+      var l9=document.getElementById('localChatInput9');
+      var l8=document.getElementById('localChatInput');
+      if(l9&&l8){
+        var p9=document.getElementById('local9');
+        var use9=p9&&!p9.classList.contains('hidden');
+        input=use9?l9:(l9.value?l9:l8);
+      } else input=l9||l8;
+    } else input=document.getElementById('chatInput');
+  }
+  if(!input){toast('Chat unavailable.');return;}
+  var text=(input.value||'').trim();if(!text){toast('Type a message first.');return;}
+  if(reqStatus(k)!=='accepted'){toast('Chat unlocks only after Accept.');return;}
+  ensureChat(k);ETIE.messages[k].push({from:who,text:text,ts:Date.now()});
+  input.value='';saveState();renderChat();renderMessagesList();
+  try{ if(window.EtieCloud&&window.EtieCloud.pushSharedMessage) window.EtieCloud.pushSharedMessage(k, text, who); }catch(e){}
+}
+function tryPlanMeetup(){var k=reqKey();if(reqStatus(k)!=='accepted'){toast('Plan unlocks after Accept.');return;}travNext(12);}
+function resetDemo(){ETIE.requests={};ETIE.messages={};ETIE.meetups={};ETIE.reviews={};ETIE._travStars=0;ETIE._localStars=0;ETIE_MATCH_INDEX=0;saveState();renderRequests();renderChat();renderMessagesList();renderMeetup();renderThanks();renderTrips();renderLocalDashboard();paintStars('travStars',0);paintStars('localStars',0);toast('Demo reset.');}
+function renderRequests(){
+  var m=currentMatch();if(!m)return;var k=m.local.id;var st=reqStatus(k);
+  try{
+    document.getElementById('reqTitle').textContent='Ask '+m.local.name+' to meet';
+    var rt=document.getElementById('reqStatusTitle'),rs=document.getElementById('reqStatusSub'),oc=document.getElementById('openChatBtn');
+    if(st==='pending'){rt.textContent='Request pending to '+m.local.name+'.';rs.textContent='Messaging stays locked until they accept. Demo: switch to Local flow → dashboard → Accept.';oc.textContent='Check chat (locked)';}
+    else if(st==='accepted'){rt.textContent=m.local.name+' accepted your request.';rs.textContent='Messaging is now unlocked. Agree on activity, time and place.';oc.textContent='Open chat';}
+    else if(st==='declined'){rt.textContent=m.local.name+' declined.';rs.textContent='Chat stays locked. Try Next suggestion in Step 6.';oc.textContent='Back to matches';oc.onclick=function(){travNext(6);};return;}
+    else{rt.textContent='No request yet to '+m.local.name+'.';rs.textContent='Send one from Step 9 to unlock messaging after acceptance.';oc.textContent='Open chat (locked)';}
+     oc.onclick=function(){openChatPopup();};
+    var lr=document.getElementById('localReqTitle');if(lr)lr.textContent='Etie, 27 · for '+(m?m.local.name:'—');
+    var lw=document.getElementById('localReqWhy');if(lw)lw.textContent=(m.shared.join(' · ')||'New traveller')+' · '+ETIE.trip.destination+' '+ETIE.trip.dates;
+    var lm=document.getElementById('localReqMsg');if(lm)lm.textContent=ETIE.requests[k]?('“'+(ETIE.requests[k].message||'')+'”'):'No message yet.';
+    var ls=document.getElementById('localReqStatus');if(ls)ls.textContent=st==='none'?'No request yet — send one as Traveller first':st;
+  }catch(e){}
+}
+function renderChat(){
+  var m=currentMatch();if(!m)return;var k=m.local.id;var st=reqStatus(k);
+  try{
+    // Traveller view: my messages on right (black), local on left (grey)
+    var ct=document.getElementById('chatTitle');if(ct)ct.textContent='Chat with '+m.local.name;
+    var lock=document.getElementById('chatLock');
+    if(lock){
+      if(st==='accepted')lock.textContent='Unlocked. Keep it simple — aim for a real-world meetup.';
+      else if(st==='pending')lock.textContent='Locked — pending. Switch to Local to Accept (demo).';
+      else if(st==='declined')lock.textContent='Locked — declined.';
+      else lock.textContent='Locked — send a request in Step 9 first.';
+    }
+    var list=document.getElementById('chatList');if(list){list.innerHTML='';
+    (ETIE.messages[k]||[]).forEach(function(msg){
+      var b=document.createElement('div');b.className='bubble'+(msg.from==='traveller'?' me':'');b.textContent=msg.text;list.appendChild(b);
+    });
+    if(!(ETIE.messages[k]||[]).length){var d=document.createElement('div');d.className='muted small';d.textContent='No messages yet.';list.appendChild(d);}
+    }
+    var ci=document.getElementById('chatInput');if(ci)ci.disabled=(st!=='accepted');
+    // Local view (mirrored): my (local) messages on right, traveller on left
+    var lt=document.getElementById('localChatTitle');
+    if(lt)lt.textContent='Chat with Etie (traveller)';
+    var ll=document.getElementById('localChatLock');
+    if(ll){
+      if(st==='accepted')ll.textContent='Unlocked. Coordinate with your traveller, then meet.';
+      else if(st==='pending')ll.textContent='Pending — press Accept in the dashboard above to unlock chat.';
+      else if(st==='declined')ll.textContent='Declined — chat stays locked.';
+      else ll.textContent='No request yet — waiting for a traveller request.';
+    }
+    var llist=document.getElementById('localChatList');
+    if(llist){llist.innerHTML='';
+      (ETIE.messages[k]||[]).forEach(function(msg){
+        var b=document.createElement('div');b.className='bubble'+(msg.from==='local'?' me':'');b.textContent=msg.text;llist.appendChild(b);
+      });
+      if(!(ETIE.messages[k]||[]).length){var dd=document.createElement('div');dd.className='muted small';dd.textContent='No messages yet.';llist.appendChild(dd);}
+    }
+    var li1=document.getElementById('localChatInput');if(li1)li1.disabled=(st!=='accepted');
+    var li9=document.getElementById('localChatInput9');if(li9)li9.disabled=(st!=='accepted');
+    // Popup (mini, dismissable — doesn't hijack the flow)
+    var pT=document.getElementById('chatPopupTitle');if(pT)pT.textContent='Chat with '+(m.local.name||'—');
+    var pS=document.getElementById('chatPopupSub');if(pS)pS.textContent=st==='accepted'?'Unlocked — aim for a meetup':(st==='pending'?'Locked — pending Accept':st);
+    var pL=document.getElementById('chatPopupList');if(pL){pL.innerHTML='';
+      var whoPopup='traveller';try{var lf=document.getElementById('localFlow'); if(lf&&!lf.classList.contains('hidden')) whoPopup='local';}catch(e){}
+      (ETIE.messages[k]||[]).forEach(function(msg){
+        var b=document.createElement('div');b.className='bubble'+(msg.from===whoPopup?' me':'');b.textContent=msg.text;pL.appendChild(b);
+      });
+      if(!(ETIE.messages[k]||[]).length){var pd=document.createElement('div');pd.className='muted small';pd.textContent='No messages yet.';pL.appendChild(pd);}
+    }
+    var pI=document.getElementById('chatPopupInput');if(pI)pI.disabled=(st!=='accepted');
+  }catch(e){}
+}
+function renderMessagesList(){
+  try{
+    var box=document.getElementById('messagesList');if(!box)return;box.innerHTML='';
+    var ids=Object.keys(ETIE.requests);
+    if(!ids.length){box.innerHTML='<div class="list-item"><div><strong>No requests yet</strong><br><span class="muted">Send one from Traveller Step 9.</span></div><span class="status">Empty</span></div>';return;}
+    ids.forEach(function(k){
+      var r=ETIE.requests[k];var msgs=ETIE.messages[k]||[];var last=msgs.length?msgs[msgs.length-1].text:'—';
+      var row=document.createElement('div');row.className='list-item';row.style.cursor='pointer';row.title='Tap to open chat';
+      row.innerHTML='<div><strong></strong><br><span class="muted"></span></div>';
+      row.querySelector('strong').textContent=(r.localName||k)+' · '+r.status;
+      row.querySelector('.muted').textContent=last.slice(0,80);
+      var st=document.createElement('span');st.className='status';st.textContent=r.status;row.appendChild(st);
+      row.onclick=(function(kk){return function(){
+        focusMatch(kk);
+        openChatPopup();
+      };})(k);
+      box.appendChild(row);
+    });
+  }catch(e){}
+}
+
+function meetKey(){return reqKey();}
+function meetup(){return ETIE.meetups[meetKey()]||{status:'none'};}
+function paintStars(id,n){var c=document.getElementById(id);if(!c)return;Array.prototype.forEach.call(c.querySelectorAll('.star'),function(s,i){s.textContent=(i<n?'★':'☆');s.classList.toggle('active',i<n);});}
+function setTravStars(n){ETIE._travStars=n;saveState();paintStars('travStars',n);}
+function setLocalStars(n){ETIE._localStars=n;saveState();paintStars('localStars',n);}
+function selectSingle(el,containerId){var c=document.getElementById(containerId);if(c)Array.prototype.forEach.call(c.querySelectorAll('.chip'),function(x){x.classList.remove('active');});el.classList.add('active');}
+function saveMeetup(){
+  if(reqStatus()!=='accepted'){toast('Accept the request first.');return;}
+  var a=document.getElementById('meetActivity').value.trim(),w=document.getElementById('meetWhen').value.trim(),wh=document.getElementById('meetWhere').value.trim();
+  if(!a||!w||!wh){toast('Fill activity, when and where.');return;}
+  ETIE.meetups[meetKey()]={activity:a,when:w,where:wh,status:'planned',with:currentMatch().local.name};
+  saveState();renderMeetup();renderTrips();
+  try{ if(window.EtieCloud&&window.EtieCloud.pushSharedMeetup) window.EtieCloud.pushSharedMeetup(meetKey()); }catch(e){}
+  travNext(13);
+}
+function completeMeetup(){
+  var m=meetup();if(m.status!=='planned'){toast('Confirm the meetup in Step 12 first.');return;}
+  ETIE.meetups[meetKey()].status='completed';saveState();renderMeetup();renderTrips();
+  try{ if(window.EtieCloud&&window.EtieCloud.pushSharedMeetup) window.EtieCloud.pushSharedMeetup(meetKey()); }catch(e){}
+  toast('Marked completed — now review.');
+}
+function completeMeetupAsLocal(){
+  if(reqStatus()!=='accepted'){toast('Accept first.');return;}
+  var m=meetup();if(m.status==='none'){toast('Traveller plans it in Step 12 first (demo: switch back).');return;}
+  if(m.status!=='completed'){ETIE.meetups[meetKey()].status='completed';saveState();
+  try{ if(window.EtieCloud&&window.EtieCloud.pushSharedMeetup) window.EtieCloud.pushSharedMeetup(meetKey()); }catch(e){}
+  }
+  renderMeetup();renderTrips();localNext(10);
+}
+function submitTravReview(){
+  if(meetup().status!=='completed'){toast('Mark meetup completed first.');return;}
+  if(!(ETIE._travStars>=1)){toast('Tap 1-5 stars.');return;}
+  var again=getChips('travAgain')[0]||'Definitely';
+  var highlights=[document.getElementById('travHighlight1').value.trim(),document.getElementById('travHighlight2').value.trim(),document.getElementById('travHighlight3').value.trim()].filter(Boolean);
+  var privateText=document.getElementById('travReviewText').value.trim();
+  var k=meetKey();ETIE.reviews[k]=ETIE.reviews[k]||{};
+  ETIE.reviews[k].trav={rating:ETIE._travStars,meetAgain:again,highlights:highlights,privateText:privateText,at:Date.now()};
+  saveState();renderMeetup();renderTrips();renderThanks();travNext(15);
+  try{ if(window.EtieCloud&&window.EtieCloud.pushSharedReview) window.EtieCloud.pushSharedReview(k, 'trav', ETIE.reviews[k].trav); }catch(e){}
+}
+function submitLocalReview(){
+  if(meetup().status!=='completed'){toast('Mark meetup completed first.');return;}
+  if(!(ETIE._localStars>=1)){toast('Tap 1-5 stars.');return;}
+  var again=getChips('localAgain')[0]||'Definitely';
+  var highlights=[document.getElementById('localHighlight1').value.trim(),document.getElementById('localHighlight2').value.trim(),document.getElementById('localHighlight3').value.trim()].filter(Boolean);
+  var privateText=document.getElementById('localReviewText').value.trim();
+  var k=meetKey();ETIE.reviews[k]=ETIE.reviews[k]||{};
+  ETIE.reviews[k].local={rating:ETIE._localStars,meetAgain:again,highlights:highlights,privateText:privateText,at:Date.now()};
+  saveState();renderTrips();toast('Review submitted — loop complete (demo).');
+  try{ if(window.EtieCloud&&window.EtieCloud.pushSharedReview) window.EtieCloud.pushSharedReview(k, 'local', ETIE.reviews[k].local); }catch(e){}
+}
+function renderMeetup(){
+  var m=currentMatch();if(!m)return;var mu=meetup();
+  try{
+    document.getElementById('meetWith').textContent='With '+m.local.name+' · '+ETIE.trip.destination;
+    if(mu.status!=='none'){
+      document.getElementById('meetActivity').value=mu.activity;
+      document.getElementById('meetWhen').value=mu.when;
+      document.getElementById('meetWhere').value=mu.where;
+    }
+    document.getElementById('meetStatusTitle').textContent=mu.status==='completed'?'Meetup completed':(mu.status==='planned'?'Meetup planned':'No meetup yet');
+    document.getElementById('meetSummaryTitle').textContent=(mu.activity||'—')+' · '+m.local.name+' + Etie';
+    document.getElementById('meetSummarySub').textContent=(mu.when||'—')+' · '+(mu.where||'—');
+    var rv=(ETIE.reviews[meetKey()]||{}).trav;
+    document.getElementById('meetStatusLine').textContent='Status: '+mu.status+' · Request: '+reqStatus()+(rv?' · Your review: '+rv.rating+'★ '+rv.meetAgain:' · No review yet');
+    document.getElementById('reviewTitle').textContent='Review '+m.local.name;
+    var li=document.getElementById('localMeetInfo');
+    if(li)li.textContent='Meetup: '+(mu.activity||'—')+' · '+(mu.when||'—')+' · '+(mu.where||'—')+' · Status: '+mu.status;
+  }catch(e){}
+}
+function renderThanks(){
+  try{
+    var k=meetKey();var r=ETIE.reviews[k]||{};var t=r.trav;
+    if(t){
+      var hs=(t.highlights||[]).length?'<div class="small muted" style="margin-top:8px;"><strong>Highlights:</strong> '+(t.highlights.join('; '))+'</div>':'';
+      var pt=t.privateText?'<div class="small muted" style="margin-top:4px;color:#b00020;"><strong>Private note:</strong> '+t.privateText+'</div>':'';
+      document.getElementById('thanksSummary').innerHTML='<strong>Saved:</strong> '+t.rating+'★ · '+t.meetAgain+hs+pt+'. Counts toward demo reputation and future matching.';
+    }else{
+      document.getElementById('thanksSummary').innerHTML='<strong>Next time:</strong> Etie can use your signals for better matches.';
+    }
+  }catch(e){}
+}
+function renderTrips(){
+  try{
+    var box=document.getElementById('tripsList');if(!box)return;box.innerHTML='';
+    var m=currentMatch();var k=meetKey();var mu=meetup();var r=ETIE.reviews[k]||{};
+    var row=document.createElement('div');row.className='list-item';
+    var conn=reqStatus(k);var meet=mu.status;
+    var tr=r.trav;var lr=r.local;
+    var revParts=[];if(tr)revParts.push('Trav: '+tr.rating+'★ '+tr.meetAgain);if(lr)revParts.push('Local: '+lr.rating+'★ '+lr.meetAgain);
+    var revText=revParts.length?revParts.join(' | '):'none';
+    var demoMet=18+(meet==='completed'?1:0);
+    row.innerHTML='<div><strong></strong><br><span class="muted"></span></div>';
+    row.querySelector('strong').textContent=ETIE.trip.destination+' · '+ETIE.trip.dates;
+    row.querySelector('.muted').textContent='Match: '+(m?m.local.name+' ('+m.score+')':'—')+' · Req: '+conn+' · Meet: '+meet+' · Reviews: '+revText+' · Met demo: '+demoMet;
+    var b=document.createElement('button');b.className='secondary';b.textContent='Open';b.onclick=function(){setRole('traveller');showScreen('home');};
+    row.appendChild(b);box.appendChild(row);
+  }catch(e){}
+}
+
+function localNameFor(k){var r=ETIE.requests[k];if(r&&r.localName)return r.localName;var all=(window.ETIE_MOCKS&&window.ETIE_MOCKS.locals)||[];for(var i=0;i<all.length;i++)if(all[i].id===k)return all[i].name;return k;}
+function focusMatch(k){var r=getRanked();for(var i=0;i<r.length;i++)if(r[i].local.id===k){ETIE_MATCH_INDEX=i;break;}renderMatches();renderRequests();renderChat();renderMeetup();}
+function acceptKey(k){if(!ETIE.requests[k]){toast('No request for '+k);return;}focusMatch(k);ETIE.requests[k].status='accepted';ETIE.requests[k].updatedAt=Date.now();ensureChat(k);ETIE.messages[k].push({from:'local',text:'Accepted! Looking forward to meeting.',ts:Date.now()});saveState();renderRequests();renderChat();renderMessagesList();renderLocalDashboard();
+  try{ if(window.EtieCloud&&window.EtieCloud.pushSharedRequest) window.EtieCloud.pushSharedRequest(k); }catch(e){}
+  try{ if(window.EtieCloud&&window.EtieCloud.pushSharedMessage) window.EtieCloud.pushSharedMessage(k, 'Accepted! Looking forward to meeting.', 'local'); }catch(e){}
+  toast('Accepted '+localNameFor(k));}
+function declineKey(k){if(!ETIE.requests[k]){toast('No request for '+k);return;}focusMatch(k);ETIE.requests[k].status='declined';ETIE.requests[k].updatedAt=Date.now();saveState();renderRequests();renderChat();renderMessagesList();renderLocalDashboard();
+  try{ if(window.EtieCloud&&window.EtieCloud.pushSharedRequest) window.EtieCloud.pushSharedRequest(k); }catch(e){}
+  toast('Declined '+localNameFor(k));}
+function renderLocalDashboard(){
+  try{
+    var q=document.getElementById('localQueue');
+    if(q){q.innerHTML='';var ids=Object.keys(ETIE.requests);
+      if(!ids.length)q.innerHTML='<div class="list-item"><div><strong>No requests yet</strong><br><span class="muted">Send one as Traveller Step 9 — try different matches.</span></div><span class="status">Empty</span></div>';
+      ids.forEach(function(k){
+        var r=ETIE.requests[k];var row=document.createElement('div');row.className='list-item';
+        row.innerHTML='<div><strong></strong><br><span class="muted"></span></div>';
+        row.querySelector('strong').textContent=localNameFor(k)+' · '+r.status;
+        row.querySelector('.muted').textContent=(r.message||'—').slice(0,90);
+        var wrap=document.createElement('div');wrap.style.display='flex';wrap.style.gap='6px';
+        var v=document.createElement('button');v.className='secondary';v.textContent='View';v.onclick=(function(kk){return function(){focusMatch(kk);localNext(8);};})(k);
+        var a=document.createElement('button');a.className='secondary';a.textContent='Accept';a.onclick=(function(kk){return function(){acceptKey(kk);};})(k);
+        var d=document.createElement('button');d.className='secondary';d.textContent='Decline';d.onclick=(function(kk){return function(){declineKey(kk);};})(k);
+        wrap.appendChild(v);wrap.appendChild(a);wrap.appendChild(d);row.appendChild(wrap);q.appendChild(row);
+      });
+    }
+    var ae=document.getElementById('localDashAvailEdit');
+    if(ae){ae.innerHTML='';ETIE.local.availability.forEach(function(a,i){
+      var row=document.createElement('div');row.className='list-item';row.style.cursor='pointer';
+      row.innerHTML='<div><strong></strong></div>';row.querySelector('strong').textContent=a.label;
+      var st=document.createElement('span');st.className='status';st.textContent=a.status;row.appendChild(st);
+      row.onclick=(function(ii){return function(){toggleDashAvail(ii);};})(i);
+      ae.appendChild(row);
+    });}
+    var vis=document.getElementById('localVisibility');
+    if(vis){var n=ETIE.local.availability.filter(function(a){return a.status==='Available';}).length;
+      vis.textContent=n>0?('Visible (demo): '+n+' Available slot(s) — travellers can match you.'):('Hidden (demo): no Available slots — set one to Available to reappear. Matching score uses this rule.');}
+    var h=document.getElementById('localHistory');
+    if(h){h.innerHTML='';var keys=Object.keys(ETIE.meetups);
+      var done=keys.filter(function(k){return ETIE.meetups[k].status==='completed';});
+      if(!done.length)h.innerHTML='<div class="list-item"><div><strong>No completed meetups yet</strong><br><span class="muted">Plan → Complete → Review to build history.</span></div><span class="status">Empty</span></div>';
+      done.forEach(function(k){
+        var mu=ETIE.meetups[k];var rv=ETIE.reviews[k]||{};
+        var row=document.createElement('div');row.className='list-item';
+        row.innerHTML='<div><strong></strong><br><span class="muted"></span></div>';
+        row.querySelector('strong').textContent=localNameFor(k)+' · '+mu.activity;
+        row.querySelector('.muted').textContent=mu.when+' · Trav review: '+(rv.trav?(rv.trav.rating+'★ '+rv.trav.meetAgain):'none')+' · Local review: '+(rv.local?(rv.local.rating+'★'):'none');
+        var st=document.createElement('span');st.className='status';st.textContent='Done';row.appendChild(st);
+        h.appendChild(row);
+      });
+    }
+  }catch(e){}
+}
+
+function restoreAll(){
+  try{
+    document.getElementById('travCity').value=ETIE.trip.destination;
+    document.getElementById('travDates').value=ETIE.trip.dates;
+    setChips('travInterests',ETIE.traveller.interests);
+    document.getElementById('travSocial').value=ETIE.traveller.personality.social;
+    document.getElementById('travSpont').value=ETIE.traveller.personality.spontaneous;
+    document.getElementById('travCurious').value=ETIE.traveller.personality.curious;
+    setChips('travLookingFor',ETIE.traveller.lookingFor);
+    document.getElementById('travHook').value=ETIE.traveller.hook;
+    document.getElementById('localCity').value=ETIE.local.city;
+    document.getElementById('localAge').value=ETIE.local.age;
+    setChips('localInterests',ETIE.local.interests);
+    document.getElementById('localSocial').value=ETIE.local.personality.social;
+    document.getElementById('localSpont').value=ETIE.local.personality.spontaneous;
+    document.getElementById('localCurious').value=ETIE.local.personality.curious;
+    document.getElementById('localOffer').value=ETIE.local.offer;
+    setChips('localOfferTags',ETIE.local.offerTags);
+    try{
+      var vm=ETIE.local.verificationMethods||[];
+      var vc=document.getElementById('localVerify');
+      if(vc)Array.prototype.forEach.call(vc.querySelectorAll('.list-item'),function(row){
+        var on=vm.indexOf(row.getAttribute('data-method'))!==-1;
+        row.classList.toggle('selected',on);
+        var st=row.querySelector('.status');if(st)st.textContent=on?'Selected':'Tap to select';
+      });
+    }catch(e){}
+  }catch(e){}
+  updateCounts();refreshSliderLabels();syncAvailUI();renderProfiles();renderMatches();renderRequests();renderChat();renderMessagesList();renderMeetup();renderThanks();renderTrips();renderLocalDashboard();paintStars('travStars',ETIE._travStars||0);paintStars('localStars',ETIE._localStars||0);
+}
+function refreshSliderLabels(){
+  var m=[['travSocial','travSocialVal'],['travSpont','travSpontVal'],['travCurious','travCuriousVal'],['localSocial','localSocialVal'],['localSpont','localSpontVal'],['localCurious','localCuriousVal']];
+  m.forEach(function(p){var a=document.getElementById(p[0]),b=document.getElementById(p[1]);if(a&&b)b.textContent=a.value;});
+}
+document.addEventListener('DOMContentLoaded',function(){
+  restoreAll();
+  ['travSocial','travSpont','travCurious','localSocial','localSpont','localCurious'].forEach(function(id){
+    var el=document.getElementById(id);if(el)el.addEventListener('input',function(){refreshSliderLabels();saveCurrentVisible(true);saveState();});
+  });
+  ['travCity','travDates','travHook','localCity','localAge','localOffer'].forEach(function(id){
+    var el=document.getElementById(id);if(el)el.addEventListener('change',function(){saveCurrentVisible(true);});
+  });
+  var ci=document.getElementById('chatInput');if(ci)ci.addEventListener('keydown',function(e){if(e.key==='Enter')sendChat('traveller');});
+  var li=document.getElementById('localChatInput');if(li)li.addEventListener('keydown',function(e){if(e.key==='Enter')sendChat('local','localChatInput');});
+  var li9=document.getElementById('localChatInput9');if(li9)li9.addEventListener('keydown',function(e){if(e.key==='Enter')sendChat('local','localChatInput9');});
+  var pi=document.getElementById('chatPopupInput');if(pi)pi.addEventListener('keydown',function(e){if(e.key==='Enter')sendChatPopup();});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'){try{closeChatPopup();}catch(e2){}try{closeAdmin();}catch(e3){}}});
+});

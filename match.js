@@ -100,6 +100,19 @@ function etieScoreLocal(trav, trip, local, userAvail, reviews){
   }
   var label=total>=75?'Strong match':(total>=55?'Good match':'Okay match');
   if(window.ETIE_REVIEWS_V2&&rep.myRating>=1&&rep.myRating<=2)label='Okay match';
+  
+  // Beginner filter: if traveller is beginner (<=3 completed trips) and no shared interests, score = 0
+  var travCompleted = (typeof ETIE!=='undefined' && ETIE.traveller) ? (ETIE.traveller.completedTrips || 0) : 0;
+  var isBeginner = travCompleted <= 3;
+  if(isBeginner && shared.length === 0){
+    return {
+      local: local, score: 0, label: 'No shared interests',
+      shared: [], interestScore: 0,
+      pers: Math.round(pers), avail: Math.round(avail), value: Math.round(value),
+      rep: rep.rating, repCount: rep.count, repBonus: repBonus, tagBonus: tagBonus, myRating: rep.myRating
+    };
+  }
+  
   return {
     local: local, score: total, label: label+repNote,
     shared: shared, interestScore: Math.round(interestScore),

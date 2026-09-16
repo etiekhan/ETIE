@@ -117,6 +117,12 @@ function canCreateActivities(){return getLocalTier()==='Host';}
 function getDiscoverLocals(){
   var all=(window.ETIE_MOCKS&&window.ETIE_MOCKS.locals)||[];
   var ranked=window.EtieMatch?window.EtieMatch.rank(ETIE.traveller, ETIE.trip, all, ETIE.local.availability, ETIE.reviews):all;
+  // Beginner filter: hide locals with no shared interests for beginners (<=3 completed trips)
+  var travCompleted = ETIE.traveller ? (ETIE.traveller.completedTrips || 0) : 0;
+  var isBeginner = travCompleted <= 3;
+  if(isBeginner){
+    ranked = ranked.filter(function(x){ return x.shared && x.shared.length > 0; });
+  }
   if(canSeeFullDiscover())return ranked;
   return ranked.slice(0,3);
 }

@@ -469,7 +469,7 @@ function sendRequest(){
   saveState();renderRequests();renderChat();renderMessagesList();
   try{ if(window.EtieCloud&&window.EtieCloud.pushSharedRequest) window.EtieCloud.pushSharedRequest(k); }catch(e){}
   try{ if(window.EtieCloud&&window.EtieCloud.pushSharedMessage) window.EtieCloud.pushSharedMessage(k, 'Request: '+(msg||'(no message)'), 'traveller'); }catch(e){}
-  travNext(10);
+travNext(11);
 }
 function acceptCurrent(){var k=reqKey();if(reqStatus(k)==='none'){toast('No pending request — send one as Traveller first.');return;}ETIE.requests[k].status='accepted';ETIE.requests[k].updatedAt=Date.now();ensureChat(k);ETIE.messages[k].push({from:'local',text:'Accepted! Looking forward to meeting. When suits you?',ts:Date.now()});saveState();renderRequests();renderChat();renderMessagesList();renderLocalDashboard();
   try{ if(window.EtieCloud&&window.EtieCloud.pushSharedRequest) window.EtieCloud.pushSharedRequest(k); }catch(e){}

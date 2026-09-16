@@ -460,16 +460,18 @@ function ensureChat(k){
   }
 }
 function sendRequest(){
+  toast('sendRequest called');
   var m=currentMatch();if(!m){toast('Find a match first.');return;}
   var k=m.local.id;var msg=document.getElementById('reqMessage').value.trim();
-  if(ETIE.requests[k]&&ETIE.requests[k].status==='pending'){travNext(10);return;}
+  if(ETIE.requests[k]&&ETIE.requests[k].status==='pending'){toast('Request already pending');travNext(11);return;}
   ETIE.requests[k]={status:'pending',message:msg,updatedAt:Date.now(),localName:m.local.name};
   ensureChat(k);
   ETIE.messages[k].push({from:'traveller',text:'Request: '+(msg||'(no message)'),ts:Date.now()});
   saveState();renderRequests();renderChat();renderMessagesList();
   try{ if(window.EtieCloud&&window.EtieCloud.pushSharedRequest) window.EtieCloud.pushSharedRequest(k); }catch(e){}
   try{ if(window.EtieCloud&&window.EtieCloud.pushSharedMessage) window.EtieCloud.pushSharedMessage(k, 'Request: '+(msg||'(no message)'), 'traveller'); }catch(e){}
-travNext(11);
+  toast('Request sent!');
+  travNext(11);
 }
 function acceptCurrent(){var k=reqKey();if(reqStatus(k)==='none'){toast('No pending request — send one as Traveller first.');return;}ETIE.requests[k].status='accepted';ETIE.requests[k].updatedAt=Date.now();ensureChat(k);ETIE.messages[k].push({from:'local',text:'Accepted! Looking forward to meeting. When suits you?',ts:Date.now()});saveState();renderRequests();renderChat();renderMessagesList();renderLocalDashboard();
   try{ if(window.EtieCloud&&window.EtieCloud.pushSharedRequest) window.EtieCloud.pushSharedRequest(k); }catch(e){}

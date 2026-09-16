@@ -1,9 +1,11 @@
-// Etie Phase 8 + 8b — cloud sync with local fallback + shared live tables (never breaks offline demo)
-// Requires: supabase-config.js loaded before this. CDN script optional.
-// If keys empty or CDN blocked → status stays offline, app works exactly as Phases 1-7.
-// Phase 8b adds shared tables (profiles/requests/messages/meetups) + realtime so TWO logged-in phones see each other.
+// Etie Phase 2 — Full Supabase sync (cloud-first, local fallback)
+// Tables: etie_profiles, etie_requests, etie_messages, etie_meetups, etie_reviews, etie_reports
+// Storage: etie-photos bucket
+// Realtime: all shared tables
+// Auto-tier promotion on review/meetup completion
 (function(){
   var client=null, session=null, pushTimer=null, profileTimer=null, sharedSyncTimer=null, realtimeChannel=null;
+  var reviewChannel=null, reportChannel=null;
 
   function keys(){return {url:(window.ETIE_SUPABASE_URL||'').trim(), key:(window.ETIE_SUPABASE_ANON_KEY||'').trim()};}
   function table(){return window.ETIE_CLOUD_TABLE||'etie_states';}
@@ -11,6 +13,8 @@
   function reqTable(){return window.ETIE_CLOUD_REQUESTS_TABLE||'etie_requests';}
   function msgTable(){return window.ETIE_CLOUD_MESSAGES_TABLE||'etie_messages';}
   function meetTable(){return window.ETIE_CLOUD_MEETUPS_TABLE||'etie_meetups';}
+  function revTable(){return window.ETIE_CLOUD_REVIEWS_TABLE||'etie_reviews';}
+  function repTable(){return window.ETIE_CLOUD_REPORTS_TABLE||'etie_reports';}
   function badge(){return document.getElementById('cloudStatus');}
   function paint(status, text){
     var b=badge();if(!b)return;
@@ -25,10 +29,8 @@
     return session?'on':'offline-no-login';
   }
   function isSharedOn(){
-    // shared needs auth + client + table names (if any table disabled, stay Phase-8 only)
-    if(window.ETIE_DEMO)return false; // demo personas stay local, never touch cloud
+    if(window.ETIE_DEMO)return false;
     if(!client||!session)return false;
-    if(!window.ETIE_CLOUD_REQUESTS_TABLE||!window.ETIE_CLOUD_MESSAGES_TABLE)return false;
     return true;
   }
 
@@ -45,8 +47,9 @@
       }).catch(function(){paint('offline','Cloud: offline');});
       client.auth.onAuthStateChange(function(ev,s){
         session=s;
-        // clean old realtime before re-subscribing
         try{ if(realtimeChannel){ client.removeChannel(realtimeChannel); realtimeChannel=null; } }catch(e){}
+        try{ if(reviewChannel){ client.removeChannel(reviewChannel); reviewChannel=null; } }catch(e){}
+        try{ if(reportChannel){ client.removeChannel(reportChannel); reportChannel=null; } }catch(e){}
         if(s){paint('on','Cloud: on');pull();pullShared();subscribeShared();syncProfile();}
         else paint('offline','Cloud: offline — sign in');
       });
@@ -65,14 +68,14 @@
     }catch(e){toast('Sign-in unavailable offline.');}
   }
   function signOut(){
-    try{if(client)try{ client.removeChannel(realtimeChannel); }catch(e){};realtimeChannel=null; if(client)client.auth.signOut();}catch(e){}
+    try{if(client)try{ client.removeChannel(realtimeChannel); client.removeChannel(reviewChannel); client.removeChannel(reportChannel); }catch(e){};realtimeChannel=reviewChannel=reportChannel=null; if(client)client.auth.signOut();}catch(e){}
     session=null;paint('offline','Cloud: offline — sign in');
   }
-  // ---- Phase 8: single-user backup ----
+  // ---- Phase 2: single-user backup (etie_states) ----
   function push(){
     try{
-      if(window.ETIE_DEMO)return; // demo personas stay local
-      if(!client||!session)return; // offline: localStorage already saved by app.js
+      if(window.ETIE_DEMO)return;
+      if(!client||!session)return;
       clearTimeout(pushTimer);
       pushTimer=setTimeout(function(){
         try{
@@ -82,17 +85,16 @@
           });
         }catch(e){console.warn('Etie cloud push skipped',e);}
       },800);
-      // also sync profile debounced (Phase 8b)
       scheduleProfileSync();
       scheduleSharedPush();
     }catch(e){}
   }
   function pull(){
     try{
-      if(window.ETIE_DEMO)return; // demo personas stay local
+      if(window.ETIE_DEMO)return;
       if(!client||!session)return;
       client.from(table()).select('data,updated_at').eq('user_id',session.user.id).maybeSingle().then(function(r){
-        if(r&&(r.error||!r.data))return; // no cloud row yet → next saveState will push local up
+        if(r&&(r.error||!r.data))return;
         var cloud=r.data&&r.data.data;
         if(!cloud||typeof cloud!=='object')return;
         var hasLocal=false;
@@ -104,8 +106,7 @@
           console.info('Etie cloud row exists; keeping local demo data. Reset demo to adopt cloud.');
           return;
         }
-        try { localStorage.setItem('etie-v1-backup', localStorage.getItem('etie-v1')||''); }
-        catch(e){}
+        try { localStorage.setItem('etie-v1-backup', localStorage.getItem('etie-v1')||''); }catch(e){}
         try{
           ETIE=Object.assign(ETIE||{},cloud);
           saveState();
@@ -115,8 +116,7 @@
       });
     }catch(e){}
   }
-
-  // ---- Phase 8b: shared live helpers ----
+  // ---- Profile sync ----
   function scheduleProfileSync(){
     if(!isSharedOn())return;
     clearTimeout(profileTimer);
@@ -132,6 +132,7 @@
         display_name: (p.displayName || ETIE.traveller && ETIE.traveller.name || session.user.email.split('@')[0]),
         city: p.city || ETIE.trip && ETIE.trip.destination || 'Lisbon',
         age: parseInt(p.age,10)||28,
+        nationality: p.nationality || 'PT',
         interests: p.interests||[],
         personality: p.personality||{},
         offer: p.offer||'',
@@ -139,6 +140,11 @@
         availability: p.availability||[],
         verification: {identity:true, local:true, methods:p.verificationMethods||[]},
         stats: {travellersMet:18, rating:4.9},
+        tier: p.tier || 'Rookie',
+        hosted_count: p.hostedCount || 0,
+        avg_host_rating: p.avgHostRating || 0,
+        references: p.references || [],
+        activities: p.activities || [],
         updated_at: new Date().toISOString()
       };
       client.from(profTable()).upsert(payload).then(function(r){
@@ -146,16 +152,12 @@
       });
     }catch(e){console.warn('Etie profile sync skipped',e);}
   }
-
+  // ---- Shared requests/messages/meetups ----
   function scheduleSharedPush(){
     if(!isSharedOn())return;
     clearTimeout(sharedSyncTimer);
     sharedSyncTimer=setTimeout(pushSharedRequests, 700);
   }
-  // push one request key to cloud (called from app.js wrappers)
-  // 8b fix: if ANOTHER user created the request for this mock (traveller -> local flow),
-  // update THEIR row by id instead of upserting our own (traveller_id, local_mock_id) row.
-  // Without this, Accept on phone B creates a duplicate row and phone A never sees it.
   function pushSharedRequest(localMockId){
     try{
       if(!isSharedOn())return Promise.resolve(null);
@@ -163,11 +165,9 @@
       var k=localMockId;
       var localReq=(typeof ETIE!=='undefined' && ETIE.requests && ETIE.requests[k])?ETIE.requests[k]:null;
       if(!localReq)return Promise.resolve(null);
-      // 1) look for latest cloud row for this mock id (whoever created it)
       return client.from(reqTable()).select('id,traveller_id,status').eq('local_mock_id', k).order('updated_at',{ascending:false}).limit(1).maybeSingle().then(function(found){
         var existing=found&&found.data;
         if(found&&found.error&&found.error.code!=='PGRST116') console.warn('pushSharedRequest lookup failed',found.error.message);
-        // 2) someone else's row exists and it's not ours -> we are the Local side: UPDATE it
         if(existing&&existing.traveller_id!==session.user.id){
           return client.from(reqTable()).update({
             status: localReq.status,
@@ -182,7 +182,6 @@
             return r&&r.data;
           });
         }
-        // 3) otherwise we are the Traveller (own row): upsert
         var payload={
           traveller_id: session.user.id,
           local_mock_id: k,
@@ -209,14 +208,11 @@
       Object.keys(ETIE.requests).forEach(function(k){ pushSharedRequest(k); });
     }catch(e){}
   }
-  // messages: ETIE.messages[k] is array of {from,text,ts}
-  // we store in etie_messages with request_id lookup; dedupe by text+sender+~ts
   function syncPendingMessages(localMockId, requestId){
     try{
       if(!isSharedOn())return;
       var arr=(ETIE.messages&&ETIE.messages[localMockId])||[];
       if(!arr.length)return;
-      // fetch existing cloud messages for this request_id to avoid duplicate inserts
       client.from(msgTable()).select('id,text,sender_role,created_at').eq('request_id', requestId).then(function(r){
         var existing=(r&&r.data)||[];
         var seen={};
@@ -240,11 +236,9 @@
     try{
       if(!isSharedOn())return;
       var k=localMockId|| (typeof reqKey==='function'?reqKey():'local-marta');
-      // need request_id first
       client.from(reqTable()).select('id').eq('traveller_id', session.user.id).eq('local_mock_id', k).maybeSingle().then(function(r){
         var rid=r&&r.data&&r.data.id;
         if(!rid){
-          // if not found, try fetch any request with this mock id (other traveller's request that we are local for)
           client.from(reqTable()).select('id').eq('local_mock_id', k).order('updated_at',{ascending:false}).limit(1).maybeSingle().then(function(r2){
             var rid2=r2&&r2.data&&r2.data.id;
             if(rid2) doInsert(rid2); else console.warn('pushSharedMessage: no request_id for',k);
@@ -264,7 +258,6 @@
       var k=localMockId|| (typeof meetKey==='function'?meetKey():(typeof reqKey==='function'?reqKey():'local-marta'));
       var mu=ETIE.meetups[k];
       if(!mu||mu.status==='none')return;
-      // need request_id
       client.from(reqTable()).select('id').eq('local_mock_id', k).order('updated_at',{ascending:false}).limit(1).maybeSingle().then(function(r){
         var rid=r&&r.data&&r.data.id;
         if(!rid)return;
@@ -275,11 +268,9 @@
       });
     }catch(e){console.warn('pushSharedMeetup skipped',e);}
   }
-
   function pullShared(){
     try{
       if(!isSharedOn())return;
-      // fetch recent requests (limit 50 for demo) — open RLS lets any auth user see them; demo-small is fine
       client.from(reqTable()).select('*').order('updated_at',{ascending:false}).limit(50).then(function(r){
         if(r&&r.error){ console.warn('pullShared requests failed',r.error.message); return; }
         var rows=r&&r.data||[];
@@ -290,7 +281,6 @@
           var existing=(ETIE.requests&&ETIE.requests[k])||null;
           var cloudTs=new Date(row.updated_at).getTime();
           var localTs=existing&&existing.updatedAt?existing.updatedAt:0;
-          // cloud newer or local missing -> adopt cloud
           if(!existing || cloudTs > localTs + 1500){
             if(!ETIE.requests)ETIE.requests={};
             ETIE.requests[k]={status: row.status, message: row.message||'', updatedAt: cloudTs, localName: row.local_name||k};
@@ -301,7 +291,6 @@
           try{ saveState(); }catch(e){}
           try{ if(typeof renderRequests==='function')renderRequests(); if(typeof renderLocalDashboard==='function')renderLocalDashboard(); if(typeof renderMessagesList==='function')renderMessagesList(); if(typeof renderMeetup==='function')renderMeetup(); if(typeof renderTrips==='function')renderTrips(); }catch(e){}
         }
-        // after requests, pull messages + meetups for those ids
         var ids=rows.map(function(x){return x.id;});
         if(ids.length) pullSharedMessages(ids);
         if(ids.length) pullSharedMeetups(ids);
@@ -315,7 +304,6 @@
         if(r&&r.error){ console.warn('pullSharedMessages failed',r.error.message); return; }
         var rows=r&&r.data||[];
         if(!rows.length)return;
-        // need map request_id -> localMockId
         client.from(reqTable()).select('id,local_mock_id').in('id', requestIds).then(function(rr){
           var idToKey={};
           (rr&&rr.data||[]).forEach(function(x){ idToKey[x.id]=x.local_mock_id; });
@@ -325,16 +313,14 @@
             if(!k)return;
             if(!ETIE.messages)ETIE.messages={};
             if(!ETIE.messages[k])ETIE.messages[k]=[];
-            var role=m.sender_role; // 'traveller'/'local'
+            var role=m.sender_role;
             var text=m.text;
-            // dedupe: if we already have same text+role, skip
             var exists=ETIE.messages[k].some(function(x){ return x.text===text && x.from===role; });
             if(exists)return;
             ETIE.messages[k].push({from: role, text: text, ts: new Date(m.created_at).getTime()});
             changed=true;
           });
           if(changed){
-            // sort by ts
             Object.keys(ETIE.messages).forEach(function(k){ ETIE.messages[k].sort(function(a,b){return a.ts-b.ts;}); });
             try{ saveState(); }catch(e){}
             try{ if(typeof renderChat==='function')renderChat(); if(typeof renderMessagesList==='function')renderMessagesList(); }catch(e){}
@@ -372,35 +358,182 @@
       });
     }catch(e){}
   }
-
   function subscribeShared(){
     try{
       if(!isSharedOn())return;
       if(realtimeChannel) try{ client.removeChannel(realtimeChannel); }catch(e){}
       realtimeChannel=client.channel('etie-8b-live');
       realtimeChannel.on('postgres_changes',{event:'*', schema:'public', table:reqTable()}, function(payload){
-        // debounce pull
         clearTimeout(sharedSyncTimer); sharedSyncTimer=setTimeout(pullShared, 600);
       }).on('postgres_changes',{event:'*', schema:'public', table:msgTable()}, function(payload){
         clearTimeout(sharedSyncTimer); sharedSyncTimer=setTimeout(function(){ pullShared(); }, 500);
       }).on('postgres_changes',{event:'*', schema:'public', table:meetTable()}, function(payload){
         clearTimeout(sharedSyncTimer); sharedSyncTimer=setTimeout(function(){ pullShared(); }, 600);
       }).subscribe(function(status){
-        if(status==='SUBSCRIBED') console.info('Etie 8b realtime subscribed');
+        if(status==='SUBSCRIBED') console.info('Etie realtime subscribed');
       });
     }catch(e){console.warn('subscribeShared skipped',e);}
   }
-
-  // expose for app.js wrappers (offline-safe)
-  function getClient(){ return client; }
-  function getSession(){ return session; }
-
+  // ---- Phase 2: Reviews ----
+  function pushSharedReview(localMockId, role, reviewData){
+    try{
+      if(!isSharedOn())return Promise.resolve(null);
+      var k=localMockId|| (typeof reqKey==='function'?reqKey():'local-marta');
+      return client.from(reqTable()).select('id').eq('local_mock_id', k).order('updated_at',{ascending:false}).limit(1).maybeSingle().then(function(r){
+        var rid=r&&r.data&&r.data.id;
+        if(!rid)return Promise.resolve(null);
+        var payload={request_id: rid};
+        if(role==='trav'){
+          payload.traveller_id=session.user.id;
+          payload.local_id=null;
+          payload.trav_rating=reviewData.rating;
+          payload.trav_meet_again=reviewData.meetAgain;
+          payload.trav_highlights=reviewData.highlights||[];
+          payload.trav_private_text=reviewData.privateText||'';
+        } else {
+          payload.traveller_id=null;
+          payload.local_id=session.user.id;
+          payload.local_rating=reviewData.rating;
+          payload.local_meet_again=reviewData.meetAgain;
+          payload.local_highlights=reviewData.highlights||[];
+          payload.local_private_text=reviewData.privateText||'';
+        }
+        return client.from(revTable()).upsert(payload, {onConflict:'request_id'}).then(function(ir){
+          if(ir&&ir.error)console.warn('pushSharedReview failed',ir.error.message);
+          // trigger auto-tier check
+          checkAutoTier(role, reviewData.rating);
+          return ir;
+        });
+      });
+    }catch(e){console.warn('pushSharedReview skipped',e); return Promise.resolve(null);}
+  }
+  function subscribeReviews(){
+    try{
+      if(!isSharedOn())return;
+      if(reviewChannel) try{ client.removeChannel(reviewChannel); }catch(e){}
+      reviewChannel=client.channel('etie-reviews-live');
+      reviewChannel.on('postgres_changes',{event:'*', schema:'public', table:revTable()}, function(payload){
+        clearTimeout(sharedSyncTimer); sharedSyncTimer=setTimeout(pullSharedReviews, 500);
+      }).subscribe(function(status){
+        if(status==='SUBSCRIBED') console.info('Etie reviews realtime subscribed');
+      });
+    }catch(e){console.warn('subscribeReviews skipped',e);}
+  }
+  function pullSharedReviews(){
+    try{
+      if(!isSharedOn())return;
+      client.from(revTable()).select('*').order('created_at',{ascending:false}).limit(20).then(function(r){
+        if(r&&r.error){ console.warn('pullSharedReviews failed',r.error.message); return; }
+        var rows=r&&r.data||[];
+        var changed=false;
+        rows.forEach(function(row){
+          // need to find localMockId from request_id
+          client.from(reqTable()).select('local_mock_id').eq('id', row.request_id).maybeSingle().then(function(r){
+            var k=r&&r.data&&r.data.local_mock_id;
+            if(!k)return;
+            if(!ETIE.reviews)ETIE.reviews={};
+            ETIE.reviews[k]=ETIE.reviews[k]||{};
+            if(row.trav_rating){
+              ETIE.reviews[k].trav={rating:row.trav_rating,meetAgain:row.trav_meet_again,highlights:row.trav_highlights,privateText:row.trav_private_text,at:new Date(row.created_at).getTime()};
+            }
+            if(row.local_rating){
+              ETIE.reviews[k].local={rating:row.local_rating,meetAgain:row.local_meet_again,highlights:row.local_highlights,privateText:row.local_private_text,at:new Date(row.created_at).getTime()};
+            }
+            changed=true;
+          });
+        });
+        if(changed){
+          try{ saveState(); }catch(e){}
+          try{ if(typeof renderMeetup==='function')renderMeetup(); if(typeof renderThanks==='function')renderThanks(); if(typeof renderTrips==='function')renderTrips(); }catch(e){}
+        }
+      });
+    }catch(e){console.warn('pullSharedReviews skipped',e);}
+  }
+  // ---- Phase 2: Reports ----
+  function pushSharedReport(reportData){
+    try{
+      if(!isSharedOn())return;
+      var payload={
+        reporter_id: session.user.id,
+        reported_id: reportData.reportedId,
+        request_id: reportData.requestId,
+        category: reportData.category,
+        details: reportData.details
+      };
+      client.from(repTable()).insert(payload).then(function(ir){
+        if(ir&&ir.error)console.warn('pushSharedReport failed',ir.error.message);
+      });
+    }catch(e){console.warn('pushSharedReport skipped',e);}
+  }
+  function subscribeReports(){
+    try{
+      if(!isSharedOn())return;
+      if(reportChannel) try{ client.removeChannel(reportChannel); }catch(e){}
+      reportChannel=client.channel('etie-reports-live');
+      reportChannel.on('postgres_changes',{event:'*', schema:'public', table:repTable()}, function(payload){
+        // reports are admin-only visible, just log
+        console.info('New report:', payload.new);
+      }).subscribe(function(status){
+        if(status==='SUBSCRIBED') console.info('Etie reports realtime subscribed');
+      });
+    }catch(e){console.warn('subscribeReports skipped',e);}
+  }
+  // ---- Auto-tier promotion ----
+  function checkAutoTier(role, rating){
+    try{
+      if(!isSharedOn()||typeof ETIE==='undefined')return;
+      var p = role==='trav' ? ETIE.traveller : ETIE.local;
+      var completed = role==='trav' ? (p.completedTrips||0)+1 : (p.hostedCount||0)+1;
+      var avgRating = role==='trav' ? (p.avgRatingReceived||0) : (p.avgHostRating||0);
+      var newAvg = avgRating===0 ? rating : Math.round((avgRating*(completed-1)+rating)/completed);
+      if(role==='trav'){
+        p.completedTrips = completed;
+        p.avgRatingReceived = newAvg;
+        if(p.tier==='Rookie' && completed>=3 && newAvg>=4){
+          p.tier='Trusted';
+          toast('🎉 You earned Trusted status! Full Discover unlocked.');
+        }
+      } else {
+        p.hostedCount = completed;
+        p.avgHostRating = newAvg;
+        if(p.tier==='Rookie' && completed>=3 && newAvg>=4){
+          p.tier='Verified';
+          toast('🎉 You earned Verified status! Full Discover + Host Activities unlocked.');
+        } else if(p.tier==='Verified' && completed>=10 && newAvg>=4.8 && (p.references||[]).length>=2){
+          p.tier='Host';
+          toast('🌟 You earned Host status! Create activities + top placement.');
+        }
+      }
+      // persist locally + schedule cloud sync
+      saveState();
+      scheduleProfileSync();
+    }catch(e){console.warn('checkAutoTier skipped',e);}
+  }
+  // ---- Photo upload to Supabase Storage ----
+  function uploadPhoto(file, role){
+    return new Promise(function(resolve, reject){
+      if(!client||!session){ reject('Not signed in'); return; }
+      if(!file){ reject('No file'); return; }
+      var ext = file.name.split('.').pop().toLowerCase();
+      var path = session.user.id + '/' + role + '_' + Date.now() + '.' + ext;
+      client.storage.from('etie-photos').upload(path, file, {cacheControl:'3600', upsert:false}).then(function(up){
+        if(up.error){ reject(up.error.message); return; }
+        client.storage.from('etie-photos').createSignedUrl(path, 60*60*24*365).then(function(su){
+          if(su.error){ reject(su.error.message); return; }
+          resolve(su.data.signedUrl);
+        });
+      }).catch(reject);
+    });
+  }
+  // ---- Expose ----
   window.EtieCloud={
     init:init, signIn:signIn, signOut:signOut,
     push:push, pull:pull, status:status,
-    // 8b
     syncProfile:syncProfile, pushSharedRequest:pushSharedRequest, pushSharedMessage:pushSharedMessage, pushSharedMeetup:pushSharedMeetup,
-    pullShared:pullShared, getClient:getClient, getSession:getSession, isSharedOn:isSharedOn
+    pushSharedReview:pushSharedReview, pushSharedReport:pushSharedReport,
+    uploadPhoto:uploadPhoto,
+    pullShared:pullShared, subscribeReviews:subscribeReviews, subscribeReports:subscribeReports,
+    getClient:function(){return client;}, getSession:function(){return session;}, isSharedOn:isSharedOn
   };
   document.addEventListener('DOMContentLoaded',init);
 })();

@@ -70,9 +70,10 @@ function loadState() {
 var ETIE = loadState();
 function saveState() { try { localStorage.setItem(ETIE_KEY, JSON.stringify(ETIE)); } catch (e) {} try { if (typeof window!=='undefined' && window.EtieCloud && window.EtieCloud.push) window.EtieCloud.push(); } catch (e) {} }
 
-// Photo handling
+// Photo handling — cloud-first (Supabase Storage), fallback to base64
 function handlePhotoUpload(input, role){
   var file=input.files[0];if(!file)return;
+  // Optimistic local preview first
   var reader=new FileReader();
   reader.onload=function(e){
     var dataUrl=e.target.result;
@@ -83,6 +84,18 @@ function handlePhotoUpload(input, role){
     saveState();renderProfiles();
   };
   reader.readAsDataURL(file);
+  // Upload to Supabase Storage (cloud-first)
+  try{
+    if(window.EtieCloud && window.EtieCloud.uploadPhoto && window.EtieCloud.isSharedOn()){
+      window.EtieCloud.uploadPhoto(file, role).then(function(url){
+        if(role==='trav')ETIE.traveller.photo=url; else ETIE.local.photo=url;
+        saveState();renderProfiles();
+        console.info('Photo uploaded to Supabase:', url);
+      }).catch(function(err){
+        console.warn('Photo upload failed, keeping local base64:', err);
+      });
+    }
+  }catch(e){console.warn('Cloud photo upload skipped',e);}
 }
 function removePhoto(role){
   if(role==='trav'){ETIE.traveller.photo=null;var prev=document.getElementById('travPhotoPreview');}
@@ -90,6 +103,7 @@ function removePhoto(role){
   if(prev){prev.innerHTML='<span style="color:rgba(255,255,255,.5);font-size:28px;">+</span>';}
   var remBtn=document.getElementById(role==='trav'?'travPhotoRemove':'localPhotoRemove');if(remBtn)remBtn.style.display='none';
   saveState();renderProfiles();
+  // TODO: delete from Supabase Storage when implemented
 }
 
 // Tier helpers
@@ -492,9 +506,10 @@ function submitSafetyReport(role){
   var details=document.getElementById('reportDetails').value.trim();
   if(!details){toast('Add details before sending.');return;}
   var k=meetKey();var m=currentMatch();
-  var report={role:role,category:cat,details:details,at:Date.now(),requestId:k,otherName:role==='traveller'?m.local.name:'Etie'};
-  try{ETIE.reports=ETIE.reports||[];ETIE.reports.push(report);saveState();}catch(e){}
-  try{ if(window.EtieCloud&&window.EtieCloud.pushSharedReport) window.EtieCloud.pushSharedReport(report); }catch(e){}
+  var reportedId=null; // would need to map mock local ID to real user ID
+  var reportData={category:cat,details:details,reportedId:reportedId,requestId:k};
+  try{ETIE.reports=ETIE.reports||[];ETIE.reports.push({role:role,category:cat,details:details,at:Date.now(),requestId:k,otherName:role==='traveller'?m.local.name:'Etie'});saveState();}catch(e){}
+  try{ if(window.EtieCloud && window.EtieCloud.pushSharedReport) window.EtieCloud.pushSharedReport(reportData); }catch(e){}
   closeSafetyReport();toast('Report sent — safety team will review.');
 }
 function sendChat(who,inputId){
@@ -646,10 +661,11 @@ function submitTravReview(){
   var again=getChips('travAgain')[0]||'Definitely';
   var highlights=[document.getElementById('travHighlight1').value.trim(),document.getElementById('travHighlight2').value.trim(),document.getElementById('travHighlight3').value.trim()].filter(Boolean);
   var privateText=document.getElementById('travReviewText').value.trim();
+  var reviewData={rating:ETIE._travStars,meetAgain:again,highlights:highlights,privateText:privateText};
   var k=meetKey();ETIE.reviews[k]=ETIE.reviews[k]||{};
   ETIE.reviews[k].trav={rating:ETIE._travStars,meetAgain:again,highlights:highlights,privateText:privateText,at:Date.now()};
   saveState();renderMeetup();renderTrips();renderThanks();travNext(15);
-  try{ if(window.EtieCloud&&window.EtieCloud.pushSharedReview) window.EtieCloud.pushSharedReview(k, 'trav', ETIE.reviews[k].trav); }catch(e){}
+  try{ if(window.EtieCloud && window.EtieCloud.pushSharedReview) window.EtieCloud.pushSharedReview(k, 'trav', reviewData); }catch(e){}
 }
 function submitLocalReview(){
   if(meetup().status!=='completed'){toast('Mark meetup completed first.');return;}
@@ -657,10 +673,11 @@ function submitLocalReview(){
   var again=getChips('localAgain')[0]||'Definitely';
   var highlights=[document.getElementById('localHighlight1').value.trim(),document.getElementById('localHighlight2').value.trim(),document.getElementById('localHighlight3').value.trim()].filter(Boolean);
   var privateText=document.getElementById('localReviewText').value.trim();
+  var reviewData={rating:ETIE._localStars,meetAgain:again,highlights:highlights,privateText:privateText};
   var k=meetKey();ETIE.reviews[k]=ETIE.reviews[k]||{};
   ETIE.reviews[k].local={rating:ETIE._localStars,meetAgain:again,highlights:highlights,privateText:privateText,at:Date.now()};
-  saveState();renderTrips();toast('Review submitted — loop complete (demo).');
-  try{ if(window.EtieCloud&&window.EtieCloud.pushSharedReview) window.EtieCloud.pushSharedReview(k, 'local', ETIE.reviews[k].local); }catch(e){}
+  saveState();renderTrips();toast('Review submitted — loop complete.');
+  try{ if(window.EtieCloud && window.EtieCloud.pushSharedReview) window.EtieCloud.pushSharedReview(k, 'local', reviewData); }catch(e){}
 }
 function renderMeetup(){
   var m=currentMatch();if(!m)return;var mu=meetup();
@@ -814,4 +831,9 @@ document.addEventListener('DOMContentLoaded',function(){
   var li9=document.getElementById('localChatInput9');if(li9)li9.addEventListener('keydown',function(e){if(e.key==='Enter')sendChat('local','localChatInput9');});
   var pi=document.getElementById('chatPopupInput');if(pi)pi.addEventListener('keydown',function(e){if(e.key==='Enter')sendChatPopup();});
   document.addEventListener('keydown',function(e){if(e.key==='Escape'){try{closeChatPopup();}catch(e2){}try{closeAdmin();}catch(e3){}}});
+  // Subscribe to reviews/reports when cloud is on
+  setTimeout(function(){
+    if(window.EtieCloud && window.EtieCloud.subscribeReviews) window.EtieCloud.subscribeReviews();
+    if(window.EtieCloud && window.EtieCloud.subscribeReports) window.EtieCloud.subscribeReports();
+  }, 2000);
 });

@@ -12,3 +12,6 @@ window.ETIE_CLOUD_PROFILES_TABLE = "etie_profiles";
 window.ETIE_CLOUD_REQUESTS_TABLE = "etie_requests";
 window.ETIE_CLOUD_MESSAGES_TABLE = "etie_messages";
 window.ETIE_CLOUD_MEETUPS_TABLE = "etie_meetups";
+// Phase 2
+window.ETIE_CLOUD_REVIEWS_TABLE = "etie_reviews";
+window.ETIE_CLOUD_REPORTS_TABLE = "etie_reports";

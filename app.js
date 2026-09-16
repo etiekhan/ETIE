@@ -274,7 +274,7 @@ function assumePersona(id){
     var M=(window.ETIE_MOCKS||{});
     if(id==='trav-etie'){
       var t=M.traveller||{};
-      ETIE.trip={destination:(M.trip&&M.trip.destination)||'Lisbon',dates:(M.trip&&M.trip.dates)||'12–18 September'};
+      ETIE.trip={destination:(M.trip&&M.trip.destination)||'Lisbon',dates:(M.trip&&M.trip.dates)||'12–18 September',country:(M.trip&&M.trip.country)||'PT'};
       ETIE.traveller={interests:((t.interests)||['Football','Salsa','Cooking','Thrift shopping']).slice(),personality:Object.assign({social:4,spontaneous:4,curious:5},t.personality||{}),lookingFor:((t.lookingFor)||['Meet someone local']).slice(),hook:t.hook||''};
       try{document.getElementById('cloudStatus').textContent='Demo: Etie (offline)';}catch(e){}
       try{document.getElementById('demoPersonaLine').textContent='Acting as Etie · traveller — Exit demo to return to your account.';}catch(e){}

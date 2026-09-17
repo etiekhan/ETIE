@@ -5,11 +5,11 @@ var ETIE_KEY = 'etie-v1';
 function etieDefaults() {
   var m = (window.ETIE_MOCKS || {});
   return {
-    trip: { destination: (m.trip && m.trip.destination) || 'Lisbon', dates: (m.trip && m.trip.dates) || '12–18 September', country: (m.trip && m.trip.country) || 'PT' },
+    trip: { destination: (m.trip && m.trip.destination) || 'Lisbon', dates: (m.trip && m.trip.dates) || '12–18 September', dateFrom: '', dateTo: '', country: (m.trip && m.trip.country) || 'PT' },
     traveller: {
       interests: (m.traveller && m.traveller.interests) || ['Football', 'Salsa', 'Cooking', 'Thrift shopping'],
-      personality: { social: 4, spontaneous: 4, curious: 5 },
-      lookingFor: ['Meet someone local'],
+      personality: { social: 8, spontaneous: 8, curious: 10 },
+      lookingFor: ['Coffee or drinks'],
       hook: (m.traveller && m.traveller.hook) || '',
       photo: null,
       tier: 'Rookie',
@@ -20,7 +20,7 @@ function etieDefaults() {
       city: 'Lisbon', age: '28', nationality: 'PT',
       verificationMethods: [],
       interests: ['Salsa', 'Cooking'],
-      personality: { social: 5, spontaneous: 5, curious: 5 },
+      personality: { social: 10, spontaneous: 10, curious: 10 },
       offer: 'I know the small salsa nights tourists never find, and I love cooking Portuguese food for friends.',
       offerTags: ['Salsa night', 'Cooking'],
       availability: [
@@ -41,11 +41,12 @@ function etieDefaults() {
     reviews: {},
     reports: [],
     _travStars: 0,
-    _localStars: 0
+    _localStars: 0,
+    _pers10: true
   };
 }
 
-function etieNorm15(v){v=+v;if(isNaN(v))return 3;if(v>5)return Math.min(5,Math.max(1,Math.round(v/20)));return Math.min(5,Math.max(1,Math.round(v)));}
+function etieNorm15(v){v=+v;if(isNaN(v))return 5;if(v>10)return Math.min(10,Math.max(1,Math.round(v/10)));return Math.min(10,Math.max(1,Math.round(v)));}
 function etieNormPers(p){try{return {social:etieNorm15(p.social),spontaneous:etieNorm15(p.spontaneous),curious:etieNorm15(p.curious)};}catch(e){return {social:3,spontaneous:3,curious:3};}}
 function loadState() {
   try {
@@ -59,6 +60,19 @@ function loadState() {
     // migrate old 0-100 slider values to 1-5
     try{ if(s.traveller&&s.traveller.personality)s.traveller.personality=etieNormPers(s.traveller.personality); }catch(e){}
     try{ if(s.local&&s.local.personality)s.local.personality=etieNormPers(s.local.personality); }catch(e){}
+    // one-time migration: 1-5 scale → 1-10 (x2). 0-100 legacy already handled above.
+    if(!s._pers10){
+      ['traveller','local'].forEach(function(r){
+        var p=s[r]&&s[r].personality;
+        if(p){['social','spontaneous','curious'].forEach(function(k){
+          var v=+p[k];
+          if(v>10)v=Math.round(v/10);
+          else if(v>=1&&v<=5)v=Math.min(10,v*2);
+          p[k]=Math.min(10,Math.max(1,v||5));
+        });}
+      });
+      s._pers10=true;
+    }
     if(!s.requests)s.requests={};
     if(!s.messages)s.messages={};
     if(!s.meetups)s.meetups={};
@@ -129,7 +143,7 @@ function getDiscoverLocals(){
 
 // Flag helpers
 function flagEmoji(code){if(!code)return '';return String.fromCodePoint(...code.toUpperCase().split('').map(c=>127397+c.charCodeAt(0)));}
-function flagForCountry(countryCode){var map={'PT':'🇵🇹','ES':'🇪🇸','FR':'🇫🇷','IT':'🇮🇹','JP':'🇯🇵','TH':'🇹🇭','US':'🇺🇸','AU':'🇦🇺','HK':'🇭🇰','SG':'🇸🇬'};return map[countryCode]||'🌍';}
+function flagForCountry(countryCode){var map={'PT':'🇵🇹','ES':'🇪🇸','FR':'🇫🇷','IT':'🇮🇹','JP':'🇯🇵','TH':'🇹🇭','US':'🇺🇸','AU':'🇦🇺','HK':'🇭🇰','SG':'🇸🇬'};return map[countryCode]||flagEmoji(countryCode)||'🌍';}
 
 function toast(msg){var t=document.getElementById('toast');if(!t){alert(msg);return;}t.textContent=msg;t.style.display='block';clearTimeout(t._h);t._h=setTimeout(function(){t.style.display='none';},2200);}
 function showScreen(id){var el=document.getElementById(id);if(id==='profile')renderProfiles();if(id==='messages')renderMessagesList();if(id==='trips'){renderTrips();renderMeetup();}if(el&&el.scrollIntoView)el.scrollIntoView({behavior:'smooth',block:'start'});}
@@ -211,7 +225,26 @@ function syncAvailUI(){
 function currentTravStep(){for(var i=1;i<=16;i++){var e=document.getElementById('trav'+i);if(e&&!e.classList.contains('hidden'))return i;}return 1;}
 function currentLocalStep(){for(var i=1;i<=11;i++){var e=document.getElementById('local'+i);if(e&&!e.classList.contains('hidden'))return i;}return 1;}
 
-function saveTrav1(){ETIE.trip.destination=document.getElementById('travCity').value.trim();ETIE.trip.dates=document.getElementById('travDates').value.trim();ETIE.trip.country=document.getElementById('travCountry').value;}
+function formatTripDates(f,t){
+  try{
+    var M=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    if(!f)return '';
+    var a=new Date(f+'T12:00');if(isNaN(a.getTime()))return f;
+    if(!t||t===f)return a.getDate()+' '+M[a.getMonth()];
+    var b=new Date(t+'T12:00');if(isNaN(b.getTime()))return a.getDate()+' '+M[a.getMonth()];
+    if(a.getMonth()===b.getMonth()&&a.getFullYear()===b.getFullYear())return a.getDate()+'–'+b.getDate()+' '+M[a.getMonth()];
+    var s=a.getDate()+' '+M[a.getMonth()]+' – '+b.getDate()+' '+M[b.getMonth()];
+    if(a.getFullYear()!==b.getFullYear())s+=' '+b.getFullYear();
+    return s;
+  }catch(e){return f+' – '+(t||'');}
+}
+function saveTrav1(){
+  ETIE.trip.destination=document.getElementById('travCity').value.trim();
+  var f=(document.getElementById('travDateFrom')||{}).value||'',t=(document.getElementById('travDateTo')||{}).value||'';
+  if(f&&t){ETIE.trip.dateFrom=f;ETIE.trip.dateTo=t;ETIE.trip.dates=formatTripDates(f,t);}
+  ETIE.trip.country=document.getElementById('travCountry').value;
+  updateHookLabel();
+}
 function saveTrav2(){ETIE.traveller.interests=getChips('travInterests');}
 function saveTrav3(){ETIE.traveller.personality={social:+document.getElementById('travSocial').value,spontaneous:+document.getElementById('travSpont').value,curious:+document.getElementById('travCurious').value};}
 function saveTrav4(){ETIE.traveller.lookingFor=getChips('travLookingFor');}
@@ -231,7 +264,7 @@ function saveTrav6(){}
 function saveTrav7(){}
 function saveTrav8(){}
 function validTrav(step){
-  if(step===1){if(!ETIE.trip.destination){toast('Add a destination (e.g. Lisbon).');return false;}if(!ETIE.trip.dates){toast('Add your travel dates.');return false;}}
+  if(step===1){if(!ETIE.trip.destination){toast('Add a destination (e.g. Lisbon).');return false;}if(!(ETIE.trip.dateFrom&&ETIE.trip.dateTo)&&!ETIE.trip.dates){toast('Pick your trip dates on the calendar.');return false;}}
   if(step===2){if(ETIE.traveller.interests.length===0){toast('Pick at least 1 interest.');return false;}if(ETIE.traveller.interests.length>4){toast('Pick up to 4.');return false;}}
   if(step===4){if(ETIE.traveller.lookingFor.length===0){toast('Pick at least 1 option.');return false;}}
   if(step===5){if(ETIE.traveller.hook.length<10){toast('Add a short hook (10+ characters) so locals get you.');return false;}}
@@ -295,14 +328,14 @@ function assumePersona(id){
     if(id==='trav-etie'){
       var t=M.traveller||{};
       ETIE.trip={destination:(M.trip&&M.trip.destination)||'Lisbon',dates:(M.trip&&M.trip.dates)||'12–18 September',country:(M.trip&&M.trip.country)||'PT'};
-      ETIE.traveller={interests:((t.interests)||['Football','Salsa','Cooking','Thrift shopping']).slice(),personality:Object.assign({social:4,spontaneous:4,curious:5},t.personality||{}),lookingFor:((t.lookingFor)||['Meet someone local']).slice(),hook:t.hook||''};
+      ETIE.traveller={interests:((t.interests)||['Football','Salsa','Cooking','Thrift shopping']).slice(),personality:Object.assign({social:8,spontaneous:8,curious:10},t.personality||{}),lookingFor:((t.lookingFor)||['Coffee or drinks']).slice(),hook:t.hook||''};
       try{document.getElementById('cloudStatus').textContent='Demo: Etie (offline)';}catch(e){}
       try{document.getElementById('demoPersonaLine').textContent='Acting as Etie · traveller — Exit demo to return to your account.';}catch(e){}
       saveState();setRole('traveller');
     } else {
       var L=null;((M.locals)||[]).forEach(function(x){if(x.id===id)L=x;});
       if(!L){toast('Unknown persona');return;}
-      ETIE.local={city:L.city||'Lisbon',age:String(L.age||28),verificationMethods:['Social media'],interests:(L.interests||[]).slice(0,4),personality:Object.assign({social:5,spontaneous:5,curious:5},L.personality||{}),offer:L.offer||'',offerTags:((L.offerTags||L.interests)||[]).slice(0,4),availability:(L.availability||[]).map(function(a){return (typeof a==='string')?{label:a,status:'Available'}:a;})};
+      ETIE.local={city:L.city||'Lisbon',age:String(L.age||28),verificationMethods:['Social media'],interests:(L.interests||[]).slice(0,4),personality:Object.assign({social:10,spontaneous:10,curious:10},L.personality||{}),offer:L.offer||'',offerTags:((L.offerTags||L.interests)||[]).slice(0,4),availability:(L.availability||[]).map(function(a){return (typeof a==='string')?{label:a,status:'Available'}:a;})};
       try{document.getElementById('cloudStatus').textContent='Demo: '+L.name+' (offline)';}catch(e){}
       try{document.getElementById('demoPersonaLine').textContent='Acting as '+L.name+' · local — Exit demo to return to your account.';}catch(e){}
       saveState();setRole('local');localNext(9);
@@ -329,7 +362,7 @@ function renderProfiles(){
     var pi=document.getElementById('profInterests');
     if(pi){pi.innerHTML='';ETIE.traveller.interests.forEach(function(x){var s=document.createElement('span');s.className='chip active';s.textContent=x;pi.appendChild(s);});}
     var pp=document.getElementById('profPersonality');
-    if(pp)pp.textContent='Social '+ETIE.traveller.personality.social+'/5 · Spontaneous '+ETIE.traveller.personality.spontaneous+'/5 · Curious '+ETIE.traveller.personality.curious+'/5';
+    if(pp)pp.textContent='Social '+ETIE.traveller.personality.social+'/10 · Spontaneous '+ETIE.traveller.personality.spontaneous+'/10 · Curious '+ETIE.traveller.personality.curious+'/10';
     var pl=document.getElementById('profLookingFor');
     if(pl)pl.textContent=ETIE.traveller.lookingFor.join(' · ')||'—';
     var ph=document.getElementById('profHook');
@@ -351,6 +384,7 @@ function renderProfiles(){
     // Local photo in dashboard
     var lp=document.getElementById('localDashPhoto');
     if(lp){lp.innerHTML=ETIE.local.photo?('<img src="'+ETIE.local.photo+'" style="width:60px;height:60px;border-radius:50%;object-fit:cover;">'):'<span style="color:rgba(255,255,255,.5);font-size:24px;">+</span>';}
+    updateHookLabel();
   }catch(e){}
 }
 
@@ -826,7 +860,8 @@ function renderLocalDashboard(){
 function restoreAll(){
   try{
     document.getElementById('travCity').value=ETIE.trip.destination;
-    document.getElementById('travDates').value=ETIE.trip.dates;
+    var tdf=document.getElementById('travDateFrom');if(tdf)tdf.value=ETIE.trip.dateFrom||'';
+    var tdt=document.getElementById('travDateTo');if(tdt)tdt.value=ETIE.trip.dateTo||'';
     document.getElementById('travCountry').value=ETIE.trip.country||'PT';
     setChips('travInterests',ETIE.traveller.interests);
     document.getElementById('travSocial').value=ETIE.traveller.personality.social;
@@ -859,6 +894,60 @@ function refreshSliderLabels(){
   var m=[['travSocial','travSocialVal'],['travSpont','travSpontVal'],['travCurious','travCuriousVal'],['localSocial','localSocialVal'],['localSpont','localSpontVal'],['localCurious','localCuriousVal']];
   m.forEach(function(p){var a=document.getElementById(p[0]),b=document.getElementById(p[1]);if(a&&b)b.textContent=a.value;});
 }
+// Location database — build country selects + city typeahead (offline, no API)
+function countryName(code){try{var a=window.ETIE_COUNTRIES||[];for(var i=0;i<a.length;i++)if(a[i].code===code)return a[i].name;}catch(e){}return code;}
+function buildCountrySelects(){
+  try{
+    if(!window.ETIE_COUNTRIES)return;
+    ['travCountry','localNationality'].forEach(function(id){
+      var sel=document.getElementById(id);if(!sel)return;
+      var cur=sel.value;
+      sel.innerHTML='';
+      window.ETIE_COUNTRIES.forEach(function(c){
+        var o=document.createElement('option');o.value=c.code;o.textContent=flagEmoji(c.code)+' '+c.name;sel.appendChild(o);
+      });
+      var o=document.createElement('option');o.value='OTHER';o.textContent='🌍 Other';sel.appendChild(o);
+      if(cur)sel.value=cur;
+    });
+  }catch(e){}
+}
+function locationSuggest(inputId,boxId){
+  try{
+    var inp=document.getElementById(inputId),box=document.getElementById(boxId);
+    if(!inp||!box)return;
+    var q=(inp.value||'').toLowerCase().trim();
+    box.innerHTML='';box.classList.remove('open');
+    if(q.length<2)return;
+    var out=[];var cities=window.ETIE_CITIES||[];
+    for(var i=0;i<cities.length&&out.length<8;i++){
+      var c=cities[i];
+      if((c.city+' '+countryName(c.code)).toLowerCase().indexOf(q)!==-1)out.push(c);
+    }
+    if(!out.length)return;
+    out.forEach(function(c){
+      var b=document.createElement('button');b.type='button';b.className='suggest-item';
+      var s=document.createElement('span');s.textContent=flagEmoji(c.code)+' '+c.city+' · '+countryName(c.code);b.appendChild(s);
+      b.onclick=(function(cc){return function(){pickLocation(inputId,boxId,cc.city,cc.code);};})(c);
+      box.appendChild(b);
+    });
+    box.classList.add('open');
+  }catch(e){}
+}
+function pickLocation(inputId,boxId,city,code){
+  try{
+    var inp=document.getElementById(inputId);if(inp)inp.value=city;
+    var box=document.getElementById(boxId);if(box){box.innerHTML='';box.classList.remove('open');}
+    if(inputId==='travCity'){var s=document.getElementById('travCountry');if(s)s.value=code;ETIE.trip.destination=city;ETIE.trip.country=code;}
+    if(inputId==='localCity'){var l=document.getElementById('localNationality');if(l)l.value=code;ETIE.local.city=city;ETIE.local.nationality=code;}
+    saveCurrentVisible(true);updateHookLabel();
+  }catch(e){}
+}
+function updateHookLabel(){
+  try{
+    var l=document.getElementById('travHookLabel');
+    if(l)l.textContent='What would you love to do in '+(ETIE.trip.destination||'this city')+'?';
+  }catch(e){}
+}
 // Alphabetise all pickers A–Z (countries keep 🌍 Other last; chips keep active state)
 function alphabetisePickers(){
   try{
@@ -880,11 +969,20 @@ function alphabetisePickers(){
 }
 document.addEventListener('DOMContentLoaded',function(){
   alphabetisePickers();
+  buildCountrySelects();
   restoreAll();
+  document.addEventListener('click',function(e){
+    try{
+      if(!e.target||!e.target.closest)return;
+      if(!e.target.closest('.suggest')&&e.target.id!=='travCity'&&e.target.id!=='localCity'){
+        ['travCitySuggest','localCitySuggest'].forEach(function(id){var b=document.getElementById(id);if(b)b.classList.remove('open');});
+      }
+    }catch(err){}
+  });
   ['travSocial','travSpont','travCurious','localSocial','localSpont','localCurious'].forEach(function(id){
     var el=document.getElementById(id);if(el)el.addEventListener('input',function(){refreshSliderLabels();saveCurrentVisible(true);saveState();});
   });
-  ['travCity','travDates','travHook','localCity','localAge','localOffer'].forEach(function(id){
+  ['travCity','travDateFrom','travDateTo','travHook','localCity','localAge','localOffer'].forEach(function(id){
     var el=document.getElementById(id);if(el)el.addEventListener('change',function(){saveCurrentVisible(true);});
   });
   var ci=document.getElementById('chatInput');if(ci)ci.addEventListener('keydown',function(e){if(e.key==='Enter')sendChat('traveller');});

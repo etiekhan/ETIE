@@ -20,9 +20,9 @@ function etieShared(travInterests, local){
 
 function etiePersonality(tP, lP){
   try{
-    // 1-5 scale: max total diff is 12 (4 per trait x 3). Closer = higher.
+    // 1-10 scale: max total diff is 27 (9 per trait x 3). Closer = higher.
     var d=Math.abs(tP.social-lP.social)+Math.abs(tP.spontaneous-lP.spontaneous)+Math.abs(tP.curious-lP.curious);
-    return Math.max(0,Math.round(100-d*(100/12)));
+    return Math.max(0,Math.round(100-d*(100/27)));
   }catch(e){return 50;}
 }
 

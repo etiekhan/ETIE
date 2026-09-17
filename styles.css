@@ -152,3 +152,31 @@ header .secondary{background:rgba(255,255,255,.96)!important;color:#171717!impor
   .actions .primary,.actions .secondary{flex:1 1 auto;min-width:0}
   .panel{padding:20px 16px}
 }
+/* Black trait sliders (1-10) */
+.trait-row input[type=range]{-webkit-appearance:none;appearance:none;height:6px;border-radius:999px;background:rgba(0,0,0,.22);outline:none;padding:0;border:none}
+.trait-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:22px;height:22px;border-radius:50%;background:#111;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4);cursor:pointer}
+.trait-row input[type=range]::-moz-range-track{height:6px;border-radius:999px;background:rgba(0,0,0,.22)}
+.trait-row input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:#111;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4);cursor:pointer}
+/* Step 4 looking-for pill grid */
+.looking-groups{margin-top:20px}
+.looking-group{margin:0 0 14px}
+.looking-group:last-child{margin-bottom:0}
+.looking-head{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:#766f65;font-weight:800;margin:0 0 8px}
+.looking-row{display:flex;flex-wrap:wrap;gap:10px}
+.looking-row .chip{padding:12px 16px;font-weight:650}
+.looking-row .chip.active::before{content:'✓ ';font-weight:800}
+/* Location typeahead dropdown */
+.field{position:relative}
+.suggest{position:absolute;top:100%;left:0;right:0;z-index:30;background:#fff;border:1px solid #e3ded6;border-radius:12px;box-shadow:0 14px 34px rgba(0,0,0,.18);overflow:hidden;display:none;max-height:240px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.suggest.open{display:block}
+.suggest-item{display:block;width:100%;text-align:left;padding:10px 12px;border:0;background:#fff;cursor:pointer;font-size:14px;color:#171717}
+.suggest-item:hover{background:#f4f1ec}
+/* Review button hierarchy: primary right, warning link, nav separated */
+.review-actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-top:18px;align-items:center}
+.review-report{background:transparent;border:1px solid #e8b4b4;color:#b00020;border-radius:12px;padding:12px 16px;cursor:pointer;font-weight:650}
+.review-report:hover{background:#fff0f0}
+.review-nav{margin-top:22px;padding-top:14px;border-top:1px solid #ece7e0}
+.review-nav-links{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}
+.linklike{background:none;border:0;color:#555;text-decoration:underline;cursor:pointer;padding:4px 0;font-size:14px}
+.linklike:hover{color:#171717}
+@media(max-width:640px){.review-actions .primary{flex:1 1 100%}}

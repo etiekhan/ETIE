@@ -9,9 +9,10 @@ function etieDefaults() {
     traveller: {
       interests: (m.traveller && m.traveller.interests) || ['Football', 'Salsa', 'Cooking', 'Thrift shopping'],
       personality: { social: 8, spontaneous: 8, curious: 10 },
-      lookingFor: ['Coffee or drinks'],
+      lookingFor: ['Social & Drinks'],
       hook: (m.traveller && m.traveller.hook) || '',
       photo: null,
+      travelPhotos: [],
       tier: 'Rookie',
       completedTrips: 0,
       avgRatingReceived: 0
@@ -74,6 +75,7 @@ function loadState() {
       s._pers10=true;
     }
     if(!s.requests)s.requests={};
+    if(!s.traveller.travelPhotos)s.traveller.travelPhotos=[];
     if(!s.messages)s.messages={};
     if(!s.meetups)s.meetups={};
     if(!s.reviews)s.reviews={};
@@ -118,6 +120,49 @@ function removePhoto(role){
   var remBtn=document.getElementById(role==='trav'?'travPhotoRemove':'localPhotoRemove');if(remBtn)remBtn.style.display='none';
   saveState();renderProfiles();
   // TODO: delete from Supabase Storage when implemented
+}
+// Optional travel photos (traveller step 6) — shown first in Discover
+function handleTravelPhoto(input,idx){
+  var file=input.files[0];if(!file)return;
+  if(!ETIE.traveller.travelPhotos)ETIE.traveller.travelPhotos=[];
+  var reader=new FileReader();
+  reader.onload=function(e){
+    ETIE.traveller.travelPhotos[idx]=e.target.result;
+    var prev=document.getElementById('travTravelPrev'+idx);
+    if(prev)prev.innerHTML='<img src="'+e.target.result+'" style="width:100%;height:100%;object-fit:cover;border-radius:12px;">';
+    saveState();renderMatches();
+  };
+  reader.readAsDataURL(file);
+  try{
+    if(window.EtieCloud&&window.EtieCloud.uploadPhoto&&window.EtieCloud.isSharedOn()){
+      window.EtieCloud.uploadPhoto(file,'trav').then(function(url){
+        ETIE.traveller.travelPhotos[idx]=url;saveState();renderMatches();
+      }).catch(function(){});
+    }
+  }catch(e){}
+}
+function restorePhotoPreviews(){
+  try{
+    var tp=document.getElementById('travPhotoPreview');
+    if(tp&&ETIE.traveller.photo){tp.innerHTML='<img src="'+ETIE.traveller.photo+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">';var rb=document.getElementById('travPhotoRemove');if(rb)rb.style.display='inline-block';}
+    (ETIE.traveller.travelPhotos||[]).forEach(function(p,i){
+      var pv=document.getElementById('travTravelPrev'+i);
+      if(pv&&p)pv.innerHTML='<img src="'+p+'" style="width:100%;height:100%;object-fit:cover;border-radius:12px;">';
+    });
+    var lp=document.getElementById('localPhotoPreview');
+    if(lp&&ETIE.local.photo){lp.innerHTML='<img src="'+ETIE.local.photo+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">';var lb=document.getElementById('localPhotoRemove');if(lb)lb.style.display='inline-block';}
+  }catch(e){}
+}
+function renderDiscoverStrip(){
+  try{
+    var photos=((ETIE.traveller||{}).travelPhotos||[]).filter(Boolean);
+    var selfie=(ETIE.traveller||{}).photo;
+    var thumbs='';
+    if(selfie)thumbs+='<img src="'+selfie+'" alt="you">';
+    photos.forEach(function(p){thumbs+='<img src="'+p+'" alt="travel">';});
+    if(!thumbs)return '<div class="card travel-strip"><strong>Your travel story</strong><p class="muted small" style="margin:6px 0 0;">No travel photos yet — add some in Traveller Step 6 so locals see your adventures.</p></div>';
+    return '<div class="card travel-strip"><strong>Your travel story</strong><div class="travel-thumbs">'+thumbs+'</div></div>';
+  }catch(e){return '';}
 }
 
 // Tier helpers
@@ -310,7 +355,7 @@ function localNext(n){
   for(var i=1;i<=10;i++){var e=document.getElementById('local'+i);if(e)e.classList.add('hidden');}
   var t=document.getElementById('local'+n);if(t)t.classList.remove('hidden');updateCounts();renderProfiles();syncAvailUI();if(n===7){renderLocalDashboard();}if(n===8||n===9){renderRequests();renderChat();renderMessagesList();renderMeetup();renderLocalDashboard();}if(n===10){renderMeetup();paintStars('localStars',ETIE._localStars||0);renderLocalDashboard();}showScreen('local'+n);
 }
-function findMatch(){try{saveTrav5();saveTrav6();saveState();if(!validTrav(5))return;}catch(e){}ETIE_MATCH_INDEX=0;renderMatches();travNext(7);}
+function findMatch(){try{saveTrav5();saveTrav6();saveState();if(!validTrav(5))return;}catch(e){}if(!ETIE.traveller.photo){toast('Add your selfie first — profiles with photos get 3x more requests.');return;}ETIE_MATCH_INDEX=0;renderMatches();travNext(7);}
 function travRestart(){showScreen('trav1');travNext(1);}
 function openAdmin(){try{var o=document.getElementById('adminOverlay');if(o)o.classList.remove('hidden');}catch(e){}}
 function closeAdmin(){try{var o=document.getElementById('adminOverlay');if(o)o.classList.add('hidden');}catch(e){}}
@@ -328,7 +373,7 @@ function assumePersona(id){
     if(id==='trav-etie'){
       var t=M.traveller||{};
       ETIE.trip={destination:(M.trip&&M.trip.destination)||'Lisbon',dates:(M.trip&&M.trip.dates)||'12–18 September',country:(M.trip&&M.trip.country)||'PT'};
-      ETIE.traveller={interests:((t.interests)||['Football','Salsa','Cooking','Thrift shopping']).slice(),personality:Object.assign({social:8,spontaneous:8,curious:10},t.personality||{}),lookingFor:((t.lookingFor)||['Coffee or drinks']).slice(),hook:t.hook||''};
+      ETIE.traveller={interests:((t.interests)||['Football','Salsa','Cooking','Thrift shopping']).slice(),personality:Object.assign({social:8,spontaneous:8,curious:10},t.personality||{}),lookingFor:((t.lookingFor)||['Social & Drinks']).slice(),hook:t.hook||''};
       try{document.getElementById('cloudStatus').textContent='Demo: Etie (offline)';}catch(e){}
       try{document.getElementById('demoPersonaLine').textContent='Acting as Etie · traveller — Exit demo to return to your account.';}catch(e){}
       saveState();setRole('traveller');
@@ -402,7 +447,7 @@ function renderMatches(){
     var lflag=flagForCountry(L.nationality||ETIE.trip.country);
     document.getElementById('matchAvatar').textContent=(L.name||'?').charAt(0);
     document.getElementById('matchName').textContent=lflag+' '+L.name;
-    document.getElementById('matchMeta').textContent=(L.city||ETIE.trip.destination)+' · Local · '+(L.age||'');
+    document.getElementById('matchMeta').textContent=flagForCountry(L.nationality||ETIE.trip.country)+' '+(L.city||ETIE.trip.destination)+' · Local · '+(L.age||'');
     document.getElementById('matchScore').textContent=m.label+' · '+m.score+'/100 (internal)';
     document.getElementById('matchRankNote').textContent='Top '+(ETIE_MATCH_INDEX+1)+' of '+r.length+' · '+r.map(function(x){return x.local.name+':'+x.score;}).join(' ');
     var mc=document.getElementById('matchChips');mc.innerHTML='';
@@ -444,7 +489,7 @@ function renderMatches(){
       p8a.textContent=(L.name||'?').charAt(0);
     }
     document.getElementById('prof8Title').textContent=L.name+', '+(L.age||'');
-    document.getElementById('prof8Meta').textContent=(L.city||'')+' · Local';
+    document.getElementById('prof8Meta').textContent=flagForCountry(L.nationality||ETIE.trip.country)+' '+(L.city||'')+' · Local';
     var p8t=document.getElementById('prof8Trust');p8t.innerHTML='';
     var p8items=[];
     if(m.repCount)p8items.push('★ '+m.rep+' ('+m.repCount+') live'+(m.myRating?(' · you: '+m.myRating+'★'):''));
@@ -462,7 +507,7 @@ function renderMatches(){
       if(!canSeeFullDiscover()){
         tierMsg='<p class="small muted" style="margin-bottom:12px;">Discover shows top 3 matches. Complete 3 trips @ 4★+ to unlock <strong>Trusted</strong> (traveller) or host 3 meetups @ 4★+ for <strong>Verified</strong> (local) and see the full list + Host activities.</p>';
       }
-      g.innerHTML=tierMsg;
+      g.innerHTML=renderDiscoverStrip()+tierMsg;
       discoverLocals.forEach(function(x){
         var d=document.createElement('div');d.className='match-card card';
         var lflag=flagForCountry(x.local.nationality);
@@ -609,7 +654,7 @@ function renderRequests(){
     else{rt.textContent='No request yet to '+m.local.name+'.';rs.textContent='Send one from Step 9 to unlock messaging after acceptance.';oc.textContent='Open chat (locked)';}
      oc.onclick=function(){openChatPopup();};
     var lr=document.getElementById('localReqTitle');if(lr)lr.textContent='Etie, 27 · for '+(m?m.local.name:'—');
-    var lw=document.getElementById('localReqWhy');if(lw)lw.textContent=(m.shared.join(' · ')||'New traveller')+' · '+ETIE.trip.destination+' '+ETIE.trip.dates;
+    var lw=document.getElementById('localReqWhy');    if(lw)lw.textContent=(m.shared.join(' · ')||'New traveller')+' · '+flagForCountry(ETIE.trip.country)+' '+ETIE.trip.destination+' '+ETIE.trip.dates;
     var lm=document.getElementById('localReqMsg');if(lm)lm.textContent=ETIE.requests[k]?('“'+(ETIE.requests[k].message||'')+'”'):'No message yet.';
     var ls=document.getElementById('localReqStatus');if(ls)ls.textContent=st==='none'?'No request yet — send one as Traveller first':st;
   }catch(e){}
@@ -756,7 +801,7 @@ function submitLocalReview(){
 function renderMeetup(){
   var m=currentMatch();if(!m)return;var mu=meetup();
   try{
-    document.getElementById('meetWith').textContent='With '+m.local.name+' · '+ETIE.trip.destination;
+    document.getElementById('meetWith').textContent='With '+m.local.name+' · '+flagForCountry(ETIE.trip.country)+' '+ETIE.trip.destination;
     if(mu.status!=='none'){
       var ma=document.getElementById('meetActivity');if(ma)ma.value=mu.activity||'';
       var mdt=document.getElementById('meetDate');if(mdt)mdt.value=mu.meetDate||'';
@@ -796,7 +841,7 @@ function renderTrips(){
     var revText=revParts.length?revParts.join(' | '):'none';
     var demoMet=18+(meet==='completed'?1:0);
     row.innerHTML='<div><strong></strong><br><span class="muted"></span></div>';
-    row.querySelector('strong').textContent=ETIE.trip.destination+' · '+ETIE.trip.dates;
+    row.querySelector('strong').textContent=flagForCountry(ETIE.trip.country)+' '+ETIE.trip.destination+' · '+ETIE.trip.dates;
     row.querySelector('.muted').textContent='Match: '+(m?m.local.name+' ('+m.score+')':'—')+' · Req: '+conn+' · Meet: '+meet+' · Reviews: '+revText+' · Met demo: '+demoMet;
     var b=document.createElement('button');b.className='secondary';b.textContent='Open';b.onclick=function(){setRole('traveller');showScreen('home');};
     row.appendChild(b);box.appendChild(row);
@@ -888,7 +933,7 @@ function restoreAll(){
       });
     }catch(e){}
   }catch(e){}
-  updateCounts();refreshSliderLabels();syncAvailUI();renderProfiles();renderMatches();renderRequests();renderChat();renderMessagesList();renderMeetup();renderThanks();renderTrips();renderLocalDashboard();paintStars('travStars',ETIE._travStars||0);paintStars('localStars',ETIE._localStars||0);
+  restorePhotoPreviews();updateCounts();refreshSliderLabels();syncAvailUI();renderProfiles();renderMatches();renderRequests();renderChat();renderMessagesList();renderMeetup();renderThanks();renderTrips();renderLocalDashboard();paintStars('travStars',ETIE._travStars||0);paintStars('localStars',ETIE._localStars||0);
 }
 function refreshSliderLabels(){
   var m=[['travSocial','travSocialVal'],['travSpont','travSpontVal'],['travCurious','travCuriousVal'],['localSocial','localSocialVal'],['localSpont','localSpontVal'],['localCurious','localCuriousVal']];
@@ -919,10 +964,16 @@ function locationSuggest(inputId,boxId){
     box.innerHTML='';box.classList.remove('open');
     if(q.length<2)return;
     var out=[];var cities=window.ETIE_CITIES||[];
-    for(var i=0;i<cities.length&&out.length<8;i++){
+    // prefer the currently-selected country, then everything else (never hard-restricted)
+    var selCode='';
+    try{selCode=(document.getElementById(inputId==='travCity'?'travCountry':'localNationality')||{}).value||'';}catch(e){}
+    var same=[],rest=[];
+    for(var i=0;i<cities.length;i++){
       var c=cities[i];
-      if((c.city+' '+countryName(c.code)).toLowerCase().indexOf(q)!==-1)out.push(c);
+      if((c.city+' '+countryName(c.code)).toLowerCase().indexOf(q)===-1)continue;
+      if(selCode&&selCode!=='OTHER'&&c.code===selCode)same.push(c);else rest.push(c);
     }
+    out=same.concat(rest).slice(0,8);
     if(!out.length)return;
     out.forEach(function(c){
       var b=document.createElement('button');b.type='button';b.className='suggest-item';

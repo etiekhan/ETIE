@@ -180,3 +180,8 @@ header .secondary{background:rgba(255,255,255,.96)!important;color:#171717!impor
 .linklike{background:none;border:0;color:#555;text-decoration:underline;cursor:pointer;padding:4px 0;font-size:14px}
 .linklike:hover{color:#171717}
 @media(max-width:640px){.review-actions .primary{flex:1 1 100%}}
+/* Travel photos (step 6 + Discover strip) */
+.travel-slot{width:72px;height:72px;border-radius:14px;background:#faf9f7;border:2px dashed #d5d0c8;display:flex;align-items:center;justify-content:center;overflow:hidden;color:#a09a90;font-size:24px}
+.travel-strip{padding:16px 18px;margin-bottom:14px}
+.travel-thumbs{display:flex;gap:8px;overflow-x:auto;margin-top:10px;padding-bottom:4px;-webkit-overflow-scrolling:touch}
+.travel-thumbs img{width:64px;height:64px;border-radius:14px;object-fit:cover;flex:0 0 auto;box-shadow:0 2px 8px rgba(0,0,0,.12)}

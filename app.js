@@ -502,14 +502,13 @@ function renderMatches(){
     var g=document.getElementById('discoverGrid');if(g){
       g.innerHTML='';
       var discoverLocals=getDiscoverLocals();
-      var tierMsg='';
-      var lt=getLocalTier(), tt=getTravellerTier();
-      if(!canSeeFullDiscover()){
-        tierMsg='<p class="small muted" style="margin-bottom:12px;">Discover shows top 3 matches. Complete 3 trips @ 4★+ to unlock <strong>Trusted</strong> (traveller) or host 3 meetups @ 4★+ for <strong>Verified</strong> (local) and see the full list + Host activities.</p>';
-      }
-      g.innerHTML=renderDiscoverStrip()+tierMsg;
+      g.innerHTML='';
       discoverLocals.forEach(function(x){
         var d=document.createElement('div');d.className='match-card card';
+        // shade by compatibility: brighter = better match
+        var sc=Math.min(99,Math.max(5,x.score||0));
+        d.style.background='rgba(255,255,255,'+(0.55+sc/100*0.45).toFixed(2)+')';
+        d.style.boxShadow='0 12px 30px rgba(232,93,117,'+(0.08+sc/100*0.28).toFixed(2)+')';
         var lflag=flagForCountry(x.local.nationality);
         d.innerHTML='<strong></strong><p class="muted"></p>';
         d.querySelector('strong').textContent=lflag+' '+x.local.name+' · '+x.score+(x.repCount?(' · '+x.rep+'★'):'');

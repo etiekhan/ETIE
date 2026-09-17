@@ -27,12 +27,17 @@ function etiePersonality(tP, lP){
 }
 
 function etieAvailability(local, userAvail){
-  // MVP: traveller dates are free text, so we check local has any Available slot.
-  // Later: real date overlap. User's own availability (if local-viewing) can boost.
+  // Calendar-first: if local picked specific dates, they count as Available. Fallback to old slot list.
+  if(local.availDates && local.availDates.length) return 100;
+  if(local.localAvailDates && local.localAvailDates.length) return 100;
   var has=(local.availability||[]).some(function(a){
     if(typeof a==='string')return true;
     return a.status==='Available';
   });
+  // also check stored ETIE.local.availDates when local is the current user (mock locals have no dates)
+  try{
+    if(typeof ETIE!=='undefined' && ETIE.local && ETIE.local.availDates && ETIE.local.availDates.length) return 100;
+  }catch(e){}
   return has?100:40;
 }
 

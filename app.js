@@ -24,6 +24,8 @@ function etieDefaults() {
       verificationMethods: [],
       interests: ['Salsa', 'Cooking'],
       personality: { social: 10, spontaneous: 10, curious: 10 },
+      socialVibe: 1, travelPace: 1, styleInterests: [],
+      availDates: [], travelPhotos: [],
       offer: 'I know the small salsa nights tourists never find, and I love cooking Portuguese food for friends.',
       offerTags: ['Salsa night', 'Cooking'],
       availability: [
@@ -82,6 +84,11 @@ function loadState() {
     if(s.traveller.travelPace==null){ var pc=s.traveller.personality&&s.traveller.personality.spontaneous||5; s.traveller.travelPace=pc<=3?0:pc>=8?2:1; }
     if(!s.traveller.styleInterests)s.traveller.styleInterests=[];
     if(!s.traveller.nationality)s.traveller.nationality='HK';
+    if(!s.local.styleInterests)s.local.styleInterests=[];
+    if(s.local.socialVibe==null){ var lsc=s.local.personality&&s.local.personality.social||5; s.local.socialVibe=lsc<=3?0:lsc>=8?2:1; }
+    if(s.local.travelPace==null){ var lpc=s.local.personality&&s.local.personality.spontaneous||5; s.local.travelPace=lpc<=3?0:lpc>=8?2:1; }
+    if(!s.local.availDates)s.local.availDates=[];
+    if(!s.local.travelPhotos)s.local.travelPhotos=[];
     if(!s.messages)s.messages={};
     if(!s.meetups)s.meetups={};
     if(!s.reviews)s.reviews={};
@@ -127,22 +134,26 @@ function removePhoto(role){
   saveState();renderProfiles();
   // TODO: delete from Supabase Storage when implemented
 }
-// Optional travel photos (traveller step 6) — shown first in Discover
+// Optional travel photos (traveller step 6 + local step 7) — any role, detected by input id
 function handleTravelPhoto(input,idx){
   var file=input.files[0];if(!file)return;
-  if(!ETIE.traveller.travelPhotos)ETIE.traveller.travelPhotos=[];
+  var isLocal = (input.id||'').indexOf('local')===0;
+  var store = isLocal ? (ETIE.local.travelPhotos||(ETIE.local.travelPhotos=[])) : (ETIE.traveller.travelPhotos||(ETIE.traveller.travelPhotos=[]));
+  var prevId = isLocal ? 'localTravelPrev'+idx : 'travTravelPrev'+idx;
+  var role = isLocal ? 'local' : 'trav';
   var reader=new FileReader();
   reader.onload=function(e){
-    ETIE.traveller.travelPhotos[idx]=e.target.result;
-    var prev=document.getElementById('travTravelPrev'+idx);
+    if(isLocal) ETIE.local.travelPhotos[idx]=e.target.result; else ETIE.traveller.travelPhotos[idx]=e.target.result;
+    var prev=document.getElementById(prevId);
     if(prev)prev.innerHTML='<img src="'+e.target.result+'" style="width:100%;height:100%;object-fit:cover;border-radius:12px;">';
-    saveState();renderMatches();
+    saveState();renderProfiles();renderMatches();
   };
   reader.readAsDataURL(file);
   try{
     if(window.EtieCloud&&window.EtieCloud.uploadPhoto&&window.EtieCloud.isSharedOn()){
-      window.EtieCloud.uploadPhoto(file,'trav').then(function(url){
-        ETIE.traveller.travelPhotos[idx]=url;saveState();renderMatches();
+      window.EtieCloud.uploadPhoto(file,role).then(function(url){
+        if(isLocal) ETIE.local.travelPhotos[idx]=url; else ETIE.traveller.travelPhotos[idx]=url;
+        saveState();renderProfiles();renderMatches();
       }).catch(function(){});
     }
   }catch(e){}
@@ -157,6 +168,11 @@ function restorePhotoPreviews(){
     });
     var lp=document.getElementById('localPhotoPreview');
     if(lp&&ETIE.local.photo){lp.innerHTML='<img src="'+ETIE.local.photo+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">';var lb=document.getElementById('localPhotoRemove');if(lb)lb.style.display='inline-block';}
+    (ETIE.local.travelPhotos||[]).forEach(function(p,i){
+      var pv=document.getElementById('localTravelPrev'+i);
+      if(pv&&p)pv.innerHTML='<img src="'+p+'" style="width:100%;height:100%;object-fit:cover;border-radius:12px;">';
+    });
+    renderAvailDates();
   }catch(e){}
 }
 function renderDiscoverStrip(){
@@ -271,7 +287,36 @@ function syncAvailUI(){
       if(ETIE.local.availability[i])row.querySelector('.status').textContent=ETIE.local.availability[i].status;
     });
   }catch(e){}
+  try{ renderAvailDates(); }catch(e){}
 }
+function renderAvailDates(){
+  try{
+    var list=document.getElementById('availDateList'); if(!list) return;
+    var dates=ETIE.local.availDates||[];
+    if(!dates.length){ list.innerHTML='<div class="list-item"><div><strong>No dates yet</strong><br><span class="muted">Add dates you\'re free — travellers see you on those days.</span></div><span class="status">Empty</span></div>'; return; }
+    list.innerHTML='';
+    dates.slice().sort().forEach(function(d,idx){
+      var row=document.createElement('div'); row.className='list-item';
+      var dt=new Date(d+'T12:00'); var label=isNaN(dt.getTime())?d:dt.toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+      row.innerHTML='<div><strong></strong></div>'; row.querySelector('strong').textContent=label;
+      var rm=document.createElement('button'); rm.className='secondary'; rm.textContent='Remove'; rm.style.padding='6px 10px'; rm.onclick=(function(i){return function(){removeAvailDate(i);};})(idx);
+      row.appendChild(rm); list.appendChild(row);
+    });
+  }catch(e){}
+}
+function addAvailDate(){
+  try{
+    var inp=document.getElementById('availDatePick'); if(!inp||!inp.value){toast('Pick a date first.');return;}
+    var d=inp.value; if(!ETIE.local.availDates) ETIE.local.availDates=[];
+    if(ETIE.local.availDates.indexOf(d)!==-1){toast('Date already added.');return;}
+    ETIE.local.availDates.push(d); ETIE.local.availDates.sort();
+    saveState(); renderAvailDates(); renderProfiles(); renderLocalDashboard(); toast('Availability added: '+d);
+  }catch(e){toast('Could not add date.');}
+}
+function removeAvailDate(i){
+  try{ ETIE.local.availDates.splice(i,1); saveState(); renderAvailDates(); renderProfiles(); renderLocalDashboard(); }catch(e){}
+}
+function clearAvailDates(){ ETIE.local.availDates=[]; saveState(); renderAvailDates(); renderProfiles(); renderLocalDashboard(); toast('Availability cleared.'); }
 
 function currentTravStep(){for(var i=1;i<=16;i++){var e=document.getElementById('trav'+i);if(e&&!e.classList.contains('hidden'))return i;}return 1;}
 function currentLocalStep(){for(var i=1;i<=11;i++){var e=document.getElementById('local'+i);if(e&&!e.classList.contains('hidden'))return i;}return 1;}
@@ -312,17 +357,26 @@ function saveTrav3(){
 }
 function travHybridPayload(){var sv=ETIE.traveller.socialVibe, tp=ETIE.traveller.travelPace; return {social_vibe:SOCIAL_VIBE_LABELS[sv!=null?sv:1],travel_pace:TRAVEL_PACE_LABELS[tp!=null?tp:1],interests:(ETIE.traveller.styleInterests||[]).slice()};}
 function refreshAnchoredLabels(){
-  var sv=document.getElementById('travSocialVibe'), tp=document.getElementById('travTravelPace');
-  var svv=document.getElementById('travSocialVibeVal'), tpv=document.getElementById('travTravelPaceVal');
-  if(sv&&svv)svv.textContent=SOCIAL_VIBE_LABELS[+sv.value]||'';
-  if(tp&&tpv)tpv.textContent=TRAVEL_PACE_LABELS[+tp.value]||'';
+  [['travSocialVibe','travSocialVibeVal'],['travTravelPace','travTravelPaceVal'],['localSocialVibe','localSocialVibeVal'],['localTravelPace','localTravelPaceVal']].forEach(function(p){
+    var a=document.getElementById(p[0]), b=document.getElementById(p[1]);
+    if(!a||!b)return;
+    var labs=(p[0].indexOf('SocialVibe')!==-1?SOCIAL_VIBE_LABELS:TRAVEL_PACE_LABELS);
+    b.textContent=labs[+a.value]||'';
+  });
 }
 function saveTrav4(){ETIE.traveller.lookingFor=getChips('travLookingFor');}
 function saveTrav5(){ETIE.traveller.hook=document.getElementById('travHook').value.trim();}
 function saveLocal3(){ETIE.local.city=document.getElementById('localCity').value.trim();ETIE.local.age=document.getElementById('localAge').value.trim();ETIE.local.nationality=document.getElementById('localNationality').value;}
 function saveLocal4(){ETIE.local.interests=getChips('localInterests');}
-function saveLocal5(){ETIE.local.personality={social:+document.getElementById('localSocial').value,spontaneous:+document.getElementById('localSpont').value,curious:+document.getElementById('localCurious').value};}
-function saveLocal6(){ETIE.local.offer=document.getElementById('localOffer').value.trim();ETIE.local.offerTags=getChips('localOfferTags');}
+function saveLocal5(){
+  var sv=+document.getElementById('localSocialVibe').value;
+  var tp=+document.getElementById('localTravelPace').value;
+  var sc=vibeToSocial(sv), pc=paceToSpont(tp);
+  ETIE.local.socialVibe=sv; ETIE.local.travelPace=tp;
+  ETIE.local.styleInterests=getChips('localStyleChips');
+  ETIE.local.personality={social:sc,spontaneous:pc,curious:Math.round((sc+pc)/2)};
+}
+function saveLocal6(){ETIE.local.offer=document.getElementById('localOffer').value.trim();try{var ot=document.getElementById('localOfferTags'); if(ot) ETIE.local.offerTags=getChips('localOfferTags'); else ETIE.local.offerTags=(ETIE.local.interests||[]).slice(0,4);}catch(e){ETIE.local.offerTags=(ETIE.local.interests||[]).slice(0,4);}}
 function saveLocal7(){
   var c=document.getElementById('localAvailability');if(!c)return;
   ETIE.local.availability=Array.prototype.map.call(c.querySelectorAll('.list-item'),function(row){
@@ -455,7 +509,14 @@ function renderProfiles(){
     var lo=document.getElementById('localDashOffer');
     if(lo)lo.textContent='“'+(ETIE.local.offer||'—')+'”';
     var la=document.getElementById('localDashAvail');
-    if(la)la.textContent='Available: '+ETIE.local.availability.filter(function(a){return a.status==='Available';}).map(function(a){return a.label;}).join(', ')+' · Other: '+ETIE.local.availability.filter(function(a){return a.status!=='Available';}).map(function(a){return a.label+' ('+a.status+')';}).join(', ');
+    if(la){
+      if((ETIE.local.availDates||[]).length){
+        var ds=(ETIE.local.availDates||[]).slice().sort().map(function(d){ try{var dt=new Date(d+'T12:00'); return isNaN(dt.getTime())?d:dt.toLocaleDateString(undefined,{month:'short',day:'numeric'});}catch(e){return d;}}).join(', ');
+        la.textContent='Available dates: '+ds;
+      } else {
+        la.textContent='Available: '+ETIE.local.availability.filter(function(a){return a.status==='Available';}).map(function(a){return a.label;}).join(', ')+' · Other: '+ETIE.local.availability.filter(function(a){return a.status!=='Available';}).map(function(a){return a.label+' ('+a.status+')';}).join(', ');
+      }
+    }
     // Local photo in dashboard
     var lp=document.getElementById('localDashPhoto');
     if(lp){lp.innerHTML=ETIE.local.photo?('<img src="'+ETIE.local.photo+'" style="width:60px;height:60px;border-radius:50%;object-fit:cover;">'):'<span style="color:rgba(255,255,255,.5);font-size:24px;">+</span>';}
@@ -946,17 +1007,18 @@ function restoreAll(){
     var svEl=document.getElementById('travSocialVibe'); if(svEl) svEl.value=(ETIE.traveller.socialVibe!=null?ETIE.traveller.socialVibe:1);
     var tpEl=document.getElementById('travTravelPace'); if(tpEl) tpEl.value=(ETIE.traveller.travelPace!=null?ETIE.traveller.travelPace:1);
     setChips('travStyleChips',ETIE.traveller.styleInterests||[]);
+    var lsv=document.getElementById('localSocialVibe'); if(lsv) lsv.value=(ETIE.local.socialVibe!=null?ETIE.local.socialVibe:1);
+    var ltp=document.getElementById('localTravelPace'); if(ltp) ltp.value=(ETIE.local.travelPace!=null?ETIE.local.travelPace:1);
+    setChips('localStyleChips',ETIE.local.styleInterests||[]);
     setChips('travLookingFor',ETIE.traveller.lookingFor);
     document.getElementById('travHook').value=ETIE.traveller.hook;
     document.getElementById('localCity').value=ETIE.local.city;
     document.getElementById('localAge').value=ETIE.local.age;
     document.getElementById('localNationality').value=ETIE.local.nationality||'PT';
     setChips('localInterests',ETIE.local.interests);
-    document.getElementById('localSocial').value=ETIE.local.personality.social;
-    document.getElementById('localSpont').value=ETIE.local.personality.spontaneous;
-    document.getElementById('localCurious').value=ETIE.local.personality.curious;
+    // local hybrid handled above (localSocialVibe etc.)
     document.getElementById('localOffer').value=ETIE.local.offer;
-    setChips('localOfferTags',ETIE.local.offerTags);
+    try{ setChips('localOfferTags',ETIE.local.offerTags); }catch(e){}
     try{
       var vm=ETIE.local.verificationMethods||[];
       var vc=document.getElementById('localVerify');
@@ -1065,10 +1127,7 @@ document.addEventListener('DOMContentLoaded',function(){
       }
     }catch(err){}
   });
-  ['localSocial','localSpont','localCurious'].forEach(function(id){
-    var el=document.getElementById(id);if(el)el.addEventListener('input',function(){refreshSliderLabels();saveCurrentVisible(true);saveState();});
-  });
-  ['travSocialVibe','travTravelPace'].forEach(function(id){
+  ['travSocialVibe','travTravelPace','localSocialVibe','localTravelPace'].forEach(function(id){
     var el=document.getElementById(id);if(el)el.addEventListener('input',function(){refreshAnchoredLabels();saveCurrentVisible(true);saveState();});
   });
   ['travCity','travDateFrom','travDateTo','travHook','localCity','localAge','localOffer','travNationality','localNationality'].forEach(function(id){

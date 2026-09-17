@@ -7,9 +7,11 @@ function etieDefaults() {
   return {
     trip: { destination: (m.trip && m.trip.destination) || 'Lisbon', dates: (m.trip && m.trip.dates) || '12–18 September', dateFrom: '', dateTo: '', country: (m.trip && m.trip.country) || 'PT' },
     traveller: {
+      nationality: (m.traveller && m.traveller.nationality) || 'HK',
       interests: (m.traveller && m.traveller.interests) || ['Football', 'Salsa', 'Cooking', 'Thrift shopping'],
       personality: { social: 8, spontaneous: 8, curious: 10 },
-      lookingFor: ['Social & Drinks'],
+      socialVibe: 1, travelPace: 1, styleInterests: [],
+      lookingFor: ['💎 Hidden Gems'],
       hook: (m.traveller && m.traveller.hook) || '',
       photo: null,
       travelPhotos: [],
@@ -76,6 +78,10 @@ function loadState() {
     }
     if(!s.requests)s.requests={};
     if(!s.traveller.travelPhotos)s.traveller.travelPhotos=[];
+    if(s.traveller.socialVibe==null){ var sc=s.traveller.personality&&s.traveller.personality.social||5; s.traveller.socialVibe=sc<=3?0:sc>=8?2:1; }
+    if(s.traveller.travelPace==null){ var pc=s.traveller.personality&&s.traveller.personality.spontaneous||5; s.traveller.travelPace=pc<=3?0:pc>=8?2:1; }
+    if(!s.traveller.styleInterests)s.traveller.styleInterests=[];
+    if(!s.traveller.nationality)s.traveller.nationality='HK';
     if(!s.messages)s.messages={};
     if(!s.meetups)s.meetups={};
     if(!s.reviews)s.reviews={};
@@ -287,11 +293,30 @@ function saveTrav1(){
   ETIE.trip.destination=document.getElementById('travCity').value.trim();
   var f=(document.getElementById('travDateFrom')||{}).value||'',t=(document.getElementById('travDateTo')||{}).value||'';
   if(f&&t){ETIE.trip.dateFrom=f;ETIE.trip.dateTo=t;ETIE.trip.dates=formatTripDates(f,t);}
-  ETIE.trip.country=document.getElementById('travCountry').value;
+  // country is inferred from city pick; keep existing if user typed free text
+  var nc=document.getElementById('travNationality'); if(nc&&nc.value) ETIE.traveller.nationality=nc.value;
   updateHookLabel();
 }
 function saveTrav2(){ETIE.traveller.interests=getChips('travInterests');}
-function saveTrav3(){ETIE.traveller.personality={social:+document.getElementById('travSocial').value,spontaneous:+document.getElementById('travSpont').value,curious:+document.getElementById('travCurious').value};}
+var SOCIAL_VIBE_LABELS=["Solo & Quiet","Balanced","Group & Social"];
+var TRAVEL_PACE_LABELS=["Relaxed","Moderate","Packed / High-Energy"];
+function vibeToSocial(v){return v==0?2:v==2?9:5;}
+function paceToSpont(v){return v==0?2:v==2?9:5;}
+function saveTrav3(){
+  var sv=+document.getElementById('travSocialVibe').value;
+  var tp=+document.getElementById('travTravelPace').value;
+  var sc=vibeToSocial(sv), pc=paceToSpont(tp);
+  ETIE.traveller.socialVibe=sv; ETIE.traveller.travelPace=tp;
+  ETIE.traveller.styleInterests=getChips('travStyleChips');
+  ETIE.traveller.personality={social:sc,spontaneous:pc,curious:Math.round((sc+pc)/2)};
+}
+function travHybridPayload(){var sv=ETIE.traveller.socialVibe, tp=ETIE.traveller.travelPace; return {social_vibe:SOCIAL_VIBE_LABELS[sv!=null?sv:1],travel_pace:TRAVEL_PACE_LABELS[tp!=null?tp:1],interests:(ETIE.traveller.styleInterests||[]).slice()};}
+function refreshAnchoredLabels(){
+  var sv=document.getElementById('travSocialVibe'), tp=document.getElementById('travTravelPace');
+  var svv=document.getElementById('travSocialVibeVal'), tpv=document.getElementById('travTravelPaceVal');
+  if(sv&&svv)svv.textContent=SOCIAL_VIBE_LABELS[+sv.value]||'';
+  if(tp&&tpv)tpv.textContent=TRAVEL_PACE_LABELS[+tp.value]||'';
+}
 function saveTrav4(){ETIE.traveller.lookingFor=getChips('travLookingFor');}
 function saveTrav5(){ETIE.traveller.hook=document.getElementById('travHook').value.trim();}
 function saveLocal3(){ETIE.local.city=document.getElementById('localCity').value.trim();ETIE.local.age=document.getElementById('localAge').value.trim();ETIE.local.nationality=document.getElementById('localNationality').value;}
@@ -373,7 +398,7 @@ function assumePersona(id){
     if(id==='trav-etie'){
       var t=M.traveller||{};
       ETIE.trip={destination:(M.trip&&M.trip.destination)||'Lisbon',dates:(M.trip&&M.trip.dates)||'12–18 September',country:(M.trip&&M.trip.country)||'PT'};
-      ETIE.traveller={interests:((t.interests)||['Football','Salsa','Cooking','Thrift shopping']).slice(),personality:Object.assign({social:8,spontaneous:8,curious:10},t.personality||{}),lookingFor:((t.lookingFor)||['Social & Drinks']).slice(),hook:t.hook||''};
+      ETIE.traveller={nationality:t.nationality||'HK',interests:((t.interests)||['Football','Salsa','Cooking','Thrift shopping']).slice(),personality:Object.assign({social:8,spontaneous:8,curious:10},t.personality||{}),socialVibe:1,travelPace:1,styleInterests:[],lookingFor:((t.lookingFor)||['💎 Hidden Gems']).slice(),hook:t.hook||'',photo:null,travelPhotos:[]};
       try{document.getElementById('cloudStatus').textContent='Demo: Etie (offline)';}catch(e){}
       try{document.getElementById('demoPersonaLine').textContent='Acting as Etie · traveller — Exit demo to return to your account.';}catch(e){}
       saveState();setRole('traveller');
@@ -382,7 +407,7 @@ function assumePersona(id){
       if(!L){toast('Unknown persona');return;}
       ETIE.local={city:L.city||'Lisbon',age:String(L.age||28),verificationMethods:['Social media'],interests:(L.interests||[]).slice(0,4),personality:Object.assign({social:10,spontaneous:10,curious:10},L.personality||{}),offer:L.offer||'',offerTags:((L.offerTags||L.interests)||[]).slice(0,4),availability:(L.availability||[]).map(function(a){return (typeof a==='string')?{label:a,status:'Available'}:a;})};
       try{document.getElementById('cloudStatus').textContent='Demo: '+L.name+' (offline)';}catch(e){}
-      try{document.getElementById('demoPersonaLine').textContent='Acting as '+L.name+' · local — Exit demo to return to your account.';}catch(e){}
+      try{document.getElementById('demoPersonaLine').textContent='Acting as '+L.name+' · local guide — Exit demo to return to your account.';}catch(e){}
       saveState();setRole('local');localNext(9);
     }
     toast('Demo persona active — cloud sync paused.');
@@ -402,12 +427,17 @@ function exitDemo(){
 function renderProfiles(){
   try{
     var tripEl=document.getElementById('profTrip');
-    var flag=flagForCountry(ETIE.trip.country);
-    if(tripEl)tripEl.textContent=flag+' '+(ETIE.trip.destination||'—')+' · '+(ETIE.trip.dates||'—')+' · Traveller';
+    var tflag=flagForCountry(ETIE.traveller.nationality||''); var dflag=flagForCountry(ETIE.trip.country);
+    if(tripEl)tripEl.textContent=(ETIE.traveller.nationality?flagForCountry(ETIE.traveller.nationality)+' ':'')+dflag+' '+(ETIE.trip.destination||'—')+' · '+(ETIE.trip.dates||'—')+' · Traveller';
     var pi=document.getElementById('profInterests');
     if(pi){pi.innerHTML='';ETIE.traveller.interests.forEach(function(x){var s=document.createElement('span');s.className='chip active';s.textContent=x;pi.appendChild(s);});}
     var pp=document.getElementById('profPersonality');
-    if(pp)pp.textContent='Social '+ETIE.traveller.personality.social+'/10 · Spontaneous '+ETIE.traveller.personality.spontaneous+'/10 · Curious '+ETIE.traveller.personality.curious+'/10';
+    if(pp){
+      var _sv=ETIE.traveller.socialVibe, _tp=ETIE.traveller.travelPace;
+      var svl=SOCIAL_VIBE_LABELS[_sv!=null?_sv:1]||'', tpl=TRAVEL_PACE_LABELS[_tp!=null?_tp:1]||'';
+      pp.textContent=(svl?('Social vibe: '+svl+' · '):'')+(tpl?('Pace: '+tpl+' · '):'')+'Social '+ETIE.traveller.personality.social+'/10 · Spontaneous '+ETIE.traveller.personality.spontaneous+'/10 · Curious '+ETIE.traveller.personality.curious+'/10';
+      if((ETIE.traveller.styleInterests||[]).length) pp.textContent+=' · '+(ETIE.traveller.styleInterests||[]).join(' · ');
+    }
     var pl=document.getElementById('profLookingFor');
     if(pl)pl.textContent=ETIE.traveller.lookingFor.join(' · ')||'—';
     var ph=document.getElementById('profHook');
@@ -419,7 +449,7 @@ function renderProfiles(){
     var lflag=flagForCountry(ETIE.local.nationality);
     if(ln)ln.textContent=lflag+' You · '+(ETIE.local.city||'—');
     var ls=document.getElementById('localDashSub');
-    if(ls)ls.textContent='Local · '+(ETIE.local.age||'—')+' · Social '+ETIE.local.personality.social;
+    if(ls)ls.textContent='Local guide · '+(ETIE.local.age||'—')+' · Social '+ETIE.local.personality.social;
     var li=document.getElementById('localDashInterests');
     if(li){li.innerHTML='';ETIE.local.interests.forEach(function(x){var s=document.createElement('span');s.className='chip active';s.textContent=x;li.appendChild(s);});ETIE.local.offerTags.forEach(function(x){if(ETIE.local.interests.indexOf(x)===-1){var s=document.createElement('span');s.className='chip';s.textContent=x;li.appendChild(s);}});}
     var lo=document.getElementById('localDashOffer');
@@ -447,7 +477,7 @@ function renderMatches(){
     var lflag=flagForCountry(L.nationality||ETIE.trip.country);
     document.getElementById('matchAvatar').textContent=(L.name||'?').charAt(0);
     document.getElementById('matchName').textContent=lflag+' '+L.name;
-    document.getElementById('matchMeta').textContent=flagForCountry(L.nationality||ETIE.trip.country)+' '+(L.city||ETIE.trip.destination)+' · Local · '+(L.age||'');
+    document.getElementById('matchMeta').textContent=flagForCountry(L.nationality||ETIE.trip.country)+' '+(L.city||ETIE.trip.destination)+' · Local guide · '+(L.age||'');
     document.getElementById('matchScore').textContent=m.label+' · '+m.score+'/100 (internal)';
     document.getElementById('matchRankNote').textContent='Top '+(ETIE_MATCH_INDEX+1)+' of '+r.length+' · '+r.map(function(x){return x.local.name+':'+x.score;}).join(' ');
     var mc=document.getElementById('matchChips');mc.innerHTML='';
@@ -463,7 +493,7 @@ function renderMatches(){
     mt.innerHTML='';
     var trustItems=[];
     if(m.repCount)trustItems.push(['★ '+m.rep+' ('+m.repCount+') live'+(m.myRating?(' · you: '+m.myRating+'★'):'')]);
-    trustItems.push(['✓ Demo identity'],['✓ Demo local'],[(L.stats&&L.stats.rating?L.stats.rating:'—')+' ★ (demo)'],[(L.stats&&L.stats.travellersMet?L.stats.travellersMet:'—')+' met (demo)']);
+    trustItems.push(['✓ Demo identity'],['✓ Demo local guide'],[(L.stats&&L.stats.rating?L.stats.rating:'—')+' ★ (demo)'],[(L.stats&&L.stats.travellersMet?L.stats.travellersMet:'—')+' met (demo)']);
     trustItems.forEach(function(a){var s=document.createElement('span');s.textContent=a[0];mt.appendChild(s);});
     document.getElementById('matchWhy').textContent='You share '+(m.shared.join(' + ')||'no direct interests yet')+', personality fit '+m.pers+'/100, local value '+(L.offer||'').slice(0,80)+'…, available '+(L.availability||[]).join(', ')+'.';
     document.getElementById('whyInterestsTitle').textContent=m.shared.length+' shared interest'+(m.shared.length===1?'':'s');
@@ -489,11 +519,11 @@ function renderMatches(){
       p8a.textContent=(L.name||'?').charAt(0);
     }
     document.getElementById('prof8Title').textContent=L.name+', '+(L.age||'');
-    document.getElementById('prof8Meta').textContent=flagForCountry(L.nationality||ETIE.trip.country)+' '+(L.city||'')+' · Local';
+    document.getElementById('prof8Meta').textContent=flagForCountry(L.nationality||ETIE.trip.country)+' '+(L.city||'')+' · Local guide';
     var p8t=document.getElementById('prof8Trust');p8t.innerHTML='';
     var p8items=[];
     if(m.repCount)p8items.push('★ '+m.rep+' ('+m.repCount+') live'+(m.myRating?(' · you: '+m.myRating+'★'):''));
-    p8items.push('✓ Demo identity','✓ Demo local',(L.stats.rating+' ★ (demo)'));
+    p8items.push('✓ Demo identity','✓ Demo local guide',(L.stats.rating+' ★ (demo)'));
     p8items.forEach(function(t){var s=document.createElement('span');s.textContent=t;p8t.appendChild(s);});
     var p8i=document.getElementById('prof8Interests');p8i.innerHTML='';
     (L.interests||[]).forEach(function(x){var s=document.createElement('span');s.className='chip'+(m.shared.indexOf(x)!==-1?' active':'');s.textContent=x;p8i.appendChild(s);});
@@ -513,7 +543,7 @@ function renderMatches(){
         d.innerHTML='<strong></strong><p class="muted"></p>';
         d.querySelector('strong').textContent=lflag+' '+x.local.name+' · '+x.score+(x.repCount?(' · '+x.rep+'★'):'');
         d.querySelector('.muted').textContent=(x.shared.join(' · ')||'No overlap yet')+' — '+x.label+(x.tagBonus?(' · loved by people like you'): '');
-        var st=document.createElement('span');st.className='status';st.textContent='Local';d.appendChild(st);
+        var st=document.createElement('span');st.className='status';st.textContent='Local guide';d.appendChild(st);
         var vb=document.createElement('button');vb.className='secondary';vb.textContent='View';vb.style.marginTop='8px';
         vb.onclick=(function(id){return function(){
           document.getElementById('travRole').classList.add('active');document.getElementById('localRole').classList.remove('active');
@@ -553,7 +583,7 @@ function ensureChat(k){
   if(!ETIE.messages[k])ETIE.messages[k]=[];
   if(!ETIE.messages[k].length){
     var m=currentMatch();
-    var lname=m?m.local.name:'Local';
+    var lname=m?m.local.name:'Local guide';
     ETIE.messages[k].push({from:'local',text:'Hey! Excited to meet you. What are you most looking forward to in Lisbon ('+lname+' here)?',ts:Date.now()-7200000});
   }
 }
@@ -647,12 +677,12 @@ function renderRequests(){
   try{
     document.getElementById('reqTitle').textContent='Ask '+m.local.name+' to meet';
     var rt=document.getElementById('reqStatusTitle'),rs=document.getElementById('reqStatusSub'),oc=document.getElementById('openChatBtn');
-    if(st==='pending'){rt.textContent='Request pending to '+m.local.name+'.';rs.textContent='Messaging stays locked until they accept. Demo: switch to Local flow → dashboard → Accept.';oc.textContent='Check chat (locked)';}
+    if(st==='pending'){rt.textContent='Request pending to '+m.local.name+'.';rs.textContent='Messaging stays locked until they accept. Demo: switch to Local guide flow → dashboard → Accept.';oc.textContent='Check chat (locked)';}
     else if(st==='accepted'){rt.textContent=m.local.name+' accepted your request.';rs.textContent='Messaging is now unlocked. Agree on activity, time and place.';oc.textContent='Open chat';}
     else if(st==='declined'){rt.textContent=m.local.name+' declined.';rs.textContent='Chat stays locked. Try Next suggestion in Step 6.';oc.textContent='Back to matches';oc.onclick=function(){travNext(6);};return;}
     else{rt.textContent='No request yet to '+m.local.name+'.';rs.textContent='Send one from Step 9 to unlock messaging after acceptance.';oc.textContent='Open chat (locked)';}
      oc.onclick=function(){openChatPopup();};
-    var lr=document.getElementById('localReqTitle');if(lr)lr.textContent='Etie, 27 · for '+(m?m.local.name:'—');
+    var lr=document.getElementById('localReqTitle');if(lr)lr.textContent=(ETIE.traveller.nationality?flagForCountry(ETIE.traveller.nationality)+' ':'')+'Etie, 27 · for '+(m?m.local.name:'—');
     var lw=document.getElementById('localReqWhy');    if(lw)lw.textContent=(m.shared.join(' · ')||'New traveller')+' · '+flagForCountry(ETIE.trip.country)+' '+ETIE.trip.destination+' '+ETIE.trip.dates;
     var lm=document.getElementById('localReqMsg');if(lm)lm.textContent=ETIE.requests[k]?('“'+(ETIE.requests[k].message||'')+'”'):'No message yet.';
     var ls=document.getElementById('localReqStatus');if(ls)ls.textContent=st==='none'?'No request yet — send one as Traveller first':st;
@@ -666,7 +696,7 @@ function renderChat(){
     var lock=document.getElementById('chatLock');
     if(lock){
       if(st==='accepted')lock.textContent='Unlocked. Keep it simple — aim for a real-world meetup.';
-      else if(st==='pending')lock.textContent='Locked — pending. Switch to Local to Accept (demo).';
+      else if(st==='pending')lock.textContent='Locked — pending. Switch to Local guide to Accept (demo).';
       else if(st==='declined')lock.textContent='Locked — declined.';
       else lock.textContent='Locked — send a request in Step 9 first.';
     }
@@ -718,7 +748,10 @@ function renderMessagesList(){
       var r=ETIE.requests[k];var msgs=ETIE.messages[k]||[];var last=msgs.length?msgs[msgs.length-1].text:'—';
       var row=document.createElement('div');row.className='list-item';row.style.cursor='pointer';row.title='Tap to open chat';
       row.innerHTML='<div><strong></strong><br><span class="muted"></span></div>';
-      row.querySelector('strong').textContent=(r.localName||k)+' · '+r.status;
+      var isTravReq = (k===reqKey() || r.localName);
+      var flagPref = '';
+      try{ if(ETIE.traveller.nationality) flagPref = flagForCountry(ETIE.traveller.nationality)+' '; }catch(e){}
+      row.querySelector('strong').textContent=flagPref+(r.localName||k)+' · '+r.status;
       row.querySelector('.muted').textContent=last.slice(0,80);
       var st=document.createElement('span');st.className='status';st.textContent=r.status;row.appendChild(st);
       row.onclick=(function(kk){return function(){
@@ -836,7 +869,7 @@ function renderTrips(){
     var row=document.createElement('div');row.className='list-item';
     var conn=reqStatus(k);var meet=mu.status;
     var tr=r.trav;var lr=r.local;
-    var revParts=[];if(tr)revParts.push('Trav: '+tr.rating+'★ '+tr.meetAgain);if(lr)revParts.push('Local: '+lr.rating+'★ '+lr.meetAgain);
+    var revParts=[];if(tr)revParts.push('Trav: '+tr.rating+'★ '+tr.meetAgain);if(lr)revParts.push('Local guide: '+lr.rating+'★ '+lr.meetAgain);
     var revText=revParts.length?revParts.join(' | '):'none';
     var demoMet=18+(meet==='completed'?1:0);
     row.innerHTML='<div><strong></strong><br><span class="muted"></span></div>';
@@ -864,7 +897,9 @@ function renderLocalDashboard(){
       ids.forEach(function(k){
         var r=ETIE.requests[k];var row=document.createElement('div');row.className='list-item';
         row.innerHTML='<div><strong></strong><br><span class="muted"></span></div>';
-        row.querySelector('strong').textContent=localNameFor(k)+' · '+r.status;
+        var qflag='';
+        try{ var qNation = (ETIE.traveller.nationality||''); if(qNation) qflag=flagForCountry(qNation)+' '; }catch(e){}
+        row.querySelector('strong').textContent=qflag+localNameFor(k)+' · '+r.status;
         row.querySelector('.muted').textContent=(r.message||'—').slice(0,90);
         var wrap=document.createElement('div');wrap.style.display='flex';wrap.style.gap='6px';
         var v=document.createElement('button');v.className='secondary';v.textContent='View';v.onclick=(function(kk){return function(){focusMatch(kk);localNext(9);};})(k);
@@ -906,11 +941,11 @@ function restoreAll(){
     document.getElementById('travCity').value=ETIE.trip.destination;
     var tdf=document.getElementById('travDateFrom');if(tdf)tdf.value=ETIE.trip.dateFrom||'';
     var tdt=document.getElementById('travDateTo');if(tdt)tdt.value=ETIE.trip.dateTo||'';
-    document.getElementById('travCountry').value=ETIE.trip.country||'PT';
+    var tn=document.getElementById('travNationality'); if(tn) tn.value=ETIE.traveller.nationality||'HK';
     setChips('travInterests',ETIE.traveller.interests);
-    document.getElementById('travSocial').value=ETIE.traveller.personality.social;
-    document.getElementById('travSpont').value=ETIE.traveller.personality.spontaneous;
-    document.getElementById('travCurious').value=ETIE.traveller.personality.curious;
+    var svEl=document.getElementById('travSocialVibe'); if(svEl) svEl.value=(ETIE.traveller.socialVibe!=null?ETIE.traveller.socialVibe:1);
+    var tpEl=document.getElementById('travTravelPace'); if(tpEl) tpEl.value=(ETIE.traveller.travelPace!=null?ETIE.traveller.travelPace:1);
+    setChips('travStyleChips',ETIE.traveller.styleInterests||[]);
     setChips('travLookingFor',ETIE.traveller.lookingFor);
     document.getElementById('travHook').value=ETIE.traveller.hook;
     document.getElementById('localCity').value=ETIE.local.city;
@@ -932,18 +967,19 @@ function restoreAll(){
       });
     }catch(e){}
   }catch(e){}
-  restorePhotoPreviews();updateCounts();refreshSliderLabels();syncAvailUI();renderProfiles();renderMatches();renderRequests();renderChat();renderMessagesList();renderMeetup();renderThanks();renderTrips();renderLocalDashboard();paintStars('travStars',ETIE._travStars||0);paintStars('localStars',ETIE._localStars||0);
+  restorePhotoPreviews();updateCounts();refreshSliderLabels();refreshAnchoredLabels();syncAvailUI();renderProfiles();renderMatches();renderRequests();renderChat();renderMessagesList();renderMeetup();renderThanks();renderTrips();renderLocalDashboard();paintStars('travStars',ETIE._travStars||0);paintStars('localStars',ETIE._localStars||0);
 }
 function refreshSliderLabels(){
-  var m=[['travSocial','travSocialVal'],['travSpont','travSpontVal'],['travCurious','travCuriousVal'],['localSocial','localSocialVal'],['localSpont','localSpontVal'],['localCurious','localCuriousVal']];
+  var m=[['localSocial','localSocialVal'],['localSpont','localSpontVal'],['localCurious','localCuriousVal']];
   m.forEach(function(p){var a=document.getElementById(p[0]),b=document.getElementById(p[1]);if(a&&b)b.textContent=a.value;});
+  refreshAnchoredLabels();
 }
 // Location database — build country selects + city typeahead (offline, no API)
 function countryName(code){try{var a=window.ETIE_COUNTRIES||[];for(var i=0;i<a.length;i++)if(a[i].code===code)return a[i].name;}catch(e){}return code;}
 function buildCountrySelects(){
   try{
     if(!window.ETIE_COUNTRIES)return;
-    ['travCountry','localNationality'].forEach(function(id){
+    ['travNationality','localNationality'].forEach(function(id){
       var sel=document.getElementById(id);if(!sel)return;
       var cur=sel.value;
       sel.innerHTML='';
@@ -965,7 +1001,7 @@ function locationSuggest(inputId,boxId){
     var out=[];var cities=window.ETIE_CITIES||[];
     // prefer the currently-selected country, then everything else (never hard-restricted)
     var selCode='';
-    try{selCode=(document.getElementById(inputId==='travCity'?'travCountry':'localNationality')||{}).value||'';}catch(e){}
+    try{selCode=(document.getElementById(inputId==='travCity'?'travNationality':'localNationality')||{}).value||'';}catch(e){}
     var same=[],rest=[];
     for(var i=0;i<cities.length;i++){
       var c=cities[i];
@@ -987,7 +1023,7 @@ function pickLocation(inputId,boxId,city,code){
   try{
     var inp=document.getElementById(inputId);if(inp)inp.value=city;
     var box=document.getElementById(boxId);if(box){box.innerHTML='';box.classList.remove('open');}
-    if(inputId==='travCity'){var s=document.getElementById('travCountry');if(s)s.value=code;ETIE.trip.destination=city;ETIE.trip.country=code;}
+    if(inputId==='travCity'){ ETIE.trip.destination=city;ETIE.trip.country=code; }
     if(inputId==='localCity'){var l=document.getElementById('localNationality');if(l)l.value=code;ETIE.local.city=city;ETIE.local.nationality=code;}
     saveCurrentVisible(true);updateHookLabel();
   }catch(e){}
@@ -1001,7 +1037,7 @@ function updateHookLabel(){
 // Alphabetise all pickers A–Z (countries keep 🌍 Other last; chips keep active state)
 function alphabetisePickers(){
   try{
-    ['travCountry','localNationality'].forEach(function(id){
+    ['travNationality','localNationality'].forEach(function(id){
       var sel=document.getElementById(id);if(!sel||!sel.options)return;
       var cur=sel.value;
       var opts=Array.prototype.slice.call(sel.options);
@@ -1029,10 +1065,13 @@ document.addEventListener('DOMContentLoaded',function(){
       }
     }catch(err){}
   });
-  ['travSocial','travSpont','travCurious','localSocial','localSpont','localCurious'].forEach(function(id){
+  ['localSocial','localSpont','localCurious'].forEach(function(id){
     var el=document.getElementById(id);if(el)el.addEventListener('input',function(){refreshSliderLabels();saveCurrentVisible(true);saveState();});
   });
-  ['travCity','travDateFrom','travDateTo','travHook','localCity','localAge','localOffer'].forEach(function(id){
+  ['travSocialVibe','travTravelPace'].forEach(function(id){
+    var el=document.getElementById(id);if(el)el.addEventListener('input',function(){refreshAnchoredLabels();saveCurrentVisible(true);saveState();});
+  });
+  ['travCity','travDateFrom','travDateTo','travHook','localCity','localAge','localOffer','travNationality','localNationality'].forEach(function(id){
     var el=document.getElementById(id);if(el)el.addEventListener('change',function(){saveCurrentVisible(true);});
   });
   var ci=document.getElementById('chatInput');if(ci)ci.addEventListener('keydown',function(e){if(e.key==='Enter')sendChat('traveller');});

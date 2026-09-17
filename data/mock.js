@@ -9,7 +9,7 @@ window.ETIE_MOCKS = {
     role: "traveller",
     interests: ["Football", "Salsa", "Cooking", "Thrift shopping"],
     personality: { social: 8, spontaneous: 8, curious: 10 },
-    lookingFor: ["Social & Drinks"],
+    lookingFor: ["💎 Hidden Gems"],
     hook: "Play football, find a good salsa night, eat local food and see the city through someone's eyes."
   },
   trip: {

@@ -152,12 +152,43 @@ header .secondary{background:rgba(255,255,255,.96)!important;color:#171717!impor
   .actions .primary,.actions .secondary{flex:1 1 auto;min-width:0}
   .panel{padding:20px 16px}
 }
-/* Black trait sliders (1-10) */
+/* Black trait sliders (1-10) + distinct anchored colours */
 .trait-row input[type=range]{-webkit-appearance:none;appearance:none;height:6px;border-radius:999px;background:rgba(0,0,0,.22);outline:none;padding:0;border:none}
 .trait-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:22px;height:22px;border-radius:50%;background:#111;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4);cursor:pointer}
 .trait-row input[type=range]::-moz-range-track{height:6px;border-radius:999px;background:rgba(0,0,0,.22)}
 .trait-row input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:#111;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4);cursor:pointer}
-/* Step 4 looking-for pill grid */
+.trait-row-social input[type=range]{background:rgba(99,102,241,.35)}
+.trait-row-social input[type=range]::-webkit-slider-thumb{background:#4f46e5}
+.trait-row-spont input[type=range]{background:rgba(14,165,233,.35)}
+.trait-row-spont input[type=range]::-webkit-slider-thumb{background:#0ea5e9}
+.trait-row-curious input[type=range]{background:rgba(16,185,129,.35)}
+.trait-row-curious input[type=range]::-webkit-slider-thumb{background:#059669}
+/* Anchored hybrid sliders (Step 3) */
+.anchored{display:flex;flex-direction:column;gap:18px;margin:16px 0 8px}
+.anchored-row{padding:12px 14px;border:1px solid #ece7e0;border-radius:16px;background:#faf9f7}
+.anchored-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.anchored-head strong{font-size:14px}
+.anchored-val{font-size:12px;font-weight:700;padding:4px 8px;border-radius:999px;background:#111;color:#fff}
+.anchored-row input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:999px;outline:none;padding:0;border:none}
+.anchored-labels{display:flex;justify-content:space-between;font-size:11px;color:#766f65;margin-top:6px}
+.slider-social{background:rgba(99,102,241,.35)!important}
+.slider-social::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:22px;height:22px;border-radius:50%;background:#4f46e5;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.35);cursor:pointer}
+.slider-social::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:#4f46e5;border:2px solid #fff}
+.slider-social::-moz-range-track{height:6px;border-radius:999px;background:rgba(99,102,241,.35)}
+.slider-pace{background:rgba(236,72,153,.35)!important}
+.slider-pace::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:22px;height:22px;border-radius:50%;background:#ec4899;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.35);cursor:pointer}
+.slider-pace::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:#ec4899;border:2px solid #fff}
+.slider-pace::-moz-range-track{height:6px;border-radius:999px;background:rgba(236,72,153,.35)}
+.style-chips{display:flex;flex-wrap:wrap;gap:8px}
+.style-chips .chip{padding:10px 14px}
+.style-chips .chip.active{background:#111;color:#fff;border-color:#111}
+/* Step 4 looking grid (10-item responsive) */
+.looking-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:14px 0}
+@media(min-width:640px){.looking-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.lg-chip{padding:14px 12px;border-radius:999px;text-align:center;font-weight:650;justify-content:center}
+.lg-chip.active{background:#111!important;color:#fff!important;border-color:#111!important}
+.looking-grid .chip.active::before{content:'✓ ';font-weight:800}
+/* Step 4 looking-for pill grid (legacy) */
 .looking-groups{margin-top:20px}
 .looking-group{margin:0 0 14px}
 .looking-group:last-child{margin-bottom:0}

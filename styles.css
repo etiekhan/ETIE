@@ -134,3 +134,21 @@ header .secondary{background:rgba(255,255,255,.96)!important;color:#171717!impor
 .bubble{max-width:78%;padding:10px 12px;border-radius:14px;background:#fff;border:1px solid #e9e4de;box-shadow:0 2px 10px rgba(0,0,0,.06)}
 .bubble.me{background:#171717;color:#fff;border-color:#171717;align-self:flex-end;box-shadow:0 8px 18px rgba(0,0,0,.28)}
 @media(max-width:640px){.chat-overlay{align-items:stretch;justify-content:center;padding:10px}.chat-popup{width:100%;height:calc(100vh - 20px)}}
+/* Trait sliders: [Label] left, [bar] middle full-width, [value] right — right edges align */
+.traits{display:flex;flex-direction:column;gap:14px;margin:14px 0}
+.trait-row{display:flex;align-items:center;gap:12px}
+.trait-label{flex:0 0 110px;font-size:13px;color:#6b655d;font-weight:600}
+.trait-row input[type=range]{flex:1 1 auto;width:100%;min-width:0;margin:0}
+.trait-val{flex:0 0 40px;text-align:right;font-size:13px;font-weight:700;color:#171717;font-variant-numeric:tabular-nums}
+/* Buttons stay inside white cards on narrow screens (iPhone): wrap, never overflow */
+.actions{flex-wrap:wrap;align-items:center}
+.actions button{max-width:100%}
+.success button{max-width:100%}
+.chat{overflow-wrap:anywhere}
+#trav12 .field input,#local10 .field input,.chat-popup-foot input{min-width:0}
+@media(max-width:640px){
+  .trait-label{flex-basis:92px}
+  .row{grid-template-columns:1fr}
+  .actions .primary,.actions .secondary{flex:1 1 auto;min-width:0}
+  .panel{padding:20px 16px}
+}

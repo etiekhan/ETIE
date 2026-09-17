@@ -265,7 +265,7 @@ function travNext(n){
     saveState();
     if(n>cur&&!validTrav(cur))return;
   }catch(e){}
-  hideGroup('trav');var e=document.getElementById('trav'+n);if(e)e.classList.remove('hidden');updateCounts();renderProfiles();if(n===7||n===8)renderMatches();if(n===9||n===10||n===11){renderRequests();renderChat();renderMessagesList();}if(n>=12&&n<=17){renderMeetup();renderTrips();renderThanks();paintStars('travStars',ETIE._travStars||0);}showScreen('trav'+n);
+  hideGroup('trav');var e=document.getElementById('trav'+n);if(e)e.classList.remove('hidden');updateCounts();renderProfiles();if(n===7||n===8)renderMatches();if(n===9||n===10||n===11||n===12){renderRequests();renderChat();renderMessagesList();}if(n>=12&&n<=17){renderMeetup();renderTrips();renderThanks();paintStars('travStars',ETIE._travStars||0);}showScreen('trav'+n);
 }
 function localNext(n){
   var cur=currentLocalStep();
@@ -542,6 +542,26 @@ function sendChat(who,inputId){
   input.value='';saveState();renderChat();renderMessagesList();
   try{ if(window.EtieCloud&&window.EtieCloud.pushSharedMessage) window.EtieCloud.pushSharedMessage(k, text, who); }catch(e){}
 }
+// Chat popup (mini overlay) — was called from HTML but never defined, so traveller chat never opened
+function chatRole(){try{var lf=document.getElementById('localFlow');if(lf&&!lf.classList.contains('hidden'))return 'local';}catch(e){}return 'traveller';}
+function openChatPopup(){
+  try{
+    renderChat();renderMessagesList();
+    var o=document.getElementById('chatPopupOverlay');if(o)o.classList.remove('hidden');
+    var pi=document.getElementById('chatPopupInput');if(pi)pi.disabled=(reqStatus()!=='accepted');
+    setTimeout(function(){try{var p=document.getElementById('chatPopupInput');if(p&&!p.disabled)p.focus();}catch(e){}},80);
+  }catch(e){toast('Chat unavailable.');}
+}
+function closeChatPopup(){try{var o=document.getElementById('chatPopupOverlay');if(o)o.classList.add('hidden');}catch(e){}}
+function sendChatPopup(){
+  var who=chatRole();var k=reqKey();
+  var pi=document.getElementById('chatPopupInput');if(!pi){toast('Chat unavailable.');return;}
+  var text=(pi.value||'').trim();if(!text){toast('Type a message first.');return;}
+  if(reqStatus(k)!=='accepted'){toast('Chat unlocks only after Accept.');return;}
+  ensureChat(k);ETIE.messages[k].push({from:who,text:text,ts:Date.now()});
+  pi.value='';saveState();renderChat();renderMessagesList();
+  try{ if(window.EtieCloud&&window.EtieCloud.pushSharedMessage) window.EtieCloud.pushSharedMessage(k, text, who); }catch(e){}
+}
 function tryPlanMeetup(){var k=reqKey();if(reqStatus(k)!=='accepted'){toast('Plan unlocks after Accept.');return;}travNext(12);}
 function resetDemo(){ETIE.requests={};ETIE.messages={};ETIE.meetups={};ETIE.reviews={};ETIE._travStars=0;ETIE._localStars=0;ETIE_MATCH_INDEX=0;saveState();renderRequests();renderChat();renderMessagesList();renderMeetup();renderThanks();renderTrips();renderLocalDashboard();paintStars('travStars',0);paintStars('localStars',0);toast('Demo reset.');}
 function renderRequests(){
@@ -638,11 +658,25 @@ function paintStars(id,n){var c=document.getElementById(id);if(!c)return;Array.p
 function setTravStars(n){ETIE._travStars=n;saveState();paintStars('travStars',n);}
 function setLocalStars(n){ETIE._localStars=n;saveState();paintStars('localStars',n);}
 function selectSingle(el,containerId){var c=document.getElementById(containerId);if(c)Array.prototype.forEach.call(c.querySelectorAll('.chip'),function(x){x.classList.remove('active');});el.classList.add('active');}
+function formatMeetWhen(d,t){
+  try{
+    var dt=new Date(d+'T'+(t||'12:00'));
+    if(isNaN(dt.getTime()))return d+' '+(t||'');
+    var days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    var months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var s=days[dt.getDay()]+' '+dt.getDate()+' '+months[dt.getMonth()];
+    if(t){var hh=+t.slice(0,2),mm=t.slice(3,5);var ap=hh>=12?'PM':'AM';var h12=hh%12||12;s+=' · '+h12+':'+mm+' '+ap;}
+    return s;
+  }catch(e){return d+' '+(t||'');}
+}
 function saveMeetup(){
   if(reqStatus()!=='accepted'){toast('Accept the request first.');return;}
-  var a=document.getElementById('meetActivity').value.trim(),w=document.getElementById('meetWhen').value.trim(),wh=document.getElementById('meetWhere').value.trim();
-  if(!a||!w||!wh){toast('Fill activity, when and where.');return;}
-  ETIE.meetups[meetKey()]={activity:a,when:w,where:wh,status:'planned',with:currentMatch().local.name};
+  var a=document.getElementById('meetActivity').value.trim(),wh=document.getElementById('meetWhere').value.trim();
+  var d=(document.getElementById('meetDate')||{}).value||'';
+  var t=(document.getElementById('meetTime')||{}).value||'';
+  if(!a||!d||!wh){toast('Fill activity, date and where.');return;}
+  var w=formatMeetWhen(d,t);
+  ETIE.meetups[meetKey()]={activity:a,when:w,meetDate:d,meetTime:t,where:wh,status:'planned',with:currentMatch().local.name};
   saveState();renderMeetup();renderTrips();
   try{ if(window.EtieCloud&&window.EtieCloud.pushSharedMeetup) window.EtieCloud.pushSharedMeetup(meetKey()); }catch(e){}
   travNext(13);
@@ -690,9 +724,10 @@ function renderMeetup(){
   try{
     document.getElementById('meetWith').textContent='With '+m.local.name+' · '+ETIE.trip.destination;
     if(mu.status!=='none'){
-      document.getElementById('meetActivity').value=mu.activity;
-      document.getElementById('meetWhen').value=mu.when;
-      document.getElementById('meetWhere').value=mu.where;
+      var ma=document.getElementById('meetActivity');if(ma)ma.value=mu.activity||'';
+      var mdt=document.getElementById('meetDate');if(mdt)mdt.value=mu.meetDate||'';
+      var mtt=document.getElementById('meetTime');if(mtt)mtt.value=mu.meetTime||'';
+      var mw=document.getElementById('meetWhere');if(mw)mw.value=mu.where||'';
     }
     document.getElementById('meetStatusTitle').textContent=mu.status==='completed'?'Meetup completed':(mu.status==='planned'?'Meetup planned':'No meetup yet');
     document.getElementById('meetSummaryTitle').textContent=(mu.activity||'—')+' · '+m.local.name+' + Etie';
@@ -824,7 +859,27 @@ function refreshSliderLabels(){
   var m=[['travSocial','travSocialVal'],['travSpont','travSpontVal'],['travCurious','travCuriousVal'],['localSocial','localSocialVal'],['localSpont','localSpontVal'],['localCurious','localCuriousVal']];
   m.forEach(function(p){var a=document.getElementById(p[0]),b=document.getElementById(p[1]);if(a&&b)b.textContent=a.value;});
 }
+// Alphabetise all pickers A–Z (countries keep 🌍 Other last; chips keep active state)
+function alphabetisePickers(){
+  try{
+    ['travCountry','localNationality'].forEach(function(id){
+      var sel=document.getElementById(id);if(!sel||!sel.options)return;
+      var cur=sel.value;
+      var opts=Array.prototype.slice.call(sel.options);
+      var other=opts.filter(function(o){return o.value==='OTHER';});
+      var rest=opts.filter(function(o){return o.value!=='OTHER';}).sort(function(a,b){return a.text.localeCompare(b.text);});
+      rest.concat(other).forEach(function(o){sel.appendChild(o);});
+      if(cur)sel.value=cur;
+    });
+    ['travInterests','localInterests','travLookingFor','localOfferTags'].forEach(function(id){
+      var c=document.getElementById(id);if(!c)return;
+      var btns=Array.prototype.slice.call(c.querySelectorAll('.chip')).sort(function(a,b){return a.textContent.trim().localeCompare(b.textContent.trim());});
+      btns.forEach(function(b){c.appendChild(b);});
+    });
+  }catch(e){}
+}
 document.addEventListener('DOMContentLoaded',function(){
+  alphabetisePickers();
   restoreAll();
   ['travSocial','travSpont','travCurious','localSocial','localSpont','localCurious'].forEach(function(id){
     var el=document.getElementById(id);if(el)el.addEventListener('input',function(){refreshSliderLabels();saveCurrentVisible(true);saveState();});

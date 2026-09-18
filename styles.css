@@ -163,8 +163,9 @@ header .secondary{background:rgba(255,255,255,.96)!important;color:#171717!impor
 .trait-row-spont input[type=range]::-webkit-slider-thumb{background:#0ea5e9}
 .trait-row-curious input[type=range]{background:rgba(16,185,129,.35)}
 .trait-row-curious input[type=range]::-webkit-slider-thumb{background:#059669}
-/* Anchored hybrid sliders (Step 3) — shortened bars */
-.anchored{display:flex;flex-direction:column;gap:18px;margin:16px 0 8px}
+/* Anchored hybrid sliders (Step 3) — side-by-side */
+.anchored{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:16px 0 8px}
+@media(max-width:640px){.anchored{grid-template-columns:1fr}}
 .anchored-row{padding:12px 14px;border:1px solid #ece7e0;border-radius:16px;background:#faf9f7}
 .anchored-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
 .anchored-head strong{font-size:14px}

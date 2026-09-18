@@ -7,6 +7,7 @@ function etieDefaults() {
   return {
     trip: { destination: (m.trip && m.trip.destination) || 'Lisbon', dates: (m.trip && m.trip.dates) || '12–18 September', dateFrom: '', dateTo: '', country: (m.trip && m.trip.country) || 'PT' },
     traveller: {
+      nickname: '',
       nationality: (m.traveller && m.traveller.nationality) || 'HK',
       interests: (m.traveller && m.traveller.interests) || ['Football', 'Salsa', 'Cooking', 'Thrift shopping'],
       personality: { social: 8, spontaneous: 8, curious: 10 },
@@ -20,6 +21,7 @@ function etieDefaults() {
       avgRatingReceived: 0
     },
     local: {
+      displayName: '',
       city: 'Lisbon', age: '28', nationality: 'PT',
       verificationMethods: [],
       interests: ['Salsa', 'Cooking'],
@@ -80,11 +82,13 @@ function loadState() {
     }
     if(!s.requests)s.requests={};
     if(!s.traveller.travelPhotos)s.traveller.travelPhotos=[];
+    if(!s.traveller.nickname) s.traveller.nickname='';
     if(s.traveller.socialVibe==null){ var sc=s.traveller.personality&&s.traveller.personality.social||5; s.traveller.socialVibe=sc<=3?0:sc>=8?2:1; }
     if(s.traveller.travelPace==null){ var pc=s.traveller.personality&&s.traveller.personality.spontaneous||5; s.traveller.travelPace=pc<=3?0:pc>=8?2:1; }
     if(!s.traveller.styleInterests)s.traveller.styleInterests=[];
     if(!s.traveller.nationality)s.traveller.nationality='HK';
     if(!s.local.styleInterests)s.local.styleInterests=[];
+    if(s.local.displayName==null) s.local.displayName='';
     if(s.local.socialVibe==null){ var lsc=s.local.personality&&s.local.personality.social||5; s.local.socialVibe=lsc<=3?0:lsc>=8?2:1; }
     if(s.local.travelPace==null){ var lpc=s.local.personality&&s.local.personality.spontaneous||5; s.local.travelPace=lpc<=3?0:lpc>=8?2:1; }
     if(!s.local.availDates)s.local.availDates=[];
@@ -338,8 +342,8 @@ function saveTrav1(){
   ETIE.trip.destination=document.getElementById('travCity').value.trim();
   var f=(document.getElementById('travDateFrom')||{}).value||'',t=(document.getElementById('travDateTo')||{}).value||'';
   if(f&&t){ETIE.trip.dateFrom=f;ETIE.trip.dateTo=t;ETIE.trip.dates=formatTripDates(f,t);}
-  // country is inferred from city pick; keep existing if user typed free text
   var nc=document.getElementById('travNationality'); if(nc&&nc.value) ETIE.traveller.nationality=nc.value;
+  var nn=document.getElementById('travNickname'); if(nn) ETIE.traveller.nickname=nn.value.trim();
   updateHookLabel();
 }
 function saveTrav2(){ETIE.traveller.interests=getChips('travInterests');}
@@ -366,7 +370,7 @@ function refreshAnchoredLabels(){
 }
 function saveTrav4(){ETIE.traveller.lookingFor=getChips('travLookingFor');}
 function saveTrav5(){ETIE.traveller.hook=document.getElementById('travHook').value.trim();}
-function saveLocal3(){ETIE.local.city=document.getElementById('localCity').value.trim();ETIE.local.age=document.getElementById('localAge').value.trim();ETIE.local.nationality=document.getElementById('localNationality').value;}
+function saveLocal3(){ETIE.local.city=document.getElementById('localCity').value.trim();ETIE.local.age=document.getElementById('localAge').value.trim();ETIE.local.nationality=document.getElementById('localNationality').value; var dn=document.getElementById('localNickname'); if(dn) ETIE.local.displayName=dn.value.trim();}
 function saveLocal4(){ETIE.local.interests=getChips('localInterests');}
 function saveLocal5(){
   var sv=+document.getElementById('localSocialVibe').value;
@@ -510,7 +514,7 @@ function assumePersona(id){
     if(id==='trav-etie'){
       var t=M.traveller||{};
       ETIE.trip={destination:(M.trip&&M.trip.destination)||'Lisbon',dates:(M.trip&&M.trip.dates)||'12–18 September',country:(M.trip&&M.trip.country)||'PT'};
-      ETIE.traveller={nationality:t.nationality||'HK',interests:((t.interests)||['Football','Salsa','Cooking','Thrift shopping']).slice(),personality:Object.assign({social:8,spontaneous:8,curious:10},t.personality||{}),socialVibe:1,travelPace:1,styleInterests:[],lookingFor:((t.lookingFor)||['💎 Hidden Gems']).slice(),hook:t.hook||'',photo:null,travelPhotos:[]};
+      ETIE.traveller={nickname:t.nickname||'',nationality:t.nationality||'HK',interests:((t.interests)||['Football','Salsa','Cooking','Thrift shopping']).slice(),personality:Object.assign({social:8,spontaneous:8,curious:10},t.personality||{}),socialVibe:1,travelPace:1,styleInterests:[],lookingFor:((t.lookingFor)||['💎 Hidden Gems']).slice(),hook:t.hook||'',photo:null,travelPhotos:[]};
       try{document.getElementById('cloudStatus').textContent='Demo: Etie (offline)';}catch(e){}
       try{document.getElementById('demoPersonaLine').textContent='Acting as Etie · traveller — Exit demo to return to your account.';}catch(e){}
       saveState();setRole('traveller');
@@ -1061,6 +1065,7 @@ function restoreAll(){
     var tdf=document.getElementById('travDateFrom');if(tdf)tdf.value=ETIE.trip.dateFrom||'';
     var tdt=document.getElementById('travDateTo');if(tdt)tdt.value=ETIE.trip.dateTo||'';
     var tn=document.getElementById('travNationality'); if(tn) tn.value=ETIE.traveller.nationality||'HK';
+    var tnn=document.getElementById('travNickname'); if(tnn) tnn.value=ETIE.traveller.nickname||'';
     setChips('travInterests',ETIE.traveller.interests);
     var svEl=document.getElementById('travSocialVibe'); if(svEl) svEl.value=(ETIE.traveller.socialVibe!=null?ETIE.traveller.socialVibe:1);
     var tpEl=document.getElementById('travTravelPace'); if(tpEl) tpEl.value=(ETIE.traveller.travelPace!=null?ETIE.traveller.travelPace:1);
@@ -1073,6 +1078,7 @@ function restoreAll(){
     document.getElementById('localCity').value=ETIE.local.city;
     document.getElementById('localAge').value=ETIE.local.age;
     document.getElementById('localNationality').value=ETIE.local.nationality||'PT';
+    var lnn=document.getElementById('localNickname'); if(lnn) lnn.value=ETIE.local.displayName||'';
     setChips('localInterests',ETIE.local.interests);
     // local hybrid handled above (localSocialVibe etc.)
     document.getElementById('localOffer').value=ETIE.local.offer;
@@ -1188,7 +1194,7 @@ document.addEventListener('DOMContentLoaded',function(){
   ['travSocialVibe','travTravelPace','localSocialVibe','localTravelPace'].forEach(function(id){
     var el=document.getElementById(id);if(el)el.addEventListener('input',function(){refreshAnchoredLabels();saveCurrentVisible(true);saveState();});
   });
-  ['travCity','travDateFrom','travDateTo','travHook','localCity','localAge','localOffer','travNationality','localNationality'].forEach(function(id){
+  ['travCity','travDateFrom','travDateTo','travHook','travNickname','localCity','localAge','localNickname','localOffer','travNationality','localNationality'].forEach(function(id){
     var el=document.getElementById(id);if(el)el.addEventListener('change',function(){saveCurrentVisible(true);});
   });
   var ci=document.getElementById('chatInput');if(ci)ci.addEventListener('keydown',function(e){if(e.key==='Enter')sendChat('traveller');});

@@ -127,9 +127,12 @@
       if(!isSharedOn())return;
       if(typeof ETIE==='undefined'||!ETIE.local)return;
       var p=ETIE.local;
+      var travNick=(typeof ETIE!=='undefined'&&ETIE.traveller&&ETIE.traveller.nickname)||'';
+      var localNick=p.displayName||'';
+      var chosen=localNick || travNick || (ETIE.traveller && ETIE.traveller.name) || session.user.email.split('@')[0];
       var base={
         user_id: session.user.id,
-        display_name: (p.displayName || ETIE.traveller && ETIE.traveller.name || session.user.email.split('@')[0]),
+        display_name: chosen,
         city: p.city || ETIE.trip && ETIE.trip.destination || 'Lisbon',
         age: parseInt(p.age,10)||28,
         interests: p.interests||[],

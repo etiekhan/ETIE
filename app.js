@@ -11,7 +11,7 @@ function etieDefaults() {
       nationality: '',
       interests: [],
       personality: { social: 5, spontaneous: 5, curious: 5 },
-      socialVibe: 1, travelPace: 1, styleInterests: [],
+      socialVibe: null, travelPace: null, _vibeSet: false, styleInterests: [],
       lookingFor: [],
       hook: '',
       photo: null,
@@ -128,6 +128,21 @@ function loadState() {
         if(s.traveller.nationality==='HK' && !s.traveller.nickname) s.traveller.nationality='';
       }
       s._cleanDefaultsV1=true;
+      try{ localStorage.setItem(ETIE_KEY, JSON.stringify(s)); }catch(e){}
+    }
+    // v2: profile truly empty-start — clear untouched vibe/personality display defaults
+    if(!s._cleanDefaultsV2){
+      var noActivity = !(s.requests && Object.keys(s.requests).length);
+      if(noActivity){
+        // if user never touched Step 3 (no flag, no style tags), reset vibe to null = "Not set yet"
+        if(!s.traveller._vibeSet && !(s.traveller.styleInterests&&s.traveller.styleInterests.length)){
+          s.traveller.socialVibe=null; s.traveller.travelPace=null; s.traveller._vibeSet=false;
+          s.traveller.personality={social:5,spontaneous:5,curious:5};
+        }
+        // clear any legacy personality display that was never user-set is handled by _vibeSet flag in renderProfiles
+      }
+      if(s.traveller.socialVibe==null && s.traveller._vibeSet==null) s.traveller._vibeSet=false;
+      s._cleanDefaultsV2=true;
       try{ localStorage.setItem(ETIE_KEY, JSON.stringify(s)); }catch(e){}
     }
     return s;
@@ -401,7 +416,7 @@ function saveTrav3(){
   var sv=+document.getElementById('travSocialVibe').value;
   var tp=+document.getElementById('travTravelPace').value;
   var sc=vibeToSocial(sv), pc=paceToSpont(tp);
-  ETIE.traveller.socialVibe=sv; ETIE.traveller.travelPace=tp;
+  ETIE.traveller.socialVibe=sv; ETIE.traveller.travelPace=tp; ETIE.traveller._vibeSet=true;
   ETIE.traveller.styleInterests=getChips('travStyleChips');
   ETIE.traveller.personality={social:sc,spontaneous:pc,curious:Math.round((sc+pc)/2)};
 }
@@ -631,15 +646,26 @@ function renderProfiles(){
     if(pi){pi.innerHTML=''; if(!ETIE.traveller.interests.length){ var e=document.createElement('span'); e.className='muted small'; e.textContent='No interests yet — pick up to 4 in Step 2.'; pi.appendChild(e);} else ETIE.traveller.interests.forEach(function(x){var s=document.createElement('span');s.className='chip active';s.textContent=x;pi.appendChild(s);});}
     var pp=document.getElementById('profPersonality');
     if(pp){
-      var _sv=ETIE.traveller.socialVibe, _tp=ETIE.traveller.travelPace;
-      var svl=SOCIAL_VIBE_LABELS[_sv!=null?_sv:1]||'', tpl=TRAVEL_PACE_LABELS[_tp!=null?_tp:1]||'';
-      pp.textContent=(svl?('Social vibe: '+svl+' · '):'')+(tpl?('Pace: '+tpl+' · '):'')+'Social '+ETIE.traveller.personality.social+'/10 · Spontaneous '+ETIE.traveller.personality.spontaneous+'/10 · Curious '+ETIE.traveller.personality.curious+'/10';
-      if((ETIE.traveller.styleInterests||[]).length) pp.textContent+=' · '+(ETIE.traveller.styleInterests||[]).join(' · ');
+      var vibeTouched = !!(ETIE.traveller._vibeSet && ETIE.traveller.socialVibe!=null);
+      var styleTouched = !!((ETIE.traveller.styleInterests||[]).length);
+      if(!vibeTouched && !styleTouched){
+        pp.textContent='Not set yet — set in Step 3.';
+      } else {
+        var _sv=ETIE.traveller.socialVibe, _tp=ETIE.traveller.travelPace;
+        var svl=(_sv!=null?SOCIAL_VIBE_LABELS[_sv]:'')||'', tpl=(_tp!=null?TRAVEL_PACE_LABELS[_tp]:'')||'';
+        pp.textContent=(svl?('Social vibe: '+svl+' · '):'')+(tpl?('Pace: '+tpl+' · '):'')+'Social '+ETIE.traveller.personality.social+'/10 · Spontaneous '+ETIE.traveller.personality.spontaneous+'/10 · Curious '+ETIE.traveller.personality.curious+'/10';
+        if((ETIE.traveller.styleInterests||[]).length) pp.textContent+=' · '+(ETIE.traveller.styleInterests||[]).join(' · ');
+      }
     }
     var pl=document.getElementById('profLookingFor');
-    if(pl)pl.textContent=ETIE.traveller.lookingFor.join(' · ')||'—';
+    if(pl)pl.textContent=(ETIE.traveller.lookingFor||[]).join(' · ')||'Not set yet — pick in Step 4.';
     var ph=document.getElementById('profHook');
-    if(ph)ph.textContent='“'+(ETIE.traveller.hook||'—')+'”';
+    if(ph)ph.textContent=ETIE.traveller.hook?('“'+ETIE.traveller.hook+'”'):'Not set yet — write in Step 5.';
+    var ps=document.getElementById('profStats');
+    if(ps){
+      var tc=ETIE.traveller.completedTrips||0, ar=ETIE.traveller.avgRatingReceived||0;
+      ps.textContent = (tc||ar) ? ('Trips: '+tc+' · Rating: '+(ar?ar.toFixed(1)+' ★':'—')) : 'No trips yet — complete a meetup to build reputation.';
+    }
     // Traveller photo in profile
     var tp=document.getElementById('profTravPhoto');
     if(tp){tp.innerHTML=ETIE.traveller.photo?('<img src="'+ETIE.traveller.photo+'" style="width:60px;height:60px;border-radius:50%;object-fit:cover;">'):'<span style="color:rgba(255,255,255,.5);font-size:24px;">+</span>';}

@@ -278,7 +278,7 @@ function flagEmoji(code){if(!code)return '';return String.fromCodePoint(...code.
 function flagForCountry(countryCode){var map={'PT':'🇵🇹','ES':'🇪🇸','FR':'🇫🇷','IT':'🇮🇹','JP':'🇯🇵','TH':'🇹🇭','US':'🇺🇸','AU':'🇦🇺','HK':'🇭🇰','SG':'🇸🇬'};return map[countryCode]||flagEmoji(countryCode)||'🌍';}
 
 function toast(msg){var t=document.getElementById('toast');if(!t){alert(msg);return;}t.textContent=msg;t.style.display='block';clearTimeout(t._h);t._h=setTimeout(function(){t.style.display='none';},2200);}
-function showScreen(id){var el=document.getElementById(id);if(id==='profile')renderProfiles();if(id==='messages')renderMessagesList();if(id==='trips'){renderTrips();renderMeetup();}if(el&&el.scrollIntoView)el.scrollIntoView({behavior:'smooth',block:'start'});}
+function showScreen(id){var el=document.getElementById(id);if(id==='profile'){renderProfiles();updateProfileVisibility();}if(id==='messages')renderMessagesList();if(id==='trips'){renderTrips();renderMeetup();}if(el&&el.scrollIntoView)el.scrollIntoView({behavior:'smooth',block:'start'});}
 function hideGroup(prefix){for(var i=1;i<=15;i++){var e=document.getElementById(prefix+i);if(e)e.classList.add('hidden');}}
 
 function getChips(containerId){
@@ -633,8 +633,34 @@ function exitDemo(){
   }catch(e){}
 }
 
+function hasAnyTravellerData(){
+  try{
+    if(ETIE.trip&&(ETIE.trip.destination||ETIE.trip.country||ETIE.trip.dates))return true;
+    var t=ETIE.traveller||{};
+    if(t.nickname||t.nationality)return true;
+    if((t.interests||[]).length)return true;
+    if(t._vibeSet||(t.styleInterests||[]).length)return true;
+    if((t.lookingFor||[]).length)return true;
+    if(t.hook)return true;
+    if(t.photo)return true;
+    if((t.travelPhotos||[]).filter(Boolean).length)return true;
+    return false;
+  }catch(e){return true;}
+}
+function updateProfileVisibility(){
+  try{
+    var ready=hasAnyTravellerData();
+    var navBtn=document.getElementById('navProfileBtn');
+    if(navBtn)navBtn.style.display=ready?'':'none';
+    var content=document.getElementById('profileContent');
+    if(content)content.style.display=ready?'':'none';
+    var locked=document.getElementById('profileLocked');
+    if(locked)locked.style.display=ready?'none':'';
+  }catch(e){}
+}
 function renderProfiles(){
   try{
+    updateProfileVisibility();
     var hasTrip=!!(ETIE.trip&&ETIE.trip.destination);
     var tripEl=document.getElementById('profTrip');
     var tflag=flagForCountry(ETIE.traveller.nationality||''); var dflag=flagForCountry(ETIE.trip.country);

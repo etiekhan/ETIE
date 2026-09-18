@@ -5,7 +5,7 @@
 // Auto-tier promotion on review/meetup completion
 (function(){
   var client=null, session=null, pushTimer=null, profileTimer=null, sharedSyncTimer=null, realtimeChannel=null;
-  var reviewChannel=null, reportChannel=null;
+  var reviewChannel=null, reportChannel=null, profileLiveChannel=null;
 
   function keys(){return {url:(window.ETIE_SUPABASE_URL||'').trim(), key:(window.ETIE_SUPABASE_ANON_KEY||'').trim()};}
   function table(){return window.ETIE_CLOUD_TABLE||'etie_states';}
@@ -42,7 +42,7 @@
       client=window.supabase.createClient(k.url,k.key);
       client.auth.getSession().then(function(r){
         session=r&&r.data&&r.data.session?r.data.session:null;
-        if(session){paint('on','Cloud: on');pull();pullShared();subscribeShared();syncProfile();}
+        if(session){paint('on','Cloud: on');pull();pullShared();subscribeShared();subscribeLiveProfiles();syncProfile();}
         else paint('offline','Cloud: offline — sign in');
       }).catch(function(){paint('offline','Cloud: offline');});
       client.auth.onAuthStateChange(function(ev,s){
@@ -50,7 +50,8 @@
         try{ if(realtimeChannel){ client.removeChannel(realtimeChannel); realtimeChannel=null; } }catch(e){}
         try{ if(reviewChannel){ client.removeChannel(reviewChannel); reviewChannel=null; } }catch(e){}
         try{ if(reportChannel){ client.removeChannel(reportChannel); reportChannel=null; } }catch(e){}
-        if(s){paint('on','Cloud: on');pull();pullShared();subscribeShared();syncProfile();}
+        try{ if(profileLiveChannel){ client.removeChannel(profileLiveChannel); profileLiveChannel=null; } }catch(e){}
+        if(s){paint('on','Cloud: on');pull();pullShared();subscribeShared();subscribeLiveProfiles();syncProfile();}
         else paint('offline','Cloud: offline — sign in');
       });
     }catch(e){paint('offline','Cloud: offline');}
@@ -68,8 +69,8 @@
     }catch(e){toast('Sign-in unavailable offline.');}
   }
   function signOut(){
-    try{if(client)try{ client.removeChannel(realtimeChannel); client.removeChannel(reviewChannel); client.removeChannel(reportChannel); }catch(e){};realtimeChannel=reviewChannel=reportChannel=null; if(client)client.auth.signOut();}catch(e){}
-    session=null;paint('offline','Cloud: offline — sign in');
+    try{if(client)try{ client.removeChannel(realtimeChannel); client.removeChannel(reviewChannel); client.removeChannel(reportChannel); client.removeChannel(profileLiveChannel); }catch(e){};realtimeChannel=reviewChannel=reportChannel=profileLiveChannel=null; if(client)client.auth.signOut();}catch(e){}
+    session=null;window.ETIE_LIVE_LOCALS=[];paint('offline','Cloud: offline — sign in');
   }
   // ---- Phase 2: single-user backup (etie_states) ----
   function push(){
@@ -502,6 +503,46 @@
         if(status==='SUBSCRIBED') console.info('Etie reports realtime subscribed');
       });
     }catch(e){console.warn('subscribeReports skipped',e);}
+  }
+  // ---- Live profiles for clean Discover (real users only) ----
+  function profileToLocal(row){
+    try{
+      return {
+        id: row.user_id,
+        name: row.display_name || 'Guide',
+        city: row.city || 'Lisbon',
+        nationality: row.nationality || 'PT',
+        age: row.age || 28,
+        interests: row.interests || [],
+        personality: row.personality || {social:5, spontaneous:5, curious:5},
+        offer: row.offer || '',
+        offerTags: row.offer_tags || [],
+        availability: row.availability || [],
+        availDates: row.avail_dates || [],
+        stats: row.stats || {rating:4.9, reviews:0, travellersMet:0},
+        tier: row.tier || 'Rookie'
+      };
+    }catch(e){ return null; }
+  }
+  function pullLiveProfiles(){
+    try{
+      if(!client||!session) return;
+      client.from(profTable()).select('*').order('updated_at',{ascending:false}).limit(50).then(function(r){
+        if(r&&r.error){ console.warn('pullLiveProfiles failed', r.error.message); return; }
+        var rows=r&&r.data||[];
+        window.ETIE_LIVE_LOCALS = rows.map(profileToLocal).filter(Boolean);
+        try{ if(typeof renderMatches==='function') renderMatches(); if(typeof renderLocalDashboard==='function') renderLocalDashboard(); }catch(e){}
+      });
+    }catch(e){ console.warn('pullLiveProfiles skipped', e); }
+  }
+  function subscribeLiveProfiles(){
+    try{
+      if(!isSharedOn()) return;
+      if(profileLiveChannel) try{ client.removeChannel(profileLiveChannel); }catch(e){}
+      profileLiveChannel=client.channel('etie-profiles-live');
+      profileLiveChannel.on('postgres_changes',{event:'*', schema:'public', table:profTable()}, function(){ setTimeout(pullLiveProfiles, 400); }).subscribe(function(s){ if(s==='SUBSCRIBED') console.info('Etie live profiles subscribed'); });
+      pullLiveProfiles();
+    }catch(e){ console.warn('subscribeLiveProfiles skipped', e); }
   }
   // ---- Auto-tier promotion ----
   function checkAutoTier(role, rating){

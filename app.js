@@ -199,8 +199,21 @@ function canSeeFullDiscover(){
   return lt==='Verified'||lt==='Host'||tt==='Trusted';
 }
 function canCreateActivities(){return getLocalTier()==='Host';}
+function isCleanLive(){ try{ return localStorage.getItem('etie-clean')==='1' || window.ETIE_CLEAN; }catch(e){ return !!window.ETIE_CLEAN; } }
+function liveLocals(){
+  var live=(window.ETIE_LIVE_LOCALS||[]);
+  if(!live.length) return null;
+  // exclude self when traveller is also a local guide
+  try{
+    var selfId=(window.EtieCloud&&window.EtieCloud.getSession&&window.EtieCloud.getSession()&&window.EtieCloud.getSession().user&&window.EtieCloud.getSession().user.id)||null;
+    if(selfId) live=live.filter(function(l){return l.id!==selfId;});
+  }catch(e){}
+  return live;
+}
 function getDiscoverLocals(){
-  var all=(window.ETIE_MOCKS&&window.ETIE_MOCKS.locals)||[];
+  var live=liveLocals();
+  var useLive = isCleanLive() || (live && live.length);
+  var all= useLive ? (live||[]) : ((window.ETIE_MOCKS&&window.ETIE_MOCKS.locals)||[]);
   var ranked=window.EtieMatch?window.EtieMatch.rank(ETIE.traveller, ETIE.trip, all, ETIE.local.availability, ETIE.reviews):all;
   // Beginner filter: hide locals with no shared interests for beginners (<=3 completed trips)
   var travCompleted = ETIE.traveller ? (ETIE.traveller.completedTrips || 0) : 0;
@@ -443,6 +456,10 @@ function travRestart(){showScreen('trav1');travNext(1);}
 function openAdmin(){try{var o=document.getElementById('adminOverlay');if(o)o.classList.remove('hidden');}catch(e){} try{ refreshAdminLive(); }catch(e){}}
 function closeAdmin(){try{var o=document.getElementById('adminOverlay');if(o)o.classList.add('hidden');}catch(e){}}
 function toggleAdmin(){try{var o=document.getElementById('adminOverlay');if(!o)return;if(o.classList.contains('hidden'))openAdmin();else closeAdmin();}catch(e){}}
+function enableCleanLive(){ try{ localStorage.setItem('etie-clean','1'); window.ETIE_CLEAN=true; var l=document.getElementById('cleanModeLine'); if(l) l.textContent='Clean mode ON — mocks hidden. Refresh both phones. Run SQL wipe below if needed, then re-onboard Fleming (local) + Ethan (traveller).'; renderMatches(); toast('Clean live mode enabled.'); }catch(e){} }
+function disableCleanLive(){ try{ localStorage.removeItem('etie-clean'); window.ETIE_CLEAN=false; var l=document.getElementById('cleanModeLine'); if(l) l.textContent='Demos visible again.'; renderMatches(); toast('Demos restored.'); }catch(e){} }
+function wipeLocalEtie(){ try{ if(!confirm('Wipe local ETIE (requests/messages/meetups/reviews, keep profile)?')) return; ETIE.requests={}; ETIE.messages={}; ETIE.meetups={}; ETIE.reviews={}; ETIE._travStars=0; ETIE._localStars=0; ETIE_MATCH_INDEX=0; saveState(); renderMatches(); renderRequests(); renderChat(); renderMessagesList(); renderMeetup(); renderTrips(); renderLocalDashboard(); toast('Local wiped — also run SQL wipe for cloud.'); }catch(e){} }
+(function(){ try{ var c=localStorage.getItem('etie-clean'); if(c==='1'){ window.ETIE_CLEAN=true; setTimeout(function(){ var l=document.getElementById('cleanModeLine'); if(l) l.textContent='Clean mode ON'; }, 600);} }catch(e){} })();
 function refreshAdminLive(){
   try{
     var hint=document.getElementById('adminLiveHint');
@@ -588,13 +605,27 @@ function renderProfiles(){
 
 var ETIE_MATCH_INDEX=0;
 function getRanked(){
-  try{return window.EtieMatch.rank(ETIE.traveller, ETIE.trip, window.ETIE_MOCKS.locals, ETIE.local.availability, ETIE.reviews);}
-  catch(e){return [];}
+  try{
+    var live=liveLocals();
+    var useLive = isCleanLive() || (live && live.length);
+    var src= useLive ? (live||[]) : (window.ETIE_MOCKS&&window.ETIE_MOCKS.locals||[]);
+    return window.EtieMatch.rank(ETIE.traveller, ETIE.trip, src, ETIE.local.availability, ETIE.reviews);
+  } catch(e){return [];}
 }
 function currentMatch(){var r=getRanked();if(!r.length)return null;return r[Math.min(ETIE_MATCH_INDEX,r.length-1)];}
 function cycleMatch(){var r=getRanked();if(!r.length)return;ETIE_MATCH_INDEX=(ETIE_MATCH_INDEX+1)%r.length;renderMatches();}
 function renderMatches(){
-  var r=getRanked();if(!r.length)return;
+  var r=getRanked();
+  if(!r.length){
+    try{
+      var mc=document.getElementById('matchAvatar'); if(mc) mc.textContent='—';
+      var mn=document.getElementById('matchName'); if(mn) mn.textContent=isCleanLive()?'No verified local guides yet': 'No matches';
+      var mm=document.getElementById('matchMeta'); if(mm) mm.textContent=isCleanLive()?'Clean mode: only real profiles. Ask Fleming to finish Local onboarding, then Refresh.': '—';
+      var rn=document.getElementById('matchRankNote'); if(rn) rn.textContent='';
+      var dg=document.getElementById('discoverGrid'); if(dg && isCleanLive()) dg.innerHTML='<div class="card" style="padding:16px;"><strong>No local guides yet</strong><p class="muted small">Clean mode on — Discover shows only verified users (Ethan/Fleming). Complete both onboardings, then check Admin → Live users.</p></div>';
+    }catch(e){}
+    return;
+  }
   var m=currentMatch();var L=m.local;
   try{
     var lflag=flagForCountry(L.nationality||ETIE.trip.country);
@@ -1003,7 +1034,7 @@ function renderTrips(){
   }catch(e){}
 }
 
-function localNameFor(k){var r=ETIE.requests[k];if(r&&r.localName)return r.localName;var all=(window.ETIE_MOCKS&&window.ETIE_MOCKS.locals)||[];for(var i=0;i<all.length;i++)if(all[i].id===k)return all[i].name;return k;}
+function localNameFor(k){var r=ETIE.requests[k];if(r&&r.localName)return r.localName;var live=liveLocals(); var all= live && live.length ? live : ((window.ETIE_MOCKS&&window.ETIE_MOCKS.locals)||[]);for(var i=0;i<all.length;i++)if(all[i].id===k)return all[i].name;return k;}
 function focusMatch(k){var r=getRanked();for(var i=0;i<r.length;i++)if(r[i].local.id===k){ETIE_MATCH_INDEX=i;break;}renderMatches();renderRequests();renderChat();renderMeetup();}
 function acceptKey(k){if(!ETIE.requests[k]){toast('No request for '+k);return;}focusMatch(k);ETIE.requests[k].status='accepted';ETIE.requests[k].updatedAt=Date.now();ensureChat(k);ETIE.messages[k].push({from:'local',text:'Accepted! Looking forward to meeting.',ts:Date.now()});saveState();renderRequests();renderChat();renderMessagesList();renderLocalDashboard();
   try{ if(window.EtieCloud&&window.EtieCloud.pushSharedRequest) window.EtieCloud.pushSharedRequest(k); }catch(e){}

@@ -436,9 +436,67 @@ function localNext(n){
 }
 function findMatch(){try{saveTrav5();saveTrav6();saveState();if(!validTrav(5))return;}catch(e){}if(!ETIE.traveller.photo){toast('Add your selfie first — profiles with photos get 3x more requests.');return;}ETIE_MATCH_INDEX=0;renderMatches();travNext(7);}
 function travRestart(){showScreen('trav1');travNext(1);}
-function openAdmin(){try{var o=document.getElementById('adminOverlay');if(o)o.classList.remove('hidden');}catch(e){}}
+function openAdmin(){try{var o=document.getElementById('adminOverlay');if(o)o.classList.remove('hidden');}catch(e){} try{ refreshAdminLive(); }catch(e){}}
 function closeAdmin(){try{var o=document.getElementById('adminOverlay');if(o)o.classList.add('hidden');}catch(e){}}
 function toggleAdmin(){try{var o=document.getElementById('adminOverlay');if(!o)return;if(o.classList.contains('hidden'))openAdmin();else closeAdmin();}catch(e){}}
+function refreshAdminLive(){
+  try{
+    var hint=document.getElementById('adminLiveHint');
+    var uc=document.getElementById('adminUserCount'), vc=document.getElementById('adminVerifiedCount'), rc=document.getElementById('adminReportsCount'), mc=document.getElementById('adminMeetupsCount');
+    var lp=document.getElementById('adminLiveProfiles'), lr=document.getElementById('adminLiveRequests');
+    if(window.ETIE_DEMO){ if(hint) hint.textContent='Demo active — cloud paused. Exit demo to see live.'; return; }
+    if(!window.EtieCloud || !window.EtieCloud.isSharedOn() || !window.EtieCloud.getClient || !window.EtieCloud.getClient()){
+      if(hint) hint.textContent='Offline — sign in on both phones for live data.';
+      if(uc) uc.textContent='—'; if(vc) vc.textContent='—'; if(rc) rc.textContent='—'; if(mc) mc.textContent='—';
+      return;
+    }
+    if(hint) hint.textContent='Live · refreshing…';
+    var client=window.EtieCloud.getClient();
+    client.from('etie_profiles').select('user_id,city,nationality,display_name,interests,hosted_count,tier,updated_at').order('updated_at',{ascending:false}).limit(20).then(function(r){
+      var rows=(r&&r.data)||[];
+      if(uc) uc.textContent=String(rows.length);
+      var verified=rows.filter(function(x){return (x.hosted_count||0)>=3;}).length;
+      if(vc) vc.textContent=String(verified);
+      if(lp){
+        if(!rows.length) lp.innerHTML='<div class="muted small">No profiles yet — complete onboarding on each phone.</div>';
+        else {
+          lp.innerHTML='';
+          rows.forEach(function(u){
+            var flag=''; try{ flag=flagForCountry(u.nationality||''); }catch(e){flag='🌍';}
+            var name=u.display_name||u.user_id.slice(0,8);
+            var city=u.city||'—';
+            var tier=u.tier||'Rookie';
+            var row=document.createElement('div'); row.className='list-item';
+            row.innerHTML='<div><strong></strong><br><span class="muted"></span></div><span class="status"></span>';
+            row.querySelector('strong').textContent=flag+' '+name+' · '+city;
+            row.querySelector('.muted').textContent=(u.interests||[]).slice(0,3).join(' · ')||'no interests yet';
+            row.querySelector('.status').textContent=tier;
+            lp.appendChild(row);
+          });
+        }
+      }
+    });
+    client.from('etie_reports').select('id',{count:'exact',head:true}).then(function(r){ if(rc) rc.textContent= String(r.count!=null?r.count:'—'); });
+    client.from('etie_meetups').select('id',{count:'exact',head:true}).then(function(r){ if(mc) mc.textContent= String(r.count!=null?r.count:'—'); });
+    client.from('etie_requests').select('id,local_mock_id,status,traveller_name,local_name,destination,updated_at').order('updated_at',{ascending:false}).limit(10).then(function(r){
+      var rows=(r&&r.data)||[];
+      if(!lr) return;
+      if(!rows.length) lr.innerHTML='<div class="muted small">No requests yet — Ethan sends one, Kevin sees it here.</div>';
+      else {
+        lr.innerHTML='';
+        rows.forEach(function(x){
+          var row=document.createElement('div'); row.className='list-item';
+          row.innerHTML='<div><strong></strong><br><span class="muted"></span></div><span class="status"></span>';
+          row.querySelector('strong').textContent=(x.traveller_name||'Traveller')+' → '+(x.local_name||x.local_mock_id)+' · '+x.status;
+          row.querySelector('.muted').textContent=(x.destination||'—')+' · '+(new Date(x.updated_at).toLocaleString());
+          row.querySelector('.status').textContent=x.status;
+          lr.appendChild(row);
+        });
+      }
+      if(hint) hint.textContent='Live · '+new Date().toLocaleTimeString();
+    });
+  }catch(e){ try{ var h=document.getElementById('adminLiveHint'); if(h) h.textContent='Live refresh failed.'; }catch(e2){}}
+}
 function toggleNav(){try{var n=document.getElementById('mainNav');var t=document.querySelector('.nav-toggle');if(n&&t){n.classList.toggle('open');t.textContent=n.classList.contains('open')?'✕':'☰';}}catch(e){}}
 function setRole(role){document.getElementById('travRole').classList.toggle('active',role==='traveller');document.getElementById('localRole').classList.toggle('active',role==='local');document.getElementById('travellerFlow').classList.toggle('hidden',role!=='traveller');document.getElementById('localFlow').classList.toggle('hidden',role!=='local');saveState();if(role==='traveller')travNext(1);else localNext(1);showScreen('home');}
 

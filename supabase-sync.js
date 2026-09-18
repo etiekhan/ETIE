@@ -127,12 +127,11 @@
       if(!isSharedOn())return;
       if(typeof ETIE==='undefined'||!ETIE.local)return;
       var p=ETIE.local;
-      var payload={
+      var base={
         user_id: session.user.id,
         display_name: (p.displayName || ETIE.traveller && ETIE.traveller.name || session.user.email.split('@')[0]),
         city: p.city || ETIE.trip && ETIE.trip.destination || 'Lisbon',
         age: parseInt(p.age,10)||28,
-        nationality: p.nationality || 'PT',
         interests: p.interests||[],
         personality: p.personality||{},
         offer: p.offer||'',
@@ -140,16 +139,39 @@
         availability: p.availability||[],
         verification: {identity:true, local:true, methods:p.verificationMethods||[]},
         stats: {travellersMet:18, rating:4.9},
+        updated_at: new Date().toISOString()
+      };
+      var extra={
+        nationality: p.nationality || 'PT',
+        traveller_nationality: (typeof ETIE!=='undefined'&&ETIE.traveller&&ETIE.traveller.nationality)||'HK',
         tier: p.tier || 'Rookie',
         hosted_count: p.hostedCount || 0,
         avg_host_rating: p.avgHostRating || 0,
         references: p.references || [],
         activities: p.activities || [],
-        updated_at: new Date().toISOString()
+        avail_dates: (p.availDates||[]),
+        travel_photos: (p.travelPhotos||[]),
+        social_vibe: (p.socialVibe!=null?p.socialVibe:1),
+        travel_pace: (p.travelPace!=null?p.travelPace:1),
+        style_interests: (p.styleInterests||[])
       };
-      client.from(profTable()).upsert(payload).then(function(r){
-        if(r&&r.error)console.warn('Etie profile sync failed',r.error.message);
-      });
+      function tryUpsert(payload){
+        return client.from(profTable()).upsert(payload).then(function(r){
+          if(r&&r.error){
+            var msg=(r.error.message||'').toLowerCase();
+            // if column missing (migrate not run), retry with base only
+            if(msg.indexOf('column')!==-1 && msg.indexOf('does not exist')!==-1){
+              console.warn('Etie profile sync: extra columns missing, retrying base only', r.error.message);
+              return client.from(profTable()).upsert(base).then(function(r2){
+                if(r2&&r2.error) console.warn('Etie profile sync (base) failed', r2.error.message);
+                else console.info('Etie profile sync OK (base fallback)');
+              });
+            }
+            console.warn('Etie profile sync failed',r.error.message);
+          } else console.info('Etie profile sync OK');
+        });
+      }
+      tryUpsert(Object.assign({}, base, extra));
     }catch(e){console.warn('Etie profile sync skipped',e);}
   }
   // ---- Shared requests/messages/meetups ----

@@ -86,7 +86,7 @@ function loadState() {
     if(s.traveller.socialVibe==null){ var sc=s.traveller.personality&&s.traveller.personality.social||5; s.traveller.socialVibe=sc<=3?0:sc>=8?2:1; }
     if(s.traveller.travelPace==null){ var pc=s.traveller.personality&&s.traveller.personality.spontaneous||5; s.traveller.travelPace=pc<=3?0:pc>=8?2:1; }
     if(!s.traveller.styleInterests)s.traveller.styleInterests=[];
-    if(!s.traveller.nationality)s.traveller.nationality='HK';
+    if(s.traveller.nationality==null) s.traveller.nationality='';
     if(!s.local.styleInterests)s.local.styleInterests=[];
     if(s.local.displayName==null) s.local.displayName='';
     if(s.local.socialVibe==null){ var lsc=s.local.personality&&s.local.personality.social||5; s.local.socialVibe=lsc<=3?0:lsc>=8?2:1; }
@@ -97,6 +97,39 @@ function loadState() {
     if(!s.meetups)s.meetups={};
     if(!s.reviews)s.reviews={};
     if(!s.reports)s.reports=[];
+    // one-time clean-defaults migration: wipe demo pre-fills for fresh traveller flow (only start date = today)
+    if(!s._cleanDefaultsV1){
+      var hasRealActivity = s.requests && Object.keys(s.requests).length>0;
+      // treat legacy demo interests/hook as pre-fill to clear if no real activity
+      var demoInt = ['Football','Salsa','Cooking','Thrift shopping'];
+      var isDemoInt = s.traveller.interests && s.traveller.interests.length===4 && demoInt.every(function(x){return s.traveller.interests.indexOf(x)!==-1;});
+      if(!hasRealActivity){
+        // force blank traveller flow 1-6: only dateFrom = today
+        s.trip.destination=''; s.trip.country=''; s.trip.dates=''; s.trip.dateFrom=todayISO(); s.trip.dateTo='';
+        if(isDemoInt) s.traveller.interests=[];
+        if(s.traveller.lookingFor && s.traveller.lookingFor.length===1 && s.traveller.lookingFor[0].indexOf('Hidden Gems')!==-1) s.traveller.lookingFor=[];
+        // style chips + hook blank (keep neutral personality 5/5/5, vibe 1/1 is okay but chips cleared)
+        s.traveller.styleInterests=[];
+        if(s.traveller.hook && s.traveller.hook.length<80 && s.traveller.hook.indexOf('guidebook')!==-1) s.traveller.hook='';
+        // photo/travel photos must be empty when off-cloud — clear stale base64 demo photo if no cloud session yet
+        try{
+          var hasCloud = window.EtieCloud && window.EtieCloud.isSharedOn && window.EtieCloud.isSharedOn();
+          if(!hasCloud){
+            // keep photo only if user explicitly set after this migration; clear old base64 blob for clean slate
+            if(s.traveller.photo && typeof s.traveller.photo==='string' && s.traveller.photo.slice(0,22).indexOf('data:image')===0){
+              // don't wipe if user is currently on Traveller Step 6 with a real recent upload — heuristic: wipe only demo-era blobs (>50k chars) or when flagged demo
+              s.traveller.photo=null; s.traveller.travelPhotos=[];
+            }
+          }
+        }catch(e){ s.traveller.photo=null; s.traveller.travelPhotos=[]; }
+        s.traveller.nationality=''; s.traveller.nickname='';
+      } else {
+        // even with activity, ensure nationality not forced to HK and dateTo blank if never set
+        if(s.traveller.nationality==='HK' && !s.traveller.nickname) s.traveller.nationality='';
+      }
+      s._cleanDefaultsV1=true;
+      try{ localStorage.setItem(ETIE_KEY, JSON.stringify(s)); }catch(e){}
+    }
     return s;
   } catch (e) { return etieDefaults(); }
 }
@@ -439,6 +472,14 @@ function travNext(n){
     saveState();
     if(n>cur&&!validTrav(cur))return;
   }catch(e){}
+  // Steps 8-16 are match-gated: only reachable when a real local guide exists (no Marta demo when offline)
+  if(n>=8 && n<=16 && !hasRealMatch()){
+    // still allow Step 7 waiting state, but block deeper
+    if(n===7){ /* allow */ } else {
+      toast(n===8?'No local guides yet — complete both onboardings to get a match.':'Complete a match first (Step 7).');
+      renderMatches(); hideGroup('trav'); var e7=document.getElementById('trav7'); if(e7) e7.classList.remove('hidden'); showScreen('trav7'); return;
+    }
+  }
   hideGroup('trav');var e=document.getElementById('trav'+n);if(e)e.classList.remove('hidden');updateCounts();renderProfiles();if(n===7||n===8)renderMatches();if(n===9||n===10||n===11||n===12){renderRequests();renderChat();renderMessagesList();}if(n>=12&&n<=17){renderMeetup();renderTrips();renderThanks();paintStars('travStars',ETIE._travStars||0);}showScreen('trav'+n);
 }
 function localNext(n){
@@ -638,18 +679,26 @@ function getRanked(){
 }
 function currentMatch(){var r=getRanked();if(!r.length)return null;return r[Math.min(ETIE_MATCH_INDEX,r.length-1)];}
 function cycleMatch(){var r=getRanked();if(!r.length)return;ETIE_MATCH_INDEX=(ETIE_MATCH_INDEX+1)%r.length;renderMatches();}
+function hasRealMatch(){ var r=getRanked(); return r && r.length>0; }
 function renderMatches(){
   var r=getRanked();
   if(!r.length){
     try{
+      var t7t=document.getElementById('trav7Title'); if(t7t) t7t.textContent='Your next friend is waiting for you!';
+      var t7s=document.getElementById('trav7Sub'); if(t7s) t7s.textContent=isCleanLive()?'No verified local guides yet — ask Fleming to finish Local onboarding, then Refresh. Discover will show real people.':'The product recommends people rather than making you browse a directory.';
       var mc=document.getElementById('matchAvatar'); if(mc) mc.textContent='—';
       var mn=document.getElementById('matchName'); if(mn) mn.textContent=isCleanLive()?'No verified local guides yet': 'No matches';
       var mm=document.getElementById('matchMeta'); if(mm) mm.textContent=isCleanLive()?'Clean mode: only real profiles. Ask Fleming to finish Local onboarding, then Refresh.': '—';
+      var ms=document.getElementById('matchScore'); if(ms) ms.textContent='No match yet';
       var rn=document.getElementById('matchRankNote'); if(rn) rn.textContent='';
-      var dg=document.getElementById('discoverGrid'); if(dg && isCleanLive()) dg.innerHTML='<div class="card" style="padding:16px;"><strong>No local guides yet</strong><p class="muted small">Clean mode on — Discover shows only verified users (Ethan/Fleming). Complete both onboardings, then check Admin → Live users.</p></div>';
+      // hide Steps 8-16 when no real match (they only live after a match)
+      ['trav8','trav9','trav10','trav11','trav12','trav13','trav14','trav15','trav16'].forEach(function(id){var el=document.getElementById(id); if(el) el.classList.add('hidden');});
+      var dg=document.getElementById('discoverGrid'); if(dg){ if(isCleanLive()) dg.innerHTML='<div class="card" style="padding:16px;"><strong>No local guides yet</strong><p class="muted small">Clean mode on — Discover shows only verified users (Ethan/Fleming). Complete both onboardings, then check Admin → Live users.</p></div>'; else dg.innerHTML=''; }
     }catch(e){}
     return;
   }
+  // when we have a real match, ensure trav7 says "We found someone." and Steps 8+ are reachable
+  try{ var t7t2=document.getElementById('trav7Title'); if(t7t2) t7t2.textContent='We found someone.'; var t7s2=document.getElementById('trav7Sub'); if(t7s2) t7s2.textContent='The product recommends people rather than making you browse a directory.'; }catch(e){}
   var m=currentMatch();var L=m.local;
   try{
     var lflag=flagForCountry(L.nationality||ETIE.trip.country);

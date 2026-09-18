@@ -2,18 +2,18 @@
 // Plain English: plan → complete → both review. Trips shows live status.
 var ETIE_KEY = 'etie-v1';
 
+function todayISO(){ try{ return new Date().toISOString().slice(0,10); }catch(e){ return ''; } }
 function etieDefaults() {
-  var m = (window.ETIE_MOCKS || {});
   return {
-    trip: { destination: (m.trip && m.trip.destination) || 'Lisbon', dates: (m.trip && m.trip.dates) || '12–18 September', dateFrom: '', dateTo: '', country: (m.trip && m.trip.country) || 'PT' },
+    trip: { destination: '', dates: '', dateFrom: todayISO(), dateTo: '', country: '' },
     traveller: {
       nickname: '',
-      nationality: (m.traveller && m.traveller.nationality) || 'HK',
-      interests: (m.traveller && m.traveller.interests) || ['Football', 'Salsa', 'Cooking', 'Thrift shopping'],
-      personality: { social: 8, spontaneous: 8, curious: 10 },
+      nationality: '',
+      interests: [],
+      personality: { social: 5, spontaneous: 5, curious: 5 },
       socialVibe: 1, travelPace: 1, styleInterests: [],
-      lookingFor: ['💎 Hidden Gems'],
-      hook: (m.traveller && m.traveller.hook) || '',
+      lookingFor: [],
+      hook: '',
       photo: null,
       travelPhotos: [],
       tier: 'Rookie',
@@ -22,14 +22,14 @@ function etieDefaults() {
     },
     local: {
       displayName: '',
-      city: 'Lisbon', age: '28', nationality: 'PT',
+      city: '', age: '', nationality: '',
       verificationMethods: [],
-      interests: ['Salsa', 'Cooking'],
-      personality: { social: 10, spontaneous: 10, curious: 10 },
+      interests: [],
+      personality: { social: 5, spontaneous: 5, curious: 5 },
       socialVibe: 1, travelPace: 1, styleInterests: [],
       availDates: [], travelPhotos: [],
-      offer: 'I know the small salsa nights tourists never find, and I love cooking Portuguese food for friends.',
-      offerTags: ['Salsa night', 'Cooking'],
+      offer: '',
+      offerTags: [],
       availability: [
         { label: 'Weekday evenings', status: 'Available' },
         { label: 'Weekend afternoons', status: 'Available' },
@@ -579,11 +579,15 @@ function exitDemo(){
 
 function renderProfiles(){
   try{
+    var hasTrip=!!(ETIE.trip&&ETIE.trip.destination);
     var tripEl=document.getElementById('profTrip');
     var tflag=flagForCountry(ETIE.traveller.nationality||''); var dflag=flagForCountry(ETIE.trip.country);
-    if(tripEl)tripEl.textContent=(ETIE.traveller.nationality?flagForCountry(ETIE.traveller.nationality)+' ':'')+dflag+' '+(ETIE.trip.destination||'—')+' · '+(ETIE.trip.dates||'—')+' · Traveller';
+    if(tripEl){
+      if(!hasTrip) tripEl.textContent='No trip yet — complete Step 1';
+      else tripEl.textContent=(ETIE.traveller.nationality?flagForCountry(ETIE.traveller.nationality)+' ':'')+dflag+' '+(ETIE.trip.destination||'—')+' · '+(ETIE.trip.dates||'—')+' · Traveller';
+    }
     var pi=document.getElementById('profInterests');
-    if(pi){pi.innerHTML='';ETIE.traveller.interests.forEach(function(x){var s=document.createElement('span');s.className='chip active';s.textContent=x;pi.appendChild(s);});}
+    if(pi){pi.innerHTML=''; if(!ETIE.traveller.interests.length){ var e=document.createElement('span'); e.className='muted small'; e.textContent='No interests yet — pick up to 4 in Step 2.'; pi.appendChild(e);} else ETIE.traveller.interests.forEach(function(x){var s=document.createElement('span');s.className='chip active';s.textContent=x;pi.appendChild(s);});}
     var pp=document.getElementById('profPersonality');
     if(pp){
       var _sv=ETIE.traveller.socialVibe, _tp=ETIE.traveller.travelPace;
@@ -913,25 +917,34 @@ function renderChat(){
     var pI=document.getElementById('chatPopupInput');if(pI)pI.disabled=(st!=='accepted');
   }catch(e){}
 }
+function deleteChat(k){ if(!confirm('Delete this chat?')) return; try{ delete ETIE.requests[k]; delete ETIE.messages[k]; delete ETIE.meetups[k]; delete ETIE.reviews[k]; saveState(); renderMessagesList(); renderRequests(); renderChat(); renderTrips(); }catch(e){} try{ var c=window.EtieCloud&&window.EtieCloud.getClient&&window.EtieCloud.getClient(); if(c) c.from('etie_requests').delete().eq('local_mock_id',k).then(function(){}); }catch(e){} toast('Chat deleted.'); }
 function renderMessagesList(){
   try{
     var box=document.getElementById('messagesList');if(!box)return;box.innerHTML='';
-    var ids=Object.keys(ETIE.requests);
-    if(!ids.length){box.innerHTML='<div class="list-item"><div><strong>No requests yet</strong><br><span class="muted">Send one from Traveller Step 9.</span></div><span class="status">Empty</span></div>';return;}
+    var ids=Object.keys(ETIE.requests||{});
+    if(isCleanLive()){
+      // hide demo pools in clean mode — only show threads whose id is a real user_id or whose localName is not Marta/Javier/Sofia unless it came from live
+      var demoIds=['local-marta','local-javier','local-sofia'];
+      ids=ids.filter(function(k){ if(demoIds.indexOf(k)!==-1 && !ETIE.requests[k].traveller_id) return false; return true; });
+    }
+    if(!ids.length){box.innerHTML='<div class="list-item"><div><strong>No chats yet</strong><br><span class="muted">No users online — send a request when a local guide is live. Swipe/delete not needed yet.</span></div><span class="status">Empty</span></div>';return;}
     ids.forEach(function(k){
       var r=ETIE.requests[k];var msgs=ETIE.messages[k]||[];var last=msgs.length?msgs[msgs.length-1].text:'—';
-      var row=document.createElement('div');row.className='list-item';row.style.cursor='pointer';row.title='Tap to open chat';
+      var row=document.createElement('div');row.className='list-item';row.style.cursor='pointer';row.title='Tap to open chat — swipe right or press ✕ to delete';
       row.innerHTML='<div><strong></strong><br><span class="muted"></span></div>';
-      var isTravReq = (k===reqKey() || r.localName);
       var flagPref = '';
       try{ if(ETIE.traveller.nationality) flagPref = flagForCountry(ETIE.traveller.nationality)+' '; }catch(e){}
       row.querySelector('strong').textContent=flagPref+(r.localName||k)+' · '+r.status;
       row.querySelector('.muted').textContent=last.slice(0,80);
       var st=document.createElement('span');st.className='status';st.textContent=r.status;row.appendChild(st);
+      var del=document.createElement('button'); del.className='secondary'; del.textContent='✕'; del.title='Delete chat'; del.style.padding='6px 10px'; del.onclick=function(e){ e.stopPropagation(); deleteChat(k); };
+      row.appendChild(del);
       row.onclick=(function(kk){return function(){
         focusMatch(kk);
         openChatPopup();
       };})(k);
+      // swipe to delete (touch)
+      (function(rowEl, key){ var sx=0; rowEl.addEventListener('touchstart',function(e){ sx=e.touches[0].clientX; }, {passive:true}); rowEl.addEventListener('touchend',function(e){ var dx=e.changedTouches[0].clientX - sx; if(dx>80) deleteChat(key); }); })(row,k);
       box.appendChild(row);
     });
   }catch(e){}
@@ -1039,16 +1052,19 @@ function renderThanks(){
 function renderTrips(){
   try{
     var box=document.getElementById('tripsList');if(!box)return;box.innerHTML='';
+    var hasTrip=!!(ETIE.trip&&ETIE.trip.destination);
+    if(!hasTrip && !Object.keys(ETIE.requests||{}).length){
+      box.innerHTML='<div class="list-item"><div><strong>No trips yet</strong><br><span class="muted">Complete Traveller Step 1 (destination + dates) to start.</span></div><span class="status">Empty</span></div>'; return;
+    }
     var m=currentMatch();var k=meetKey();var mu=meetup();var r=ETIE.reviews[k]||{};
     var row=document.createElement('div');row.className='list-item';
     var conn=reqStatus(k);var meet=mu.status;
     var tr=r.trav;var lr=r.local;
     var revParts=[];if(tr)revParts.push('Trav: '+tr.rating+'★ '+tr.meetAgain);if(lr)revParts.push('Local guide: '+lr.rating+'★ '+lr.meetAgain);
     var revText=revParts.length?revParts.join(' | '):'none';
-    var demoMet=18+(meet==='completed'?1:0);
     row.innerHTML='<div><strong></strong><br><span class="muted"></span></div>';
-    row.querySelector('strong').textContent=flagForCountry(ETIE.trip.country)+' '+ETIE.trip.destination+' · '+ETIE.trip.dates;
-    row.querySelector('.muted').textContent='Match: '+(m?m.local.name+' ('+m.score+')':'—')+' · Req: '+conn+' · Meet: '+meet+' · Reviews: '+revText+' · Met demo: '+demoMet;
+    row.querySelector('strong').textContent=(hasTrip?flagForCountry(ETIE.trip.country)+' '+ETIE.trip.destination+' · '+ETIE.trip.dates : 'No active trip');
+    row.querySelector('.muted').textContent='Match: '+(m?m.local.name+' ('+m.score+')':'—')+' · Req: '+conn+' · Meet: '+meet+' · Reviews: '+revText;
     var b=document.createElement('button');b.className='secondary';b.textContent='Open';b.onclick=function(){setRole('traveller');showScreen('home');};
     row.appendChild(b);box.appendChild(row);
   }catch(e){}
@@ -1115,7 +1131,7 @@ function restoreAll(){
     document.getElementById('travCity').value=ETIE.trip.destination;
     var tdf=document.getElementById('travDateFrom');if(tdf)tdf.value=ETIE.trip.dateFrom||'';
     var tdt=document.getElementById('travDateTo');if(tdt)tdt.value=ETIE.trip.dateTo||'';
-    var tn=document.getElementById('travNationality'); if(tn) tn.value=ETIE.traveller.nationality||'HK';
+    var tn=document.getElementById('travNationality'); if(tn) tn.value=ETIE.traveller.nationality||'';
     var tnn=document.getElementById('travNickname'); if(tnn) tnn.value=ETIE.traveller.nickname||'';
     setChips('travInterests',ETIE.traveller.interests);
     var svEl=document.getElementById('travSocialVibe'); if(svEl) svEl.value=(ETIE.traveller.socialVibe!=null?ETIE.traveller.socialVibe:1);
@@ -1128,7 +1144,7 @@ function restoreAll(){
     document.getElementById('travHook').value=ETIE.traveller.hook;
     document.getElementById('localCity').value=ETIE.local.city;
     document.getElementById('localAge').value=ETIE.local.age;
-    document.getElementById('localNationality').value=ETIE.local.nationality||'PT';
+    document.getElementById('localNationality').value=ETIE.local.nationality||'';
     var lnn=document.getElementById('localNickname'); if(lnn) lnn.value=ETIE.local.displayName||'';
     setChips('localInterests',ETIE.local.interests);
     // local hybrid handled above (localSocialVibe etc.)
@@ -1159,7 +1175,7 @@ function buildCountrySelects(){
     ['travNationality','localNationality'].forEach(function(id){
       var sel=document.getElementById(id);if(!sel)return;
       var cur=sel.value;
-      sel.innerHTML='';
+      sel.innerHTML='<option value="">Select nationality</option>';
       window.ETIE_COUNTRIES.forEach(function(c){
         var o=document.createElement('option');o.value=c.code;o.textContent=flagEmoji(c.code)+' '+c.name;sel.appendChild(o);
       });

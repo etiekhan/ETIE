@@ -459,6 +459,26 @@ function toggleAdmin(){try{var o=document.getElementById('adminOverlay');if(!o)r
 function enableCleanLive(){ try{ localStorage.setItem('etie-clean','1'); window.ETIE_CLEAN=true; var l=document.getElementById('cleanModeLine'); if(l) l.textContent='Clean mode ON — mocks hidden. Refresh both phones. Run SQL wipe below if needed, then re-onboard Fleming (local) + Ethan (traveller).'; renderMatches(); toast('Clean live mode enabled.'); }catch(e){} }
 function disableCleanLive(){ try{ localStorage.setItem('etie-clean','0'); window.ETIE_CLEAN=false; var l=document.getElementById('cleanModeLine'); if(l) l.textContent='Demos visible again (clean off).'; renderMatches(); toast('Demos restored.'); }catch(e){} }
 function wipeLocalEtie(){ try{ if(!confirm('Wipe local ETIE (requests/messages/meetups/reviews, keep profile)?')) return; ETIE.requests={}; ETIE.messages={}; ETIE.meetups={}; ETIE.reviews={}; ETIE._travStars=0; ETIE._localStars=0; ETIE_MATCH_INDEX=0; saveState(); renderMatches(); renderRequests(); renderChat(); renderMessagesList(); renderMeetup(); renderTrips(); renderLocalDashboard(); toast('Local wiped — also run SQL wipe for cloud.'); }catch(e){} }
+function wipeEverything(){
+  if(!confirm('WIPE EVERYTHING on this device + cloud for this login? Profile, trips, chats, meetups all gone. Continue?')) return;
+  try{
+    var client=window.EtieCloud&&window.EtieCloud.getClient&&window.EtieCloud.getClient();
+    var sess=window.EtieCloud&&window.EtieCloud.getSession&&window.EtieCloud.getSession();
+    var uid=sess&&sess.user&&sess.user.id;
+    if(client&&uid){
+      client.from('etie_messages').delete().eq('sender_id', uid).then(function(){});
+      client.from('etie_meetups').delete().neq('request_id','00000000-0000-0000-0000-000000000000').then(function(){}); // RLS will scope, errors ignored
+      client.from('etie_requests').delete().eq('traveller_id', uid).then(function(){});
+      client.from('etie_reviews').delete().or('traveller_id.eq.'+uid+',local_id.eq.'+uid).then(function(){});
+      client.from('etie_reports').delete().eq('reporter_id', uid).then(function(){});
+      client.from('etie_profiles').delete().eq('user_id', uid).then(function(){});
+      client.from('etie_states').delete().eq('user_id', uid).then(function(){});
+    }
+  }catch(e){}
+  try{ localStorage.removeItem('etie-v1'); localStorage.removeItem('etie-v1-user-backup'); localStorage.setItem('etie-clean','1'); }catch(e){}
+  try{ ETIE=loadState(); }catch(e){}
+  setTimeout(function(){ location.reload(); }, 600);
+}
 (function(){ try{ var c=localStorage.getItem('etie-clean'); if(c!=='0'){ window.ETIE_CLEAN=true; localStorage.setItem('etie-clean','1'); setTimeout(function(){ var l=document.getElementById('cleanModeLine'); if(l) l.textContent='Clean mode ON (default)'; }, 600);} }catch(e){ window.ETIE_CLEAN=true; } })();
 function refreshAdminLive(){
   try{

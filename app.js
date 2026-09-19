@@ -410,8 +410,9 @@ function formatTripDates(f,t){
 function saveTrav1(){
   ETIE.trip.destination=document.getElementById('travCity').value.trim();
   var f=(document.getElementById('travDateFrom')||{}).value||'',t=(document.getElementById('travDateTo')||{}).value||'';
-  if(f&&t){ETIE.trip.dateFrom=f;ETIE.trip.dateTo=t;ETIE.trip.dates=formatTripDates(f,t);}
-  var nc=document.getElementById('travNationality'); if(nc&&nc.value) ETIE.traveller.nationality=nc.value;
+  ETIE.trip.dateFrom=f; ETIE.trip.dateTo=t;
+  ETIE.trip.dates=(f&&t)?formatTripDates(f,t):'';
+  var nc=document.getElementById('travNationality'); ETIE.traveller.nationality=nc?nc.value:'';
   var nn=document.getElementById('travNickname'); if(nn) ETIE.traveller.nickname=nn.value.trim();
   updateHookLabel();
 }
@@ -461,8 +462,15 @@ function saveTrav6(){}
 function saveTrav7(){}
 function saveTrav8(){}
 function validTrav(step){
-  if(step===1){if(!ETIE.trip.destination){toast('Add a destination (e.g. Lisbon).');return false;}if(!(ETIE.trip.dateFrom&&ETIE.trip.dateTo)&&!ETIE.trip.dates){toast('Pick your trip dates on the calendar.');return false;}}
+  if(step===1){
+    if(!ETIE.trip.destination){toast('Add a destination (e.g. Lisbon).');return false;}
+    if(!ETIE.trip.dateFrom||!ETIE.trip.dateTo){toast('Pick both start and end dates.');return false;}
+    if(ETIE.trip.dateTo<ETIE.trip.dateFrom){toast('End date must be after start date.');return false;}
+    if(!ETIE.traveller.nationality){toast('Select your nationality.');return false;}
+    if(!ETIE.traveller.nickname){toast('Add a nickname shown to local guides.');return false;}
+  }
   if(step===2){if(ETIE.traveller.interests.length===0){toast('Pick at least 1 interest.');return false;}if(ETIE.traveller.interests.length>4){toast('Pick up to 4.');return false;}}
+  if(step===3){if((ETIE.traveller.styleInterests||[]).length===0){toast('Pick at least 1 style tag.');return false;}}
   if(step===4){if(ETIE.traveller.lookingFor.length===0){toast('Pick at least 1 option.');return false;}}
   if(step===5){if(ETIE.traveller.hook.length<10){toast('Add a short hook (10+ characters) so locals get you.');return false;}}
   if(step===6||step===7||step===8){return true;}
@@ -503,7 +511,7 @@ function travNext(n){
       renderMatches(); hideGroup('trav'); var e7=document.getElementById('trav7'); if(e7) e7.classList.remove('hidden'); showScreen('trav7'); return;
     }
   }
-  hideGroup('trav');var e=document.getElementById('trav'+n);if(e)e.classList.remove('hidden');updateCounts();renderProfiles();if(n===7||n===8)renderMatches();if(n===9||n===10||n===11||n===12){renderRequests();renderChat();renderMessagesList();}if(n>=12&&n<=17){renderMeetup();renderTrips();renderThanks();paintStars('travStars',ETIE._travStars||0);}showScreen('trav'+n);
+  hideGroup('trav');var e=document.getElementById('trav'+n);if(e)e.classList.remove('hidden');updateCounts();renderProfiles();if(n===7||n===8||n===9||n===10)renderMatches();if(n===9||n===10||n===11||n===12){renderRequests();renderChat();renderMessagesList();}if(n>=12&&n<=17){renderMeetup();renderTrips();renderThanks();paintStars('travStars',ETIE._travStars||0);}showScreen('trav'+n);
 }
 function localNext(n){
   var cur=currentLocalStep();

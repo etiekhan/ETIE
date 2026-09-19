@@ -507,6 +507,9 @@
   // ---- Live profiles for clean Discover (real users only) ----
   function profileToLocal(row){
     try{
+      var hc = (row.hosted_count!=null?row.hosted_count:((row.stats&&row.stats.travellersMet)||0));
+      var tier = row.tier || 'Rookie';
+      var veteran = (tier==='Host'||tier==='Verified'||hc>=10);
       return {
         id: row.user_id,
         name: row.display_name || 'Guide',
@@ -519,8 +522,10 @@
         offerTags: row.offer_tags || [],
         availability: row.availability || [],
         availDates: row.avail_dates || [],
-        stats: row.stats || {rating:4.9, reviews:0, travellersMet:0},
-        tier: row.tier || 'Rookie'
+        stats: row.stats || {rating:4.9, reviews:0, travellersMet:hc},
+        tier: tier,
+        hostedCount: hc,
+        veteran: veteran
       };
     }catch(e){ return null; }
   }

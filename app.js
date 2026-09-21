@@ -828,12 +828,27 @@ function renderProfiles(){
     if(lpp){ lpp.innerHTML=ETIE.local.photo?('<img src="'+ETIE.local.photo+'" style="width:60px;height:60px;border-radius:50%;object-fit:cover;">'):'<span style="color:rgba(255,255,255,.5);font-size:24px;">+</span>'; }
     var lpi=document.getElementById('localProfInterests');
     if(lpi){ lpi.innerHTML=''; if(!(ETIE.local.interests||[]).length){var e=document.createElement('span');e.className='muted small';e.textContent='No interests yet — Local Step 4.';lpi.appendChild(e);} else ETIE.local.interests.forEach(function(x){var s=document.createElement('span');s.className='chip active';s.textContent=x;lpi.appendChild(s);}); }
+    var lpp2=document.getElementById('localProfPersonality');
+    if(lpp2){
+      var lStyle=(ETIE.local.styleInterests||[]).length, lInt=(ETIE.local.interests||[]).length;
+      if(!lStyle && !lInt){ lpp2.textContent='Not set yet — set in Local Step 5.'; }
+      else {
+        var _lsv=ETIE.local.socialVibe, _ltp=ETIE.local.travelPace;
+        var lsvl=(_lsv!=null?SOCIAL_VIBE_LABELS[_lsv]:'')||'', ltpl=(_ltp!=null?TRAVEL_PACE_LABELS[_ltp]:'')||'';
+        lpp2.textContent=(lsvl?('Social vibe: '+lsvl+' · '):'')+(ltpl?('Pace: '+ltpl+' · '):'')+'Social '+ETIE.local.personality.social+'/10 · Spontaneous '+ETIE.local.personality.spontaneous+'/10 · Curious '+ETIE.local.personality.curious+'/10';
+        if((ETIE.local.styleInterests||[]).length) lpp2.textContent+=' · '+(ETIE.local.styleInterests||[]).join(' · ');
+      }
+    }
     var lpo=document.getElementById('localProfOffer');
     if(lpo) lpo.textContent=ETIE.local.offer?('“'+ETIE.local.offer+'”'):'Not set yet — Local Step 6.';
     var lpa=document.getElementById('localProfAvail');
     if(lpa){ var ad=ETIE.local.availDates||[]; lpa.textContent=ad.length?('Available: '+ad.slice().sort().join(', ')):'No dates yet — Local Step 8.'; }
     var lpv=document.getElementById('localProfVerify');
     if(lpv){ var lm=ETIE.local.verificationMethods||[]; lpv.textContent=lm.length?('Verified: '+lm.join(' · ')):'Not verified yet — Local Step 2.'; }
+    var lpvt=document.getElementById('localProfVerifyTrust');
+    if(lpvt){ lpvt.innerHTML=''; var lms=ETIE.local.verificationMethods||[]; if(!lms.length){var s=document.createElement('span');s.textContent='Unverified';lpvt.appendChild(s);} else lms.forEach(function(m){var s=document.createElement('span');s.textContent='✓ '+m;lpvt.appendChild(s);}); }
+    var lps=document.getElementById('localProfStats');
+    if(lps){ var hc=ETIE.local.hostedCount||0, hr=ETIE.local.avgHostRating||0; lps.textContent=(hc||hr)?('Hosted: '+hc+' · Rating: '+(hr?hr.toFixed(1)+' ★':'—')):'No guests yet — complete a meetup to build reputation.'; }
     updateHookLabel();
   }catch(e){}
 }

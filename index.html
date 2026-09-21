@@ -19,10 +19,10 @@
     <button class="nav-btn" onclick="showScreen('messages')">Messages</button>
     <button class="nav-btn" id="navProfileBtn" onclick="showScreen('profile')">Profile</button>
     <button class="secondary" id="adminBtn" style="display:none;" onclick="toggleAdmin()">Admin</button>
-    <span class="status" id="cloudStatus">Cloud: offline demo</span>
+    <span class="status" id="cloudStatus" style="display:none;">Cloud: offline demo</span>
     <input id="authEmail" placeholder="email for login" style="max-width:170px;padding:9px;border:1px solid #d6d0c8;border-radius:10px;background:#faf9f7;">
-    <button class="secondary" onclick="EtieCloud.signIn()">Sign in</button>
-    <button class="nav-btn" onclick="EtieCloud.signOut()">Sign out</button>
+    <button class="secondary" id="signInBtn" onclick="EtieCloud.signIn()">Sign in</button>
+    <button class="nav-btn" id="signOutBtn" style="display:none;" onclick="EtieCloud.signOut()">Sign out</button>
   </nav>
   <div class="header-profile" id="headerProfile" style="display:none;" onclick="showScreen('profile')" title="Your profile"><span class="header-avatar" id="headerAvatar">+</span><span id="headerName">Guest</span></div>
 </header>

@@ -677,9 +677,21 @@ function hasAnyTravellerData(){
     return false;
   }catch(e){return true;}
 }
+function isSignedIn(){ try{ var s=window.EtieCloud&&window.EtieCloud.getSession&&window.EtieCloud.getSession(); return !!(s&&s.user); }catch(e){ return false; } }
+function updateAuthHeader(){
+  try{
+    var in_=isSignedIn();
+    var em=document.getElementById('authEmail'); if(em) em.style.display=in_?'none':'';
+    var si=document.getElementById('signInBtn'); if(si) si.style.display=in_?'none':'';
+    var so=document.getElementById('signOutBtn'); if(so) so.style.display=in_?'':'none';
+    try{ if(typeof updateAdminVisibility==='function') updateAdminVisibility(); }catch(e){}
+  }catch(e){}
+}
 function renderHeaderProfile(){
   try{
     var box=document.getElementById('headerProfile'); if(!box)return;
+    updateAuthHeader();
+    if(!isSignedIn()){ box.style.display='none'; return; }
     var t=ETIE.traveller||{};
     var photo=t.photo||ETIE.local.photo||null;
     var name=t.nickname||ETIE.local.displayName||'';

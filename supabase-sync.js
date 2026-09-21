@@ -45,6 +45,7 @@
         if(session){paint('on','Cloud: on');pull();pullShared();subscribeShared();subscribeLiveProfiles();syncProfile();}
         else paint('offline','Cloud: offline — sign in');
         try{ if(typeof updateAdminVisibility==='function')updateAdminVisibility(); }catch(e){}
+        try{ if(typeof updateAuthHeader==='function')updateAuthHeader(); if(typeof renderHeaderProfile==='function')renderHeaderProfile(); }catch(e){}
       }).catch(function(){paint('offline','Cloud: offline');});
       client.auth.onAuthStateChange(function(ev,s){
         session=s;
@@ -55,6 +56,7 @@
         if(s){paint('on','Cloud: on');pull();pullShared();subscribeShared();subscribeLiveProfiles();syncProfile();}
         else paint('offline','Cloud: offline — sign in');
         try{ if(typeof updateAdminVisibility==='function')updateAdminVisibility(); }catch(e){}
+        try{ if(typeof updateAuthHeader==='function')updateAuthHeader(); if(typeof renderHeaderProfile==='function')renderHeaderProfile(); }catch(e){}
       });
     }catch(e){paint('offline','Cloud: offline');}
   }

@@ -677,8 +677,24 @@ function hasAnyTravellerData(){
     return false;
   }catch(e){return true;}
 }
+function renderHeaderProfile(){
+  try{
+    var box=document.getElementById('headerProfile'); if(!box)return;
+    var t=ETIE.traveller||{};
+    var photo=t.photo||ETIE.local.photo||null;
+    var name=t.nickname||ETIE.local.displayName||'';
+    var flag=''; try{ flag=flagForCountry(t.nationality||ETIE.local.nationality||''); }catch(e){}
+    if(!name && !photo){ box.style.display='none'; return; }
+    box.style.display='';
+    var av=document.getElementById('headerAvatar');
+    if(av){ if(photo) av.innerHTML='<img src="'+photo+'">'; else av.textContent=(name||'?').charAt(0).toUpperCase(); }
+    var nm=document.getElementById('headerName');
+    if(nm) nm.textContent=(flag?flag+' ':'')+(name||'Traveller');
+  }catch(e){}
+}
 function updateProfileVisibility(){
   try{
+    renderHeaderProfile();
     var ready=hasAnyTravellerData();
     var navBtn=document.getElementById('navProfileBtn');
     if(navBtn)navBtn.style.display=ready?'':'none';

@@ -73,8 +73,11 @@
     }catch(e){toast('Sign-in unavailable offline.');}
   }
   function signOut(){
+    try{ if(!confirm('Are you sure you want to sign out?')) return; }catch(e){ return; }
+    try{ if(!confirm('Yes, please proceed — sign out on this device? (No = stay signed in)')) return; }catch(e){ return; }
     try{if(client)try{ client.removeChannel(realtimeChannel); client.removeChannel(reviewChannel); client.removeChannel(reportChannel); client.removeChannel(profileLiveChannel); }catch(e){};realtimeChannel=reviewChannel=reportChannel=profileLiveChannel=null; if(client)client.auth.signOut();}catch(e){}
     session=null;window.ETIE_LIVE_LOCALS=[];paint('offline','Cloud: offline — sign in');
+    try{ if(typeof updateAuthHeader==='function')updateAuthHeader(); if(typeof renderHeaderProfile==='function')renderHeaderProfile(); }catch(e){}
   }
   // ---- Phase 2: single-user backup (etie_states) ----
   function push(){

@@ -2,7 +2,7 @@
 // Plain English: plan → complete → both review. Trips shows live status.
 var ETIE_KEY = 'etie-v1';
 
-function todayISO(){ try{ return new Date().toISOString().slice(0,10); }catch(e){ return ''; } }
+function todayISO(){ try{ var d=new Date(); var m=('0'+(d.getMonth()+1)).slice(-2), day=('0'+d.getDate()).slice(-2); return d.getFullYear()+'-'+m+'-'+day; }catch(e){ return ''; } }
 function etieDefaults() {
   return {
     activeRole: null,
@@ -51,6 +51,8 @@ function etieDefaults() {
     reports: [],
     _travStars: 0,
     _localStars: 0,
+    _lastTrav: 1,
+    _lastLocal: 1,
     _pers10: true
   };
 }
@@ -64,6 +66,8 @@ function loadState() {
     var s = JSON.parse(raw);
     var def = etieDefaults();
     if(s.activeRole==null) s.activeRole=null;
+    if(s._lastTrav==null) s._lastTrav=1;
+    if(s._lastLocal==null) s._lastLocal=1;
     if(s.traveller&&s.traveller.verificationMethods==null) s.traveller.verificationMethods=[];
     s.trip = Object.assign(def.trip, s.trip || {});
     s.traveller = Object.assign(def.traveller, s.traveller || {});
@@ -409,13 +413,10 @@ var ETIE_AVAIL_YM=null, ETIE_AVAIL_DRAG=null;
 function availCalYM(){
   try{
     if(ETIE_AVAIL_YM) return ETIE_AVAIL_YM;
-    var base=null;
-    try{ var ds=(ETIE.local.availDates||[]).filter(Boolean).sort(); if(ds.length) base=ds[0]; }catch(e){}
-    var d=base?new Date(base+'T12:00'):new Date();
-    if(isNaN(d.getTime())) d=new Date();
+    var d=new Date(); // always open on the current month, follows local time
     ETIE_AVAIL_YM={y:d.getFullYear(),m:d.getMonth()};
     return ETIE_AVAIL_YM;
-  }catch(e){ return {y:2026,m:8}; }
+  }catch(e){ var _d=new Date(); return {y:_d.getFullYear(),m:_d.getMonth()}; }
 }
 function availCalNav(dir){
   try{
@@ -493,17 +494,10 @@ function renderAvailCal(){
 }
 function renderAvailDates(){
   try{
-    var list=document.getElementById('availDateList'); if(!list) return;
-    var dates=ETIE.local.availDates||[];
-    if(!dates.length){ list.innerHTML='<div class="list-item"><div><strong>No dates yet</strong><br><span class="muted">Add dates you\'re free — travellers see you on those days.</span></div><span class="status">Empty</span></div>'; return; }
-    list.innerHTML='';
-    dates.slice().sort().forEach(function(d,idx){
-      var row=document.createElement('div'); row.className='list-item';
-      var dt=new Date(d+'T12:00'); var label=isNaN(dt.getTime())?d:dt.toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short',year:'numeric'});
-      row.innerHTML='<div><strong></strong></div>'; row.querySelector('strong').textContent=label;
-      var rm=document.createElement('button'); rm.className='secondary'; rm.textContent='Remove'; rm.style.padding='6px 10px'; rm.onclick=(function(i){return function(){removeAvailDate(i);};})(idx);
-      row.appendChild(rm); list.appendChild(row);
-    });
+    // calendar-tap only: no date list columns — just a selected count
+    var dates=(ETIE.local.availDates||[]).slice().sort();
+    var sc=document.getElementById('availSelCount');
+    if(sc) sc.textContent=dates.length?(dates.length+' date(s) selected: '+dates.join(', ')):'No dates selected yet.';
   }catch(e){}
 }
 function addAvailDate(){
@@ -643,7 +637,7 @@ function travNext(n){
       renderMatches(); hideGroup('trav'); var e7=document.getElementById('trav7'); if(e7) e7.classList.remove('hidden'); showScreen('trav7'); return;
     }
   }
-  hideGroup('trav');var e=document.getElementById('trav'+n);if(e)e.classList.remove('hidden');updateCounts();renderProfiles();if(n===7||n===8||n===9||n===10)renderMatches();if(n===9||n===10||n===11||n===12){renderRequests();renderChat();renderMessagesList();}if(n>=12&&n<=17){renderMeetup();renderTrips();renderThanks();paintStars('travStars',ETIE._travStars||0);}showScreen('trav'+n);
+  hideGroup('trav');var e=document.getElementById('trav'+n);if(e)e.classList.remove('hidden');try{ETIE._lastTrav=n;saveState();}catch(_){}updateCounts();renderProfiles();if(n===7||n===8||n===9||n===10)renderMatches();if(n===9||n===10||n===11||n===12){renderRequests();renderChat();renderMessagesList();}if(n>=12&&n<=17){renderMeetup();renderTrips();renderThanks();paintStars('travStars',ETIE._travStars||0);}showScreen('trav'+n);
 }
 function localNext(n){
   var cur=currentLocalStep();
@@ -653,7 +647,7 @@ function localNext(n){
     if(n>cur&&!validLocal(cur))return;
   }catch(e){}
   for(var i=1;i<=11;i++){var e=document.getElementById('local'+i);if(e)e.classList.add('hidden');}
-  var t=document.getElementById('local'+n);if(t)t.classList.remove('hidden');updateCounts();renderProfiles();syncAvailUI();if(n===7){renderLocalDashboard();}if(n===8||n===9){renderRequests();renderChat();renderMessagesList();renderMeetup();renderLocalDashboard();}if(n===10){renderMeetup();paintStars('localStars',ETIE._localStars||0);renderLocalDashboard();}showScreen('local'+n);
+  var t=document.getElementById('local'+n);if(t)t.classList.remove('hidden');try{ETIE._lastLocal=n;saveState();}catch(_){}updateCounts();renderProfiles();syncAvailUI();if(n===7){renderLocalDashboard();}if(n===8||n===9){renderRequests();renderChat();renderMessagesList();renderMeetup();renderLocalDashboard();}if(n===10){renderMeetup();paintStars('localStars',ETIE._localStars||0);renderLocalDashboard();}showScreen('local'+n);
 }
 function findMatch(){try{saveTrav5();saveTrav6();saveState();if(!validTrav(5))return;}catch(e){}if(!ETIE.traveller.photo){toast('Add your selfie first — profiles with photos get 3x more requests.');return;}ETIE_MATCH_INDEX=0;renderMatches();travNext(7);}
 function travRestart(){showScreen('trav1');travNext(1);}
@@ -747,7 +741,7 @@ function refreshAdminLive(){
   }catch(e){ try{ var h=document.getElementById('adminLiveHint'); if(h) h.textContent='Live refresh failed.'; }catch(e2){}}
 }
 function toggleNav(){try{var n=document.getElementById('mainNav');var t=document.querySelector('.nav-toggle');if(n&&t){n.classList.toggle('open');t.textContent=n.classList.contains('open')?'✕':'☰';}}catch(e){}}
-function setRole(role){try{ETIE.activeRole=role;}catch(e){}document.getElementById('travRole').classList.toggle('active',role==='traveller');document.getElementById('localRole').classList.toggle('active',role==='local');document.getElementById('travellerFlow').classList.toggle('hidden',role!=='traveller');document.getElementById('localFlow').classList.toggle('hidden',role!=='local');saveState();renderRoleGate();if(role==='traveller')travNext(1);else localNext(1);showScreen('home');}
+function setRole(role){try{ETIE.activeRole=role;}catch(e){}document.getElementById('travRole').classList.toggle('active',role==='traveller');document.getElementById('localRole').classList.toggle('active',role==='local');document.getElementById('travellerFlow').classList.toggle('hidden',role!=='traveller');document.getElementById('localFlow').classList.toggle('hidden',role!=='local');saveState();renderRoleGate();if(role==='traveller')travNext(Math.min(16,Math.max(1,ETIE._lastTrav||1)));else localNext(Math.min(11,Math.max(1,ETIE._lastLocal||1)));showScreen('home');}
 function hasAnyLocalData(){try{var l=ETIE.local||{};if(l.city||l.age||l.nationality||l.displayName)return true;if((l.interests||[]).length)return true;if((l.styleInterests||[]).length)return true;if(l.offer)return true;if(l.photo)return true;if((l.travelPhotos||[]).filter(Boolean).length)return true;if((l.availDates||[]).length)return true;if((l.verificationMethods||[]).length)return true;return false;}catch(e){return false;}}
 function renderRoleGate(){
   try{
@@ -1448,18 +1442,6 @@ function renderLocalDashboard(){
       });
     }
     try{ renderDashCal(); }catch(e){}
-    var ae=document.getElementById('localDashAvailEdit');
-    if(ae){
-      ae.innerHTML='';
-      var ads=(ETIE.local.availDates||[]).slice().sort();
-      if(!ads.length){ae.innerHTML='<div class="list-item"><div><strong>No dates yet</strong><br><span class="muted">Pick dates on the calendar in Step 7.</span></div><span class="status">Empty</span></div>';}
-      ads.forEach(function(ds){
-        var row=document.createElement('div');row.className='list-item';
-        var dt=new Date(ds+'T12:00'); var label=isNaN(dt.getTime())?ds:dt.toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short'});
-        row.innerHTML='<div><strong></strong></div><span class="status">Available</span>';row.querySelector('strong').textContent=label;
-        ae.appendChild(row);
-      });
-    }
     var vis=document.getElementById('localVisibility');
     if(vis){var n=(ETIE.local.availDates||[]).length;
       vis.textContent=n>0?('Visible: '+n+' date(s) selected — travellers can match you on those days.'):('Hidden: no dates selected — pick dates in Step 7 to reappear.');}

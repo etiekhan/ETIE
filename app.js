@@ -5,10 +5,12 @@ var ETIE_KEY = 'etie-v1';
 function todayISO(){ try{ return new Date().toISOString().slice(0,10); }catch(e){ return ''; } }
 function etieDefaults() {
   return {
+    activeRole: null,
     trip: { destination: '', dates: '', dateFrom: todayISO(), dateTo: '', country: '' },
     traveller: {
       nickname: '',
       nationality: '',
+      verificationMethods: [],
       interests: [],
       personality: { social: 5, spontaneous: 5, curious: 5 },
       socialVibe: null, travelPace: null, _vibeSet: false, styleInterests: [],
@@ -61,6 +63,8 @@ function loadState() {
     if (!raw) { var d = etieDefaults(); localStorage.setItem(ETIE_KEY, JSON.stringify(d)); return d; }
     var s = JSON.parse(raw);
     var def = etieDefaults();
+    if(s.activeRole==null) s.activeRole=null;
+    if(s.traveller&&s.traveller.verificationMethods==null) s.traveller.verificationMethods=[];
     s.trip = Object.assign(def.trip, s.trip || {});
     s.traveller = Object.assign(def.traveller, s.traveller || {});
     s.local = Object.assign(def.local, s.local || {});
@@ -345,6 +349,21 @@ function toggleVerify(el){
     saveLocal2();saveState();
   }catch(e){}
 }
+function toggleVerifyTrav(el){
+  try{
+    el.classList.toggle('selected');
+    var st=el.querySelector('.status');
+    if(st)st.textContent=el.classList.contains('selected')?'Selected':'Tap to select';
+    saveTravVerify();saveState();renderProfiles();
+  }catch(e){}
+}
+function saveTravVerify(){
+  try{
+    var c=document.getElementById('travVerify');if(!c)return;
+    ETIE.traveller.verificationMethods=Array.prototype.map.call(
+      c.querySelectorAll('.list-item.selected'),function(row){return row.getAttribute('data-method');});
+  }catch(e){}
+}
 function saveLocal2(){
   try{
     var c=document.getElementById('localVerify');if(!c)return;
@@ -425,6 +444,7 @@ function saveTrav1(){
   ETIE.trip.dates=(f&&t)?formatTripDates(f,t):'';
   var nc=document.getElementById('travNationality'); ETIE.traveller.nationality=nc?nc.value:'';
   var nn=document.getElementById('travNickname'); if(nn) ETIE.traveller.nickname=nn.value.trim();
+  saveTravVerify();
   updateHookLabel();
 }
 function saveTrav2(){ETIE.traveller.interests=getChips('travInterests');}
@@ -479,6 +499,7 @@ function validTrav(step){
     if(ETIE.trip.dateTo<ETIE.trip.dateFrom){toast('End date must be after start date.');return false;}
     if(!ETIE.traveller.nationality){toast('Select your nationality.');return false;}
     if(!ETIE.traveller.nickname){toast('Add a nickname shown to local guides.');return false;}
+    if(!(ETIE.traveller.verificationMethods&&ETIE.traveller.verificationMethods.length)){toast('Pick at least 1 verification method to continue.');return false;}
   }
   if(step===2){if(ETIE.traveller.interests.length===0){toast('Pick at least 1 interest.');return false;}if(ETIE.traveller.interests.length>4){toast('Pick up to 4.');return false;}}
   if(step===3){if((ETIE.traveller.styleInterests||[]).length===0){toast('Pick at least 1 style tag.');return false;}}
@@ -626,7 +647,24 @@ function refreshAdminLive(){
   }catch(e){ try{ var h=document.getElementById('adminLiveHint'); if(h) h.textContent='Live refresh failed.'; }catch(e2){}}
 }
 function toggleNav(){try{var n=document.getElementById('mainNav');var t=document.querySelector('.nav-toggle');if(n&&t){n.classList.toggle('open');t.textContent=n.classList.contains('open')?'✕':'☰';}}catch(e){}}
-function setRole(role){document.getElementById('travRole').classList.toggle('active',role==='traveller');document.getElementById('localRole').classList.toggle('active',role==='local');document.getElementById('travellerFlow').classList.toggle('hidden',role!=='traveller');document.getElementById('localFlow').classList.toggle('hidden',role!=='local');saveState();if(role==='traveller')travNext(1);else localNext(1);showScreen('home');}
+function setRole(role){try{ETIE.activeRole=role;}catch(e){}document.getElementById('travRole').classList.toggle('active',role==='traveller');document.getElementById('localRole').classList.toggle('active',role==='local');document.getElementById('travellerFlow').classList.toggle('hidden',role!=='traveller');document.getElementById('localFlow').classList.toggle('hidden',role!=='local');saveState();renderRoleGate();if(role==='traveller')travNext(1);else localNext(1);showScreen('home');}
+function hasAnyLocalData(){try{var l=ETIE.local||{};if(l.city||l.age||l.nationality||l.displayName)return true;if((l.interests||[]).length)return true;if((l.styleInterests||[]).length)return true;if(l.offer)return true;if(l.photo)return true;if((l.travelPhotos||[]).filter(Boolean).length)return true;if((l.availDates||[]).length)return true;if((l.verificationMethods||[]).length)return true;return false;}catch(e){return false;}}
+function renderRoleGate(){
+  try{
+    var gate=document.getElementById('roleGate'); if(!gate)return;
+    var fresh=!hasAnyTravellerData()&&!hasAnyLocalData()&&!ETIE.activeRole;
+    gate.style.display=fresh?'':'none';
+    if(fresh){
+      document.getElementById('travellerFlow').classList.add('hidden');
+      document.getElementById('localFlow').classList.add('hidden');
+    } else if(ETIE.activeRole){
+      document.getElementById('travellerFlow').classList.toggle('hidden',ETIE.activeRole!=='traveller');
+      document.getElementById('localFlow').classList.toggle('hidden',ETIE.activeRole!=='local');
+      document.getElementById('travRole').classList.toggle('active',ETIE.activeRole==='traveller');
+      document.getElementById('localRole').classList.toggle('active',ETIE.activeRole==='local');
+    }
+  }catch(e){}
+}
 
 // Demo personas — permanent test individuals for solo testing (same browser, no second phone).
 // Cloud sync pauses while a persona is active so demo play never pollutes real tables.
@@ -668,7 +706,7 @@ function hasAnyTravellerData(){
   try{
     if(ETIE.trip&&(ETIE.trip.destination||ETIE.trip.country||ETIE.trip.dates))return true;
     var t=ETIE.traveller||{};
-    if(t.nickname||t.nationality)return true;
+    if(t.nickname||t.nationality||((t.verificationMethods||[]).length))return true;
     if((t.interests||[]).length)return true;
     if(t._vibeSet||(t.styleInterests||[]).length)return true;
     if((t.lookingFor||[]).length)return true;
@@ -708,7 +746,8 @@ function renderHeaderProfile(){
 function updateProfileVisibility(){
   try{
     renderHeaderProfile();
-    var ready=hasAnyTravellerData();
+    renderRoleGate();
+    var ready=hasAnyTravellerData()||hasAnyLocalData();
     var navBtn=document.getElementById('navProfileBtn');
     if(navBtn)navBtn.style.display=ready?'':'none';
     var content=document.getElementById('profileContent');
@@ -775,6 +814,26 @@ function renderProfiles(){
     // Local photo in dashboard
     var lp=document.getElementById('localDashPhoto');
     if(lp){lp.innerHTML=ETIE.local.photo?('<img src="'+ETIE.local.photo+'" style="width:60px;height:60px;border-radius:50%;object-fit:cover;">'):'<span style="color:rgba(255,255,255,.5);font-size:24px;">+</span>';}
+    // Traveller verification line in Profile
+    var pv=document.getElementById('profVerify');
+    if(pv){ var vm=ETIE.traveller.verificationMethods||[]; pv.textContent=vm.length?('Verified: '+vm.join(' · ')):'Not verified yet — pick at least one in Step 1.'; }
+    var pvt=document.getElementById('profVerifyTrust');
+    if(pvt){ pvt.innerHTML=''; var vms=ETIE.traveller.verificationMethods||[]; if(!vms.length){var s=document.createElement('span');s.textContent='Unverified';pvt.appendChild(s);} else vms.forEach(function(m){var s=document.createElement('span');s.textContent='✓ '+m;pvt.appendChild(s);}); }
+    // Local guide section inside Profile — mirrors Local flow live
+    var LPC=document.getElementById('localProfileContent');
+    if(LPC) LPC.style.display=hasAnyLocalData()?'':'none';
+    var lpc=document.getElementById('localProfCity');
+    if(lpc){ if(!hasAnyLocalData()) lpc.textContent='No local base yet — complete Local Steps 1–3'; else lpc.textContent=(ETIE.local.nationality?flagForCountry(ETIE.local.nationality)+' ':'')+(ETIE.local.city||'—')+(ETIE.local.age?' · '+ETIE.local.age:'')+' · Local guide'; }
+    var lpp=document.getElementById('localProfPhoto');
+    if(lpp){ lpp.innerHTML=ETIE.local.photo?('<img src="'+ETIE.local.photo+'" style="width:60px;height:60px;border-radius:50%;object-fit:cover;">'):'<span style="color:rgba(255,255,255,.5);font-size:24px;">+</span>'; }
+    var lpi=document.getElementById('localProfInterests');
+    if(lpi){ lpi.innerHTML=''; if(!(ETIE.local.interests||[]).length){var e=document.createElement('span');e.className='muted small';e.textContent='No interests yet — Local Step 4.';lpi.appendChild(e);} else ETIE.local.interests.forEach(function(x){var s=document.createElement('span');s.className='chip active';s.textContent=x;lpi.appendChild(s);}); }
+    var lpo=document.getElementById('localProfOffer');
+    if(lpo) lpo.textContent=ETIE.local.offer?('“'+ETIE.local.offer+'”'):'Not set yet — Local Step 6.';
+    var lpa=document.getElementById('localProfAvail');
+    if(lpa){ var ad=ETIE.local.availDates||[]; lpa.textContent=ad.length?('Available: '+ad.slice().sort().join(', ')):'No dates yet — Local Step 8.'; }
+    var lpv=document.getElementById('localProfVerify');
+    if(lpv){ var lm=ETIE.local.verificationMethods||[]; lpv.textContent=lm.length?('Verified: '+lm.join(' · ')):'Not verified yet — Local Step 2.'; }
     updateHookLabel();
   }catch(e){}
 }
@@ -1319,8 +1378,17 @@ function restoreAll(){
         var st=row.querySelector('.status');if(st)st.textContent=on?'Selected':'Tap to select';
       });
     }catch(e){}
+    try{
+      var tvm=ETIE.traveller.verificationMethods||[];
+      var tc=document.getElementById('travVerify');
+      if(tc)Array.prototype.forEach.call(tc.querySelectorAll('.list-item'),function(row){
+        var on=tvm.indexOf(row.getAttribute('data-method'))!==-1;
+        row.classList.toggle('selected',on);
+        var st=row.querySelector('.status');if(st)st.textContent=on?'Selected':'Tap to select';
+      });
+    }catch(e){}
   }catch(e){}
-  restorePhotoPreviews();updateCounts();refreshSliderLabels();refreshAnchoredLabels();syncAvailUI();renderProfiles();renderMatches();renderRequests();renderChat();renderMessagesList();renderMeetup();renderThanks();renderTrips();renderLocalDashboard();paintStars('travStars',ETIE._travStars||0);paintStars('localStars',ETIE._localStars||0);
+  restorePhotoPreviews();updateCounts();refreshSliderLabels();refreshAnchoredLabels();syncAvailUI();renderProfiles();renderRoleGate();renderMatches();renderRequests();renderChat();renderMessagesList();renderMeetup();renderThanks();renderTrips();renderLocalDashboard();paintStars('travStars',ETIE._travStars||0);paintStars('localStars',ETIE._localStars||0);
 }
 function refreshSliderLabels(){
   var m=[['localSocial','localSocialVal'],['localSpont','localSpontVal'],['localCurious','localCuriousVal']];

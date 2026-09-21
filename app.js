@@ -423,7 +423,30 @@ function availCalNav(dir){
     var m=ym.m+dir, y=ym.y;
     while(m<0){m+=12;y--;} while(m>11){m-=12;y++;}
     ETIE_AVAIL_YM={y:y,m:m};
-    renderAvailCal();
+    renderAvailCal(); renderDashCal();
+  }catch(e){}
+}
+function renderDashCal(){
+  try{
+    var box=document.getElementById('localDashCal'); if(!box) return;
+    var ym=availCalYM();
+    var M=['January','February','March','April','May','June','July','August','September','October','November','December'];
+    var first=new Date(ym.y,ym.m,1);
+    var startDay=(first.getDay()+6)%7;
+    var days=new Date(ym.y,ym.m+1,0).getDate();
+    var today=todayISO();
+    var sel={}; (ETIE.local.availDates||[]).forEach(function(d){sel[d]=1;});
+    box.innerHTML='';
+    ['Mo','Tu','We','Th','Fr','Sa','Su'].forEach(function(w){var h=document.createElement('div');h.className='avail-cal-dow';h.textContent=w;box.appendChild(h);});
+    for(var i=0;i<startDay;i++){var p=document.createElement('div');p.className='avail-cal-day empty';box.appendChild(p);}
+    for(var d=1;d<=days;d++){
+      var mm=('0'+(ym.m+1)).slice(-2), dd=('0'+d).slice(-2);
+      var ds=ym.y+'-'+mm+'-'+dd;
+      var c=document.createElement('div');
+      c.className='avail-cal-day '+(ds<today?'past':(sel[ds]?'avail':'unavail'));
+      c.textContent=d; c.title=ds+(sel[ds]?' — available':' — not available');
+      box.appendChild(c);
+    }
   }catch(e){}
 }
 function toggleAvailCal(dateStr, force){
@@ -1424,6 +1447,7 @@ function renderLocalDashboard(){
         wrap.appendChild(v);wrap.appendChild(a);wrap.appendChild(d);row.appendChild(wrap);q.appendChild(row);
       });
     }
+    try{ renderDashCal(); }catch(e){}
     var ae=document.getElementById('localDashAvailEdit');
     if(ae){
       ae.innerHTML='';
@@ -1432,10 +1456,8 @@ function renderLocalDashboard(){
       ads.forEach(function(ds){
         var row=document.createElement('div');row.className='list-item';
         var dt=new Date(ds+'T12:00'); var label=isNaN(dt.getTime())?ds:dt.toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short'});
-        row.innerHTML='<div><strong></strong></div>';row.querySelector('strong').textContent=label;
-        var rm=document.createElement('button');rm.className='secondary';rm.textContent='Remove';rm.style.padding='6px 10px';
-        rm.onclick=(function(d){return function(){toggleAvailCal(d,false);};})(ds);
-        row.appendChild(rm);ae.appendChild(row);
+        row.innerHTML='<div><strong></strong></div><span class="status">Available</span>';row.querySelector('strong').textContent=label;
+        ae.appendChild(row);
       });
     }
     var vis=document.getElementById('localVisibility');

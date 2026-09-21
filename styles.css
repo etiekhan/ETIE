@@ -123,6 +123,9 @@ header nav{margin-left:auto;justify-content:flex-end}
 .avail-cal-day.empty{border:0;background:transparent;cursor:default}
 .avail-cal-day.sel{background:#171717;color:#fff;border-color:#171717;font-weight:800}
 .avail-cal-day.past{opacity:.35;cursor:default}
+.avail-cal.locked .avail-cal-day{cursor:default}
+.avail-cal-day.avail{background:#1d9e6b;color:#fff;border-color:#1d9e6b;font-weight:800}
+.avail-cal-day.unavail{background:#f3c1c1;color:#7a1f1f;border-color:#e8a0a0}
 /* Verification selectable rows */
 #localVerify .list-item,#travVerify .list-item{cursor:pointer}
 #localVerify .list-item.selected,#travVerify .list-item.selected{border-color:#171717;background:#f4f1ec}

@@ -316,7 +316,19 @@ function setChips(containerId, values){
 }
 function updateCounts(){
   var tc=document.getElementById('travInterestCount');if(tc)tc.textContent=getChips('travInterests').length+' / 4 selected';
-  var lc=document.getElementById('localInterestCount');if(lc)lc.textContent=getChips('localInterests').length+' selected';
+  var lc=document.getElementById('localInterestCount');if(lc)lc.textContent=getChips('localInterests').length+' / 4 selected';
+  try{
+    var box=document.getElementById('localSelected4');
+    if(box){
+      var sel=getChips('localInterests');
+      box.innerHTML='';
+      for(var i=0;i<4;i++){
+        var d=document.createElement('div');d.className='selected4-cell'+(sel[i]?' filled':'');
+        d.textContent=sel[i]||('Slot '+(i+1));
+        box.appendChild(d);
+      }
+    }
+  }catch(e){}
 }
 
 function toggleChip(el){
@@ -391,6 +403,70 @@ function syncAvailUI(){
     });
   }catch(e){}
   try{ renderAvailDates(); }catch(e){}
+  try{ renderAvailCal(); }catch(e){}
+}
+var ETIE_AVAIL_YM=null, ETIE_AVAIL_DRAG=null;
+function availCalYM(){
+  try{
+    if(ETIE_AVAIL_YM) return ETIE_AVAIL_YM;
+    var base=null;
+    try{ var ds=(ETIE.local.availDates||[]).filter(Boolean).sort(); if(ds.length) base=ds[0]; }catch(e){}
+    var d=base?new Date(base+'T12:00'):new Date();
+    if(isNaN(d.getTime())) d=new Date();
+    ETIE_AVAIL_YM={y:d.getFullYear(),m:d.getMonth()};
+    return ETIE_AVAIL_YM;
+  }catch(e){ return {y:2026,m:8}; }
+}
+function availCalNav(dir){
+  try{
+    var ym=availCalYM();
+    var m=ym.m+dir, y=ym.y;
+    while(m<0){m+=12;y--;} while(m>11){m-=12;y++;}
+    ETIE_AVAIL_YM={y:y,m:m};
+    renderAvailCal();
+  }catch(e){}
+}
+function toggleAvailCal(dateStr, force){
+  try{
+    if(!ETIE.local.availDates) ETIE.local.availDates=[];
+    var i=ETIE.local.availDates.indexOf(dateStr);
+    var want=(force!=null)?force:(i===-1);
+    if(want&&i===-1) ETIE.local.availDates.push(dateStr);
+    if(!want&&i!==-1) ETIE.local.availDates.splice(i,1);
+    ETIE.local.availDates.sort();
+    saveState(); renderAvailDates(); renderAvailCal(); renderProfiles(); renderLocalDashboard();
+  }catch(e){}
+}
+function renderAvailCal(){
+  try{
+    var box=document.getElementById('availCal'); if(!box) return;
+    var ym=availCalYM();
+    var M=['January','February','March','April','May','June','July','August','September','October','November','December'];
+    var title=document.getElementById('availCalTitle');
+    if(title) title.textContent=M[ym.m]+' '+ym.y;
+    var first=new Date(ym.y,ym.m,1);
+    var startDay=(first.getDay()+6)%7; // Monday-first
+    var days=new Date(ym.y,ym.m+1,0).getDate();
+    var today=todayISO();
+    var sel={}; (ETIE.local.availDates||[]).forEach(function(d){sel[d]=1;});
+    box.innerHTML='';
+    ['Mo','Tu','We','Th','Fr','Sa','Su'].forEach(function(w){var h=document.createElement('div');h.className='avail-cal-dow';h.textContent=w;box.appendChild(h);});
+    for(var i=0;i<startDay;i++){var p=document.createElement('div');p.className='avail-cal-day empty';box.appendChild(p);}
+    for(var d=1;d<=days;d++){
+      (function(day){
+        var mm=('0'+(ym.m+1)).slice(-2), dd=('0'+day).slice(-2);
+        var ds=ym.y+'-'+mm+'-'+dd;
+        var c=document.createElement('div');
+        c.className='avail-cal-day'+(sel[ds]?' sel':'')+(ds<today?' past':'');
+        c.textContent=day; c.dataset.date=ds;
+        c.onmousedown=function(e){ try{e.preventDefault();}catch(_){} if(ds<today)return; ETIE_AVAIL_DRAG={mode:!sel[ds]}; toggleAvailCal(ds, ETIE_AVAIL_DRAG.mode); };
+        c.onmouseover=function(){ if(ETIE_AVAIL_DRAG&&ds>=today) toggleAvailCal(ds, ETIE_AVAIL_DRAG.mode); };
+        c.onclick=function(){ if(ds<today)return; if(!ETIE_AVAIL_DRAG) toggleAvailCal(ds); };
+        box.appendChild(c);
+      })(d);
+    }
+    document.onmouseup=function(){ ETIE_AVAIL_DRAG=null; };
+  }catch(e){}
 }
 function renderAvailDates(){
   try{
@@ -509,8 +585,9 @@ function validTrav(step){
   return true;
 }
 function validLocal(step){
+  if(step===1){if(!ETIE.local.city){toast('Add your home city.');return false;}var a=parseInt(ETIE.local.age,10);if(isNaN(a)||a<18){toast('Age must be 18+.');return false;}if(!ETIE.local.nationality){toast('Select your nationality.');return false;}if(!ETIE.local.displayName){toast('Add a nickname shown to travellers.');return false;}}
   if(step===2){if(!(ETIE.local.verificationMethods&&ETIE.local.verificationMethods.length)){toast('Pick at least 1 verification method to continue.');return false;}}
-  if(step===3){if(!ETIE.local.city){toast('Add your home city.');return false;}var a=parseInt(ETIE.local.age,10);if(isNaN(a)||a<18){toast('Age must be 18+.');return false;}}
+  if(step===3){return true; /* merged into Step 1 */}
   if(step===4){if(ETIE.local.interests.length===0){toast('Pick at least 1 interest.');return false;}if(ETIE.local.interests.length>4){toast('Pick up to 4.');return false;}}
   if(step===6){if(ETIE.local.offer.length<10){toast('Add what you can offer (10+ characters).');return false;}}
   return true;
@@ -523,7 +600,7 @@ function saveCurrentVisible(silent){
     if(t===1)saveTrav1();if(t===2)saveTrav2();if(t===3)saveTrav3();if(t===4)saveTrav4();if(t===5)saveTrav5();
   }catch(e){}}
   else{var s=currentLocalStep();try{
-    if(s===2)saveLocal2();if(s===3)saveLocal3();if(s===4)saveLocal4();if(s===5)saveLocal5();if(s===6)saveLocal6();if(s===7)saveLocal7();
+    if(s===1)saveLocal3();if(s===2)saveLocal2();if(s===4)saveLocal4();if(s===5)saveLocal5();if(s===6)saveLocal6();if(s===7)saveLocal7();
   }catch(e){}}
   saveState();if(!silent)updateCounts();
 }
@@ -548,11 +625,11 @@ function travNext(n){
 function localNext(n){
   var cur=currentLocalStep();
   try{
-    if(cur===2)saveLocal2();if(cur===3)saveLocal3();if(cur===4)saveLocal4();if(cur===5)saveLocal5();if(cur===6)saveLocal6();if(cur===7)saveLocal7();
+    if(cur===1)saveLocal3();if(cur===2)saveLocal2();if(cur===4)saveLocal4();if(cur===5)saveLocal5();if(cur===6)saveLocal6();if(cur===7)saveLocal7();
     saveState();
     if(n>cur&&!validLocal(cur))return;
   }catch(e){}
-  for(var i=1;i<=10;i++){var e=document.getElementById('local'+i);if(e)e.classList.add('hidden');}
+  for(var i=1;i<=11;i++){var e=document.getElementById('local'+i);if(e)e.classList.add('hidden');}
   var t=document.getElementById('local'+n);if(t)t.classList.remove('hidden');updateCounts();renderProfiles();syncAvailUI();if(n===7){renderLocalDashboard();}if(n===8||n===9){renderRequests();renderChat();renderMessagesList();renderMeetup();renderLocalDashboard();}if(n===10){renderMeetup();paintStars('localStars',ETIE._localStars||0);renderLocalDashboard();}showScreen('local'+n);
 }
 function findMatch(){try{saveTrav5();saveTrav6();saveState();if(!validTrav(5))return;}catch(e){}if(!ETIE.traveller.photo){toast('Add your selfie first — profiles with photos get 3x more requests.');return;}ETIE_MATCH_INDEX=0;renderMatches();travNext(7);}
@@ -765,7 +842,7 @@ function updateProfileVisibility(){
       try{
         var p=locked.querySelector('p');
         var btn=locked.querySelector('button');
-        if(role==='local'){ if(p)p.textContent='No local profile yet — complete Local Steps 1–8 and your profile will appear here.'; if(btn){btn.textContent='Start Local Step 1'; btn.setAttribute('onclick',"setRole('local');showScreen('home')");} }
+        if(role==='local'){ if(p)p.textContent='No local profile yet — complete Local Steps 1–7 and your profile will appear here.'; if(btn){btn.textContent='Start Local Step 1'; btn.setAttribute('onclick',"setRole('local');showScreen('home')");} }
         else { if(p)p.textContent='No profile yet — complete Traveller Steps 1–6 and your profile will appear here.'; if(btn){btn.textContent='Start Step 1'; btn.setAttribute('onclick',"setRole('traveller');showScreen('home')");} }
       }catch(e){}
     }
@@ -838,7 +915,7 @@ function renderProfiles(){
     var LPC=document.getElementById('localProfileContent');
     if(LPC){ var _r=ETIE.activeRole||null; LPC.style.display=(hasAnyLocalData()&&(!_r||_r==='local'))?'':'none'; }
     var lpc=document.getElementById('localProfCity');
-    if(lpc){ if(!hasAnyLocalData()) lpc.textContent='No local base yet — complete Local Steps 1–3'; else lpc.textContent=(ETIE.local.nationality?flagForCountry(ETIE.local.nationality)+' ':'')+(ETIE.local.city||'—')+(ETIE.local.age?' · '+ETIE.local.age:'')+' · Local guide'; }
+    if(lpc){ if(!hasAnyLocalData()) lpc.textContent='No local base yet — complete Local Step 1'; else lpc.textContent=(ETIE.local.nationality?flagForCountry(ETIE.local.nationality)+' ':'')+(ETIE.local.city||'—')+(ETIE.local.age?' · '+ETIE.local.age:'')+' · Local guide'; }
     var lpp=document.getElementById('localProfPhoto');
     if(lpp){ lpp.innerHTML=ETIE.local.photo?('<img src="'+ETIE.local.photo+'" style="width:60px;height:60px;border-radius:50%;object-fit:cover;">'):'<span style="color:rgba(255,255,255,.5);font-size:24px;">+</span>'; }
     var lpi=document.getElementById('localProfInterests');
@@ -846,7 +923,7 @@ function renderProfiles(){
     var lpp2=document.getElementById('localProfPersonality');
     if(lpp2){
       var lStyle=(ETIE.local.styleInterests||[]).length, lInt=(ETIE.local.interests||[]).length;
-      if(!lStyle && !lInt){ lpp2.textContent='Not set yet — set in Local Step 5.'; }
+      if(!lStyle && !lInt){ lpp2.textContent='Not set yet — set in Local Step 4.'; }
       else {
         var _lsv=ETIE.local.socialVibe, _ltp=ETIE.local.travelPace;
         var lsvl=(_lsv!=null?SOCIAL_VIBE_LABELS[_lsv]:'')||'', ltpl=(_ltp!=null?TRAVEL_PACE_LABELS[_ltp]:'')||'';
@@ -855,9 +932,9 @@ function renderProfiles(){
       }
     }
     var lpo=document.getElementById('localProfOffer');
-    if(lpo) lpo.textContent=ETIE.local.offer?('“'+ETIE.local.offer+'”'):'Not set yet — Local Step 6.';
+    if(lpo) lpo.textContent=ETIE.local.offer?('“'+ETIE.local.offer+'”'):'Not set yet — Local Step 5.';
     var lpa=document.getElementById('localProfAvail');
-    if(lpa){ var ad=ETIE.local.availDates||[]; lpa.textContent=ad.length?('Available: '+ad.slice().sort().join(', ')):'No dates yet — Local Step 8.'; }
+    if(lpa){ var ad=ETIE.local.availDates||[]; lpa.textContent=ad.length?('Available: '+ad.slice().sort().join(', ')):'No dates yet — Local Step 7.'; }
     var lpv=document.getElementById('localProfVerify');
     if(lpv){ var lm=ETIE.local.verificationMethods||[]; lpv.textContent=lm.length?('Verified: '+lm.join(' · ')):'Not verified yet — Local Step 2.'; }
     var lpvt=document.getElementById('localProfVerifyTrust');
@@ -1348,16 +1425,22 @@ function renderLocalDashboard(){
       });
     }
     var ae=document.getElementById('localDashAvailEdit');
-    if(ae){ae.innerHTML='';ETIE.local.availability.forEach(function(a,i){
-      var row=document.createElement('div');row.className='list-item';row.style.cursor='pointer';
-      row.innerHTML='<div><strong></strong></div>';row.querySelector('strong').textContent=a.label;
-      var st=document.createElement('span');st.className='status';st.textContent=a.status;row.appendChild(st);
-      row.onclick=(function(ii){return function(){toggleDashAvail(ii);};})(i);
-      ae.appendChild(row);
-    });}
+    if(ae){
+      ae.innerHTML='';
+      var ads=(ETIE.local.availDates||[]).slice().sort();
+      if(!ads.length){ae.innerHTML='<div class="list-item"><div><strong>No dates yet</strong><br><span class="muted">Pick dates on the calendar in Step 7.</span></div><span class="status">Empty</span></div>';}
+      ads.forEach(function(ds){
+        var row=document.createElement('div');row.className='list-item';
+        var dt=new Date(ds+'T12:00'); var label=isNaN(dt.getTime())?ds:dt.toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short'});
+        row.innerHTML='<div><strong></strong></div>';row.querySelector('strong').textContent=label;
+        var rm=document.createElement('button');rm.className='secondary';rm.textContent='Remove';rm.style.padding='6px 10px';
+        rm.onclick=(function(d){return function(){toggleAvailCal(d,false);};})(ds);
+        row.appendChild(rm);ae.appendChild(row);
+      });
+    }
     var vis=document.getElementById('localVisibility');
-    if(vis){var n=ETIE.local.availability.filter(function(a){return a.status==='Available';}).length;
-      vis.textContent=n>0?('Visible (demo): '+n+' Available slot(s) — travellers can match you.'):('Hidden (demo): no Available slots — set one to Available to reappear. Matching score uses this rule.');}
+    if(vis){var n=(ETIE.local.availDates||[]).length;
+      vis.textContent=n>0?('Visible: '+n+' date(s) selected — travellers can match you on those days.'):('Hidden: no dates selected — pick dates in Step 7 to reappear.');}
     var h=document.getElementById('localHistory');
     if(h){h.innerHTML='';var keys=Object.keys(ETIE.meetups);
       var done=keys.filter(function(k){return ETIE.meetups[k].status==='completed';});

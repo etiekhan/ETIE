@@ -110,6 +110,19 @@ header nav{margin-left:auto;justify-content:flex-end}
 .interest-picker .chip:last-child{margin-bottom:0}
 /* Comfortable Continue scrolling below sticky header */
 .card.panel,.section{scroll-margin-top:92px}
+/* Selected interests 4-column preview */
+.selected4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 0}
+.selected4-cell{padding:10px 8px;border:1px dashed #d5d0c8;border-radius:12px;text-align:center;font-size:13px;color:#a09a90;background:#faf9f7}
+.selected4-cell.filled{border-style:solid;border-color:#171717;color:#171717;background:#fff;font-weight:700}
+@media(max-width:640px){.selected4{grid-template-columns:repeat(2,1fr)}}
+/* Availability calendar multi-select */
+.avail-cal-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:12px 0}
+.avail-cal{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;user-select:none;-webkit-user-select:none}
+.avail-cal-dow{text-align:center;font-size:11px;font-weight:800;color:#766f65;padding:4px 0}
+.avail-cal-day{text-align:center;padding:10px 0;border:1px solid #e3ded6;border-radius:12px;background:#fff;cursor:pointer;font-size:14px}
+.avail-cal-day.empty{border:0;background:transparent;cursor:default}
+.avail-cal-day.sel{background:#171717;color:#fff;border-color:#171717;font-weight:800}
+.avail-cal-day.past{opacity:.35;cursor:default}
 /* Verification selectable rows */
 #localVerify .list-item,#travVerify .list-item{cursor:pointer}
 #localVerify .list-item.selected,#travVerify .list-item.selected{border-color:#171717;background:#f4f1ec}

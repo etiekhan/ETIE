@@ -145,6 +145,15 @@ function loadState() {
       s._cleanDefaultsV2=true;
       try{ localStorage.setItem(ETIE_KEY, JSON.stringify(s)); }catch(e){}
     }
+    // v3: start date always rolls to today when no real trip yet (stale 20th -> 21st)
+    try{
+      var noReq=!(s.requests && Object.keys(s.requests).length);
+      var today=todayISO();
+      if(noReq && today && (!s.trip.dateFrom || s.trip.dateFrom<today) && !s.trip.destination){
+        s.trip.dateFrom=today; s.trip.dateTo=''; s.trip.dates='';
+        try{ localStorage.setItem(ETIE_KEY, JSON.stringify(s)); }catch(e){}
+      }
+    }catch(e){}
     return s;
   } catch (e) { return etieDefaults(); }
 }

@@ -22,8 +22,13 @@ header .secondary{background:rgba(255,255,255,.14);border-color:rgba(255,255,255
 #authEmail{background:rgba(255,255,255,.12)!important;border-color:rgba(255,255,255,.3)!important;color:#fff;padding:8px 10px;font-size:13px}
 #authEmail::placeholder{color:rgba(255,255,255,.6)}
 
+/* Header right cluster: nav + profile bubble grouped right for cleaner layout */
+header{gap:12px}
+header nav{margin-left:auto;justify-content:flex-end}
+.header-profile{margin-left:4px;flex:0 0 auto}
 /* Mobile hamburger */
-.nav-toggle{display:none;background:none;border:none;color:#fff;font-size:22px;padding:8px;cursor:pointer}
+.nav-toggle{display:none;background:none;border:none;color:#fff;font-size:22px;padding:8px;cursor:pointer;margin-left:auto}
+.header-profile + .nav-toggle{margin-left:0}
 @media(max-width:640px){
   header{padding:10px 14px}
   nav{position:absolute;top:100%;left:0;right:0;background:rgba(18,13,26,.96);backdrop-filter:blur(12px);border-bottom:1px solid rgba(255,255,255,.12);display:none;flex-direction:column;padding:10px 14px;gap:6px}

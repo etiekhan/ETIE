@@ -747,13 +747,28 @@ function updateProfileVisibility(){
   try{
     renderHeaderProfile();
     renderRoleGate();
-    var ready=hasAnyTravellerData()||hasAnyLocalData();
+    var role=ETIE.activeRole||null;
+    var showTrav=!role||role==='traveller';
+    var showLocal=!role||role==='local';
+    var travReady=hasAnyTravellerData()&&showTrav;
+    var localReady=hasAnyLocalData()&&showLocal;
+    var ready=travReady||localReady;
     var navBtn=document.getElementById('navProfileBtn');
     if(navBtn)navBtn.style.display=ready?'':'none';
     var content=document.getElementById('profileContent');
-    if(content)content.style.display=ready?'':'none';
+    if(content)content.style.display=travReady?'':'none';
+    var lpc=document.getElementById('localProfileContent');
+    if(lpc)lpc.style.display=localReady?'':'none';
     var locked=document.getElementById('profileLocked');
-    if(locked)locked.style.display=ready?'none':'';
+    if(locked){
+      locked.style.display=ready?'none':'';
+      try{
+        var p=locked.querySelector('p');
+        var btn=locked.querySelector('button');
+        if(role==='local'){ if(p)p.textContent='No local profile yet — complete Local Steps 1–8 and your profile will appear here.'; if(btn){btn.textContent='Start Local Step 1'; btn.setAttribute('onclick',"setRole('local');showScreen('home')");} }
+        else { if(p)p.textContent='No profile yet — complete Traveller Steps 1–6 and your profile will appear here.'; if(btn){btn.textContent='Start Step 1'; btn.setAttribute('onclick',"setRole('traveller');showScreen('home')");} }
+      }catch(e){}
+    }
   }catch(e){}
 }
 function renderProfiles(){
@@ -819,9 +834,9 @@ function renderProfiles(){
     if(pv){ var vm=ETIE.traveller.verificationMethods||[]; pv.textContent=vm.length?('Verified: '+vm.join(' · ')):'Not verified yet — pick at least one in Step 1.'; }
     var pvt=document.getElementById('profVerifyTrust');
     if(pvt){ pvt.innerHTML=''; var vms=ETIE.traveller.verificationMethods||[]; if(!vms.length){var s=document.createElement('span');s.textContent='Unverified';pvt.appendChild(s);} else vms.forEach(function(m){var s=document.createElement('span');s.textContent='✓ '+m;pvt.appendChild(s);}); }
-    // Local guide section inside Profile — mirrors Local flow live
+    // Local guide section inside Profile — scoped to active role (visibility handled in updateProfileVisibility)
     var LPC=document.getElementById('localProfileContent');
-    if(LPC) LPC.style.display=hasAnyLocalData()?'':'none';
+    if(LPC){ var _r=ETIE.activeRole||null; LPC.style.display=(hasAnyLocalData()&&(!_r||_r==='local'))?'':'none'; }
     var lpc=document.getElementById('localProfCity');
     if(lpc){ if(!hasAnyLocalData()) lpc.textContent='No local base yet — complete Local Steps 1–3'; else lpc.textContent=(ETIE.local.nationality?flagForCountry(ETIE.local.nationality)+' ':'')+(ETIE.local.city||'—')+(ETIE.local.age?' · '+ETIE.local.age:'')+' · Local guide'; }
     var lpp=document.getElementById('localProfPhoto');

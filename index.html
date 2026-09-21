@@ -18,7 +18,7 @@
     <button class="nav-btn" onclick="showScreen('trips')">My trips</button>
     <button class="nav-btn" onclick="showScreen('messages')">Messages</button>
     <button class="nav-btn" id="navProfileBtn" onclick="showScreen('profile')">Profile</button>
-    <button class="secondary" onclick="toggleAdmin()">Admin</button>
+    <button class="secondary" id="adminBtn" style="display:none;" onclick="toggleAdmin()">Admin</button>
     <span class="status" id="cloudStatus">Cloud: offline demo</span>
     <input id="authEmail" placeholder="email for login" style="max-width:170px;padding:9px;border:1px solid #d6d0c8;border-radius:10px;background:#faf9f7;">
     <button class="secondary" onclick="EtieCloud.signIn()">Sign in</button>

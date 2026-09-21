@@ -525,9 +525,12 @@ function localNext(n){
 }
 function findMatch(){try{saveTrav5();saveTrav6();saveState();if(!validTrav(5))return;}catch(e){}if(!ETIE.traveller.photo){toast('Add your selfie first — profiles with photos get 3x more requests.');return;}ETIE_MATCH_INDEX=0;renderMatches();travNext(7);}
 function travRestart(){showScreen('trav1');travNext(1);}
-function openAdmin(){try{var o=document.getElementById('adminOverlay');if(o)o.classList.remove('hidden');}catch(e){} try{ refreshAdminLive(); }catch(e){}}
+window.ETIE_ADMINS=['kan.ethan.cy@gmail.com','fleming.spur@gmail.com'];
+function isEtieAdmin(){try{var s=window.EtieCloud&&window.EtieCloud.getSession&&window.EtieCloud.getSession();var em=s&&s.user&&s.user.email;if(em&&window.ETIE_ADMINS.indexOf(em.toLowerCase())!==-1)return true;}catch(e){} try{var q=new URLSearchParams(window.location.search).get('admin');if(q==='1'&&localStorage.getItem('etie-admin-unlock')==='1')return true;}catch(e){} return false;}
+function updateAdminVisibility(){try{var b=document.getElementById('adminBtn');if(b)b.style.display=isEtieAdmin()?'':'none';if(!isEtieAdmin())closeAdmin();}catch(e){}}
+function openAdmin(){if(!isEtieAdmin()){toast('Admin restricted.');return;}try{var o=document.getElementById('adminOverlay');if(o)o.classList.remove('hidden');}catch(e){} try{ refreshAdminLive(); }catch(e){}}
 function closeAdmin(){try{var o=document.getElementById('adminOverlay');if(o)o.classList.add('hidden');}catch(e){}}
-function toggleAdmin(){try{var o=document.getElementById('adminOverlay');if(!o)return;if(o.classList.contains('hidden'))openAdmin();else closeAdmin();}catch(e){}}
+function toggleAdmin(){if(!isEtieAdmin()){toast('Admin restricted.');return;}try{var o=document.getElementById('adminOverlay');if(!o)return;if(o.classList.contains('hidden'))openAdmin();else closeAdmin();}catch(e){}}
 function enableCleanLive(){ try{ localStorage.setItem('etie-clean','1'); window.ETIE_CLEAN=true; var l=document.getElementById('cleanModeLine'); if(l) l.textContent='Clean mode ON — mocks hidden. Refresh both phones. Run SQL wipe below if needed, then re-onboard Fleming (local) + Ethan (traveller).'; renderMatches(); toast('Clean live mode enabled.'); }catch(e){} }
 function disableCleanLive(){ try{ localStorage.setItem('etie-clean','0'); window.ETIE_CLEAN=false; var l=document.getElementById('cleanModeLine'); if(l) l.textContent='Demos visible again (clean off).'; renderMatches(); toast('Demos restored.'); }catch(e){} }
 function wipeLocalEtie(){ try{ if(!confirm('Wipe local ETIE (requests/messages/meetups/reviews, keep profile)?')) return; ETIE.requests={}; ETIE.messages={}; ETIE.meetups={}; ETIE.reviews={}; ETIE._travStars=0; ETIE._localStars=0; ETIE_MATCH_INDEX=0; saveState(); renderMatches(); renderRequests(); renderChat(); renderMessagesList(); renderMeetup(); renderTrips(); renderLocalDashboard(); toast('Local wiped — also run SQL wipe for cloud.'); }catch(e){} }

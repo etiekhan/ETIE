@@ -260,6 +260,8 @@ function isCleanLive(){ try{ var v=localStorage.getItem('etie-clean'); if(v==='0
 function liveLocals(){
   var live=(window.ETIE_LIVE_LOCALS||[]);
   if(!live.length) return null;
+  // drop legacy kan_win demo row even if cached
+  live=live.filter(function(l){ var n=((l&&l.name)||'').toLowerCase().trim(); return n!=='kan_win'&&n!=='kan win'&&n!=='kanwin'; });
   // exclude self when traveller is also a local guide
   try{
     var selfId=(window.EtieCloud&&window.EtieCloud.getSession&&window.EtieCloud.getSession()&&window.EtieCloud.getSession().user&&window.EtieCloud.getSession().user.id)||null;
@@ -606,7 +608,7 @@ function refreshAdminLive(){
     client.from('etie_requests').select('id,local_mock_id,status,traveller_name,local_name,destination,updated_at').order('updated_at',{ascending:false}).limit(10).then(function(r){
       var rows=(r&&r.data)||[];
       if(!lr) return;
-      if(!rows.length) lr.innerHTML='<div class="muted small">No requests yet — Ethan sends one, Kevin sees it here.</div>';
+      if(!rows.length) lr.innerHTML='<div class="muted small">No requests yet — Fleming sends one, Ethan sees it here.</div>';
       else {
         lr.innerHTML='';
         rows.forEach(function(x){

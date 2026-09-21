@@ -537,6 +537,8 @@
       client.from(profTable()).select('*').order('updated_at',{ascending:false}).limit(50).then(function(r){
         if(r&&r.error){ console.warn('pullLiveProfiles failed', r.error.message); return; }
         var rows=r&&r.data||[];
+        // drop legacy kan_win demo row (old Kevin account) — never match it
+        rows=rows.filter(function(x){ var n=((x&&x.display_name)||'').toLowerCase().trim(); return n!=='kan_win'&&n!=='kan win'&&n!=='kanwin'; });
         window.ETIE_LIVE_LOCALS = rows.map(profileToLocal).filter(Boolean);
         try{ if(typeof renderMatches==='function') renderMatches(); if(typeof renderLocalDashboard==='function') renderLocalDashboard(); }catch(e){}
       });

@@ -76,7 +76,11 @@
     try{ if(!confirm('Are you sure you want to sign out?')) return; }catch(e){ return; }
     try{if(client)try{ client.removeChannel(realtimeChannel); client.removeChannel(reviewChannel); client.removeChannel(reportChannel); client.removeChannel(profileLiveChannel); }catch(e){};realtimeChannel=reviewChannel=reportChannel=profileLiveChannel=null; if(client)client.auth.signOut();}catch(e){}
     session=null;window.ETIE_LIVE_LOCALS=[];paint('offline','Cloud: offline — sign in');
-    try{ if(typeof updateAuthHeader==='function')updateAuthHeader(); if(typeof renderHeaderProfile==='function')renderHeaderProfile(); }catch(e){}
+    // privacy: clear local profile/trips/chats so next user on a public device sees blank (cloud copy stays for next sign-in)
+    try{ localStorage.removeItem('etie-v1'); localStorage.removeItem('etie-v1-user-backup'); localStorage.removeItem('etie-v1-backup'); }catch(e){}
+    try{ if(typeof etieDefaults==='function') ETIE=etieDefaults(); }catch(e){}
+    try{ if(typeof restoreAll==='function') restoreAll(); }catch(e){}
+    try{ if(typeof updateAuthHeader==='function')updateAuthHeader(); if(typeof renderHeaderProfile==='function')renderHeaderProfile(); if(typeof updateProfileVisibility==='function')updateProfileVisibility(); }catch(e){}
   }
   // ---- Phase 2: single-user backup (etie_states) ----
   function push(){

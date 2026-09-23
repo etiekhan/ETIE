@@ -35,6 +35,8 @@ header{flex-wrap:nowrap}
 #headerName{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .menu-item{background:transparent;border:0;color:#fff;text-align:left;padding:10px 12px;border-radius:10px;cursor:pointer;font-size:14px;font-weight:600}
 .menu-item:hover{background:rgba(255,255,255,.10)}
+.avatar-dropdown.hidden{display:none}
+#adminBtn{background:transparent!important;color:rgba(255,255,255,.72)!important;border:1px solid rgba(255,255,255,.28)!important;box-shadow:none!important}
 /* Mobile hamburger */
 .nav-toggle{display:none;background:none;border:none;color:#fff;font-size:22px;padding:8px;cursor:pointer;margin-left:auto}
 .header-profile + .nav-toggle{margin-left:0}
@@ -143,9 +145,9 @@ body.no-role #discover,body.no-role #trips,body.no-role #messages,body.no-role #
 body.no-role #roleGate,body.no-role #roleSwitch{display:none}
 body.no-role #devBar{display:none}
 /* Sticky bottom floating dev toolbar for the prototype loop */
-#devBar{position:fixed;left:12px;right:12px;bottom:12px;z-index:60;max-width:1180px;margin:0 auto;background:rgba(20,16,28,.92);border:1px solid rgba(255,255,255,.16);border-radius:16px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);padding:8px 12px;box-shadow:0 18px 44px rgba(0,0,0,.5)}
-#devBarToggle{background:transparent;border:0;color:rgba(255,255,255,.75);font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;padding:4px 0}
-#devBar .flowbar{background:transparent;border:0;padding:8px 0 4px;display:flex;gap:8px;overflow:auto}
+#devBar{position:fixed;left:12px;right:12px;bottom:12px;z-index:50;max-width:1180px;margin:0 auto;background:transparent;border:0;padding:0}
+#devBarToggle{background:rgba(20,16,28,.85);border:1px solid rgba(255,255,255,.14);border-radius:999px;color:rgba(255,255,255,.75);font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;padding:6px 14px;margin-bottom:8px}
+#devBar .flowbar{background:rgba(20,16,28,.92)!important;border:1px solid rgba(255,255,255,.16)!important;border-radius:16px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);padding:12px;display:flex;gap:8px;overflow:auto;box-shadow:0 18px 44px rgba(0,0,0,.5)}
 #devBar .flow-step{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.16)}
 #devBar .flow-step.active{background:#fff;color:#171717;border-color:#fff}
 #devBar.collapsed .flowbar{display:none}
@@ -157,7 +159,7 @@ body.no-role .hero .entry-grid{margin-top:16px}
 .hero .entry-grid .card h3:first-child{margin-top:0;color:#fff}
 .hero .entry-grid .card p{color:rgba(255,255,255,.78);flex:1}
 .hero .entry-grid .card .primary{background:#fff!important;color:#171717!important;border-color:#fff!important}
-.hero .entry-grid .card .secondary{background:transparent!important;color:#fff!important;border-color:rgba(255,255,255,.55)!important;box-shadow:none}
+.hero .entry-grid .card .secondary{background:#fff!important;color:#171717!important;border-color:#fff!important;box-shadow:0 8px 22px rgba(0,0,0,.35)}
 /* Verification selectable rows */
 #localVerify .list-item,#travVerify .list-item{cursor:pointer}
 #localVerify .list-item.selected,#travVerify .list-item.selected{border-color:#171717;background:#f4f1ec}

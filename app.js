@@ -1036,7 +1036,7 @@ function renderMatches(){
     if(m.repCount)trustItems.push(['★ '+m.rep+' ('+m.repCount+') live'+(m.myRating?(' · you: '+m.myRating+'★'):'')]);
     trustItems.push(['✓ Demo identity'],['✓ Demo local guide'],[(L.stats&&L.stats.rating?L.stats.rating:'—')+' ★ (demo)'],[(L.stats&&L.stats.travellersMet?L.stats.travellersMet:'—')+' met (demo)']);
     trustItems.forEach(function(a){var s=document.createElement('span');s.textContent=a[0];mt.appendChild(s);});
-    document.getElementById('matchWhy').textContent='You share '+(m.shared.join(' + ')||'no direct interests yet')+', personality fit '+m.pers+'/100, local value '+(L.offer||'').slice(0,80)+'…, available '+(L.availability||[]).join(', ')+'.';
+    document.getElementById('matchWhy').textContent='You share '+(m.shared.join(' + ')||'no direct interests yet')+', personality fit '+m.pers+'/100, local value '+((L.offer||'').slice(0,80)||'—')+'…, available '+(availText(L)||'ask me')+'.';
     document.getElementById('whyInterestsTitle').textContent=m.shared.length+' shared interest'+(m.shared.length===1?'':'s');
     document.getElementById('whyInterests').textContent=(m.shared.join(' · ')||'None yet — try adding Salsa/Cooking/Football/Photography')+' ('+m.interestScore+'/100)';
     document.getElementById('whyInterestsBadge').textContent=m.interestScore>=70?'Strong':(m.interestScore>=40?'Okay':'Low');
@@ -1044,7 +1044,7 @@ function renderMatches(){
     document.getElementById('whyPersonalityBadge').textContent=m.pers>=75?'Strong':(m.pers>=55?'Good':'Low');
     document.getElementById('whyValue').textContent=(L.offer||'—')+' ('+m.value+'/100)';
     document.getElementById('whyValueBadge').textContent=m.value>=70?'High':(m.value>=50?'Okay':'Low');
-    document.getElementById('whyAvail').textContent=(L.availability||[]).join(', ')+' during '+ETIE.trip.dates;
+    document.getElementById('whyAvail').textContent=(availText(L)||'Ask the guide')+' during '+(ETIE.trip.dates||ETIE.trip.destination||'your trip');
     document.getElementById('whyAvailBadge').textContent=m.avail>=80?'Available':'Check';
     try{
       var wr=document.getElementById('whyReputation'),wb=document.getElementById('whyReputationBadge');
@@ -1120,6 +1120,20 @@ function renderMatches(){
 
 function reqKey(){var m=currentMatch();return m?m.local.id:'local-marta';}
 function reqStatus(k){k=k||reqKey();return (ETIE.requests[k]&&ETIE.requests[k].status)||'none';}
+function availText(L){
+  try{
+    if(!L) return '';
+    if(L.availDates && L.availDates.length) return L.availDates.slice().sort().join(', ');
+    var av=L.availability||[];
+    if(!av.length) return '';
+    return av.map(function(a){ return (typeof a==='string')?a:(a.label+((a.status&&a.status!=='Available')?(' ('+a.status+')'):'')); }).join(', ');
+  }catch(e){ return ''; }
+}
+function myUid(){ try{ var s=window.EtieCloud&&window.EtieCloud.getSession&&window.EtieCloud.getSession(); return (s&&s.user&&s.user.id)||null; }catch(e){ return null; } }
+// Incoming request addressed to me (live local): requests are keyed by local id, so my own id as key = inbox
+function inboxKey(){ try{ var uid=myUid(); if(!uid) return null; if(ETIE.requests && ETIE.requests[uid]) return uid; return null; }catch(e){ return null; } }
+// Chat/request key honouring side: locals read their inbox, travellers read the match
+function chatKey(){ try{ return (chatRole()==='local') ? (inboxKey()||reqKey()) : reqKey(); }catch(e){ return reqKey(); } }
 function ensureChat(k){
   if(!ETIE.messages[k])ETIE.messages[k]=[];
   if(!ETIE.messages[k].length){
@@ -1142,11 +1156,11 @@ function sendRequest(){
   toast('Request sent!');
   travNext(11);
 }
-function acceptCurrent(){var k=reqKey();if(reqStatus(k)==='none'){toast('No pending request — send one as Traveller first.');return;}ETIE.requests[k].status='accepted';ETIE.requests[k].updatedAt=Date.now();ensureChat(k);ETIE.messages[k].push({from:'local',text:'Accepted! Looking forward to meeting. When suits you?',ts:Date.now()});saveState();renderRequests();renderChat();renderMessagesList();renderLocalDashboard();
+function acceptCurrent(){var k=inboxKey()||reqKey();if(reqStatus(k)==='none'){toast('No pending request — send one as Traveller first.');return;}ETIE.requests[k].status='accepted';ETIE.requests[k].updatedAt=Date.now();ensureChat(k);ETIE.messages[k].push({from:'local',text:'Accepted! Looking forward to meeting. When suits you?',ts:Date.now()});saveState();renderRequests();renderChat();renderMessagesList();renderLocalDashboard();
   try{ if(window.EtieCloud&&window.EtieCloud.pushSharedRequest) window.EtieCloud.pushSharedRequest(k); }catch(e){}
   try{ if(window.EtieCloud&&window.EtieCloud.pushSharedMessage) window.EtieCloud.pushSharedMessage(k, 'Accepted! Looking forward to meeting. When suits you?', 'local'); }catch(e){}
   toast('Accepted — chat unlocked.');try{openChatPopup();}catch(e){}localNext(10);}
-function declineCurrent(){var k=reqKey();if(reqStatus(k)==='none'){toast('No pending request.');return;}ETIE.requests[k].status='declined';ETIE.requests[k].updatedAt=Date.now();saveState();renderRequests();renderChat();renderMessagesList();renderLocalDashboard();
+function declineCurrent(){var k=inboxKey()||reqKey();if(reqStatus(k)==='none'){toast('No pending request.');return;}ETIE.requests[k].status='declined';ETIE.requests[k].updatedAt=Date.now();saveState();renderRequests();renderChat();renderMessagesList();renderLocalDashboard();
   try{ if(window.EtieCloud&&window.EtieCloud.pushSharedRequest) window.EtieCloud.pushSharedRequest(k); }catch(e){}
   toast('Declined — chat stays locked.');}
 function openSafetyReport(role){
@@ -1168,7 +1182,7 @@ function submitSafetyReport(role){
   closeSafetyReport();toast('Report sent — safety team will review.');
 }
 function sendChat(who,inputId){
-  var k=reqKey();
+  var k=(who==='local')?(inboxKey()||reqKey()):reqKey();
   var input=null;
   if(inputId)input=document.getElementById(inputId);
   if(!input){
@@ -1197,13 +1211,13 @@ function openChatPopup(){
   try{
     renderChat();renderMessagesList();
     var o=document.getElementById('chatPopupOverlay');if(o)o.classList.remove('hidden');
-    var pi=document.getElementById('chatPopupInput');if(pi)pi.disabled=(reqStatus()!=='accepted');
+    var pi=document.getElementById('chatPopupInput');if(pi)pi.disabled=(reqStatus(chatKey())!=='accepted');
     setTimeout(function(){try{var p=document.getElementById('chatPopupInput');if(p&&!p.disabled)p.focus();}catch(e){}},80);
   }catch(e){toast('Chat unavailable.');}
 }
 function closeChatPopup(){try{var o=document.getElementById('chatPopupOverlay');if(o)o.classList.add('hidden');}catch(e){}}
 function sendChatPopup(){
-  var who=chatRole();var k=reqKey();
+  var who=chatRole();var k=chatKey();
   var pi=document.getElementById('chatPopupInput');if(!pi){toast('Chat unavailable.');return;}
   var text=(pi.value||'').trim();if(!text){toast('Type a message first.');return;}
   if(reqStatus(k)!=='accepted'){toast('Chat unlocks only after Accept.');return;}
@@ -1225,8 +1239,9 @@ function renderRequests(){
      oc.onclick=function(){openChatPopup();};
     var lr=document.getElementById('localReqTitle');if(lr)lr.textContent=(ETIE.traveller.nationality?flagForCountry(ETIE.traveller.nationality)+' ':'')+'Etie, 27 · for '+(m?m.local.name:'—');
     var lw=document.getElementById('localReqWhy');    if(lw)lw.textContent=(m.shared.join(' · ')||'New traveller')+' · '+flagForCountry(ETIE.trip.country)+' '+ETIE.trip.destination+' '+ETIE.trip.dates;
-    var lm=document.getElementById('localReqMsg');if(lm)lm.textContent=ETIE.requests[k]?('“'+(ETIE.requests[k].message||'')+'”'):'No message yet.';
-    var ls=document.getElementById('localReqStatus');if(ls)ls.textContent=st==='none'?'No request yet — send one as Traveller first':st;
+    var ik=inboxKey();var ir=ik?ETIE.requests[ik]:null;
+    var lm=document.getElementById('localReqMsg');if(lm)lm.textContent=(ir||ETIE.requests[k])?('“'+(((ir||ETIE.requests[k]).message)||'')+'”'):'No message yet.';
+    var ls=document.getElementById('localReqStatus');if(ls){var ist=ir?ir.status:st;ls.textContent=ist==='none'?'No request yet — send one as Traveller first':ist;}
   }catch(e){}
 }
 function renderChat(){
@@ -1248,36 +1263,38 @@ function renderChat(){
     if(!(ETIE.messages[k]||[]).length){var d=document.createElement('div');d.className='muted small';d.textContent='No messages yet.';list.appendChild(d);}
     }
     var ci=document.getElementById('chatInput');if(ci)ci.disabled=(st!=='accepted');
-    // Local view (mirrored): my (local) messages on right, traveller on left
+    // Local view (mirrored): reads the inbox request addressed to me, not the match
+    var lk=inboxKey()||k; var lst=reqStatus(lk);
     var lt=document.getElementById('localChatTitle');
     if(lt)lt.textContent='Chat with Etie (traveller)';
     var ll=document.getElementById('localChatLock');
     if(ll){
-      if(st==='accepted')ll.textContent='Unlocked. Coordinate with your traveller, then meet.';
-      else if(st==='pending')ll.textContent='Pending — press Accept in the dashboard above to unlock chat.';
-      else if(st==='declined')ll.textContent='Declined — chat stays locked.';
+      if(lst==='accepted')ll.textContent='Unlocked. Coordinate with your traveller, then meet.';
+      else if(lst==='pending')ll.textContent='Pending — press Accept in the dashboard above to unlock chat.';
+      else if(lst==='declined')ll.textContent='Declined — chat stays locked.';
       else ll.textContent='No request yet — waiting for a traveller request.';
     }
     var llist=document.getElementById('localChatList');
     if(llist){llist.innerHTML='';
-      (ETIE.messages[k]||[]).forEach(function(msg){
+      (ETIE.messages[lk]||[]).forEach(function(msg){
         var b=document.createElement('div');b.className='bubble'+(msg.from==='local'?' me':'');b.textContent=msg.text;llist.appendChild(b);
       });
-      if(!(ETIE.messages[k]||[]).length){var dd=document.createElement('div');dd.className='muted small';dd.textContent='No messages yet.';llist.appendChild(dd);}
+      if(!(ETIE.messages[lk]||[]).length){var dd=document.createElement('div');dd.className='muted small';dd.textContent='No messages yet.';llist.appendChild(dd);}
     }
-    var li1=document.getElementById('localChatInput');if(li1)li1.disabled=(st!=='accepted');
-    var li9=document.getElementById('localChatInput9');if(li9)li9.disabled=(st!=='accepted');
+    var li1=document.getElementById('localChatInput');if(li1)li1.disabled=(lst!=='accepted');
+    var li9=document.getElementById('localChatInput9');if(li9)li9.disabled=(lst!=='accepted');
     // Popup (mini, dismissable — doesn't hijack the flow)
-    var pT=document.getElementById('chatPopupTitle');if(pT)pT.textContent='Chat with '+(m.local.name||'—');
-    var pS=document.getElementById('chatPopupSub');if(pS)pS.textContent=st==='accepted'?'Unlocked — aim for a meetup':(st==='pending'?'Locked — pending Accept':st);
+    var whoPopup='traveller';try{var lf=document.getElementById('localFlow'); if(lf&&!lf.classList.contains('hidden')) whoPopup='local';}catch(e){}
+    var pk=(whoPopup==='local')?lk:k; var pst=(whoPopup==='local')?lst:st;
+    var pT=document.getElementById('chatPopupTitle');if(pT)pT.textContent='Chat with '+((whoPopup==='local'&&inboxKey())?'Etie (traveller)':(m.local.name||'—'));
+    var pS=document.getElementById('chatPopupSub');if(pS)pS.textContent=pst==='accepted'?'Unlocked — aim for a meetup':(pst==='pending'?'Locked — pending Accept':pst);
     var pL=document.getElementById('chatPopupList');if(pL){pL.innerHTML='';
-      var whoPopup='traveller';try{var lf=document.getElementById('localFlow'); if(lf&&!lf.classList.contains('hidden')) whoPopup='local';}catch(e){}
-      (ETIE.messages[k]||[]).forEach(function(msg){
+      (ETIE.messages[pk]||[]).forEach(function(msg){
         var b=document.createElement('div');b.className='bubble'+(msg.from===whoPopup?' me':'');b.textContent=msg.text;pL.appendChild(b);
       });
-      if(!(ETIE.messages[k]||[]).length){var pd=document.createElement('div');pd.className='muted small';pd.textContent='No messages yet.';pL.appendChild(pd);}
+      if(!(ETIE.messages[pk]||[]).length){var pd=document.createElement('div');pd.className='muted small';pd.textContent='No messages yet.';pL.appendChild(pd);}
     }
-    var pI=document.getElementById('chatPopupInput');if(pI)pI.disabled=(st!=='accepted');
+    var pI=document.getElementById('chatPopupInput');if(pI)pI.disabled=(pst!=='accepted');
   }catch(e){}
 }
 function deleteChat(k){ if(!confirm('Delete this chat?')) return; try{ delete ETIE.requests[k]; delete ETIE.messages[k]; delete ETIE.meetups[k]; delete ETIE.reviews[k]; saveState(); renderMessagesList(); renderRequests(); renderChat(); renderTrips(); }catch(e){} try{ var c=window.EtieCloud&&window.EtieCloud.getClient&&window.EtieCloud.getClient(); if(c) c.from('etie_requests').delete().eq('local_mock_id',k).then(function(){}); }catch(e){} toast('Chat deleted.'); }
@@ -1313,7 +1330,7 @@ function renderMessagesList(){
   }catch(e){}
 }
 
-function meetKey(){return reqKey();}
+function meetKey(){try{return (chatRole()==='local')?(inboxKey()||reqKey()):reqKey();}catch(e){return reqKey();}}
 function meetup(){return ETIE.meetups[meetKey()]||{status:'none'};}
 function paintStars(id,n){var c=document.getElementById(id);if(!c)return;Array.prototype.forEach.call(c.querySelectorAll('.star'),function(s,i){s.textContent=(i<n?'★':'☆');s.classList.toggle('active',i<n);});}
 function setTravStars(n){ETIE._travStars=n;saveState();paintStars('travStars',n);}

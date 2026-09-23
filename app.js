@@ -1043,15 +1043,15 @@ function renderMatches(){
   if(!r.length){
     try{
       var t7t=document.getElementById('trav7Title'); if(t7t) t7t.textContent='Your next friend is waiting for you!';
-      var t7s=document.getElementById('trav7Sub'); if(t7s) t7s.textContent=isCleanLive()?'No verified local guides yet — ask Fleming to finish Local onboarding, then Refresh. Discover will show real people.':'The product recommends people rather than making you browse a directory.';
+      var t7s=document.getElementById('trav7Sub'); if(t7s) t7s.textContent=isCleanLive()?'No local guides found matching your current filters. Check back after guides complete onboarding.':'The product recommends people rather than making you browse a directory.';
       var mc=document.getElementById('matchAvatar'); if(mc) mc.textContent='—';
-      var mn=document.getElementById('matchName'); if(mn) mn.textContent=isCleanLive()?'No verified local guides yet': 'No matches';
-      var mm=document.getElementById('matchMeta'); if(mm) mm.textContent=isCleanLive()?'Clean mode: only real profiles. Ask Fleming to finish Local onboarding, then Refresh.': '—';
+      var mn=document.getElementById('matchName'); if(mn) mn.textContent=isCleanLive()?'No local guides found': 'No matches';
+      var mm=document.getElementById('matchMeta'); if(mm) mm.textContent=isCleanLive()?'Matching your current filters — check back soon.': '—';
       var ms=document.getElementById('matchScore'); if(ms) ms.textContent='No match yet';
       var rn=document.getElementById('matchRankNote'); if(rn) rn.textContent='';
       // hide Steps 8-16 when no real match (they only live after a match)
       ['trav8','trav9','trav10','trav11','trav12','trav13','trav14','trav15','trav16'].forEach(function(id){var el=document.getElementById(id); if(el) el.classList.add('hidden');});
-      var dg=document.getElementById('discoverGrid'); if(dg){ if(isCleanLive()) dg.innerHTML='<div class="card" style="padding:16px;"><strong>No local guides yet</strong><p class="muted small">Clean mode on — Discover shows only verified users (Ethan/Fleming). Complete both onboardings, then check Admin → Live users.</p></div>'; else dg.innerHTML=''; }
+      var dg=document.getElementById('discoverGrid'); if(dg){ if(isCleanLive()) dg.innerHTML='<div class="card match-card" style="padding:16px;"><strong>No local guides found</strong><p class="muted small">No local guides found matching your current filters.</p></div>'; else dg.innerHTML=''; }
     }catch(e){}
     return;
   }
@@ -1120,10 +1120,9 @@ function renderMatches(){
       g.innerHTML='';
       discoverLocals.forEach(function(x){
         var d=document.createElement('div');d.className='match-card card';
-        // shade by compatibility: brighter = better match
+        // glow by compatibility: stronger glow = better match (dark surface)
         var sc=Math.min(99,Math.max(5,x.score||0));
-        d.style.background='rgba(255,255,255,'+(0.55+sc/100*0.45).toFixed(2)+')';
-        d.style.boxShadow='0 12px 30px rgba(232,93,117,'+(0.08+sc/100*0.28).toFixed(2)+')';
+        d.style.boxShadow='0 12px 30px rgba(232,93,117,'+(0.10+sc/100*0.35).toFixed(2)+')';
         var lflag=flagForCountry(x.local.nationality);
         d.innerHTML='<strong></strong><p class="muted"></p>';
         d.querySelector('strong').textContent=lflag+' '+x.local.name+' · '+x.score+(x.repCount?(' · '+x.rep+'★'):'');
@@ -1351,7 +1350,7 @@ function renderMessagesList(){
       var demoIds=['local-marta','local-javier','local-sofia'];
       ids=ids.filter(function(k){ if(demoIds.indexOf(k)!==-1 && !ETIE.requests[k].traveller_id) return false; return true; });
     }
-    if(!ids.length){box.innerHTML='<div class="list-item"><div><strong>No chats yet</strong><br><span class="muted">No users online — send a request when a local guide is live. Swipe/delete not needed yet.</span></div><span class="status">Empty</span></div>';return;}
+    if(!ids.length){box.innerHTML='<div class="list-item"><div><strong>No messages yet</strong><br><span class="muted">Your conversations will appear here after you connect.</span></div><span class="status">Empty</span></div>';return;}
     ids.forEach(function(k){
       var r=ETIE.requests[k];var msgs=ETIE.messages[k]||[];var last=msgs.length?msgs[msgs.length-1].text:'—';
       var row=document.createElement('div');row.className='list-item';row.style.cursor='pointer';row.title='Tap to open chat — swipe right or press ✕ to delete';

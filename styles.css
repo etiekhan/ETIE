@@ -131,13 +131,14 @@ header{flex-wrap:nowrap}
 .avail-cal-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:12px 0}
 .avail-cal{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;user-select:none;-webkit-user-select:none}
 .avail-cal-dow{text-align:center;font-size:11px;font-weight:800;color:#766f65;padding:4px 0}
-.avail-cal-day{text-align:center;padding:10px 0;border:1px solid #e3ded6;border-radius:12px;background:#fff;cursor:pointer;font-size:14px}
+.avail-cal-day{text-align:center;padding:10px 0;border:1px solid #e3ded6;border-radius:12px;background:#fff;color:#171717;cursor:pointer;font-size:14px}
 .avail-cal-day.empty{border:0;background:transparent;cursor:default}
-.avail-cal-day.sel{background:#171717;color:#fff;border-color:#171717;font-weight:800}
+.avail-cal-day.sel{background:rgba(16,185,129,.20);color:#065f46;border-color:rgba(16,185,129,.45);font-weight:800}
 .avail-cal-day.past{opacity:.35;cursor:default}
-.avail-cal.locked .avail-cal-day{cursor:default}
-.avail-cal-day.avail{background:#1d9e6b;color:#fff;border-color:#1d9e6b;font-weight:800}
-.avail-cal-day.unavail{background:#f3c1c1;color:#7a1f1f;border-color:#e8a0a0}
+.avail-cal.locked .avail-cal-day{cursor:default;background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.14);color:#d6d3d1}
+.avail-cal.locked .avail-cal-day.empty{background:transparent;border:0}
+.avail-cal.locked .avail-cal-day.sel,.avail-cal-day.avail{background:rgba(16,185,129,.20);color:#6ee7b7;border-color:rgba(16,185,129,.40);font-weight:800}
+.avail-cal.locked .avail-cal-day.past{opacity:.3}
 /* Pre-role: hide nav links + product sections until Traveller/Local chosen */
 body.no-role nav .nav-btn{display:none}
 body.no-role #discover,body.no-role #trips,body.no-role #messages,body.no-role #profile{display:none}
@@ -145,27 +146,33 @@ body.no-role #discover,body.no-role #trips,body.no-role #messages,body.no-role #
 body.no-role #roleGate,body.no-role #roleSwitch{display:none}
 body.no-role #devBar{display:none}
 /* Sticky bottom floating dev toolbar for the prototype loop */
-#devBar{position:fixed;left:12px;right:12px;bottom:12px;z-index:50;max-width:1180px;margin:0 auto;background:transparent;border:0;padding:0}
-#devBarToggle{background:rgba(20,16,28,.85);border:1px solid rgba(255,255,255,.14);border-radius:999px;color:rgba(255,255,255,.75);font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;padding:6px 14px;margin-bottom:8px}
-#devBar .flowbar{background:rgba(20,16,28,.92)!important;border:1px solid rgba(255,255,255,.16)!important;border-radius:16px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);padding:12px;display:flex;gap:8px;overflow:auto;box-shadow:0 18px 44px rgba(0,0,0,.5)}
+#devBar{position:fixed;bottom:1rem;left:50%;transform:translateX(-50%);z-index:50;display:flex;align-items:center;gap:.75rem;max-width:min(1180px,calc(100vw - 24px));background:rgba(20,16,28,.95);border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-radius:999px;padding:.5rem 1rem;box-shadow:0 18px 44px rgba(0,0,0,.5)}
+#devBarToggle{background:transparent;border:0;color:rgba(255,255,255,.75);font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;padding:4px 0;white-space:nowrap}
+#devBar .flowbar{background:transparent!important;border:0!important;border-radius:0;padding:0;display:flex;gap:8px;overflow:auto;box-shadow:none}
 #devBar .flow-step{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.16)}
 #devBar .flow-step.active{background:#fff;color:#171717;border-color:#fff}
 #devBar.collapsed .flowbar{display:none}
 .footer{padding-bottom:120px}
-/* Dark dashboard + profile: glass panels, light text; light inner surfaces keep dark text */
-#profile .card.panel,#local9.card.panel{background:rgba(20,16,28,.90);border:1px solid rgba(255,255,255,.12);color:#f5f4f2;box-shadow:0 18px 44px rgba(0,0,0,.45)}
-#profile .card.panel h2,#profile .card.panel h3,#local9.card.panel h2,#local9.card.panel h3{color:#fff}
-#profile .card.panel .muted,#local9.card.panel .muted{color:rgba(255,255,255,.72)}
-#profile .card.panel .sidebar-note,#local9.card.panel .sidebar-note{color:#171717}
-#profile .card.panel .sidebar-note h3,#local9.card.panel .sidebar-note h3{color:#171717}
-#profile .card.panel .sidebar-note .muted,#local9.card.panel .sidebar-note .muted,
-#profile .card.panel .match-card .muted,#local9.card.panel .match-card .muted,
-#profile .card.panel .list-item .muted,#local9.card.panel .list-item .muted{color:#6b655d}
-#profile .card.panel .sidebar-note strong,#local9.card.panel .sidebar-note strong,
-#profile .card.panel .match-card strong,#local9.card.panel .match-card strong,
-#profile .card.panel .list-item strong,#local9.card.panel .list-item strong{color:#171717}
+/* Unified dark system: dashboard, profile, discover, trips, messages */
+#profile .card.panel,#local9.card.panel,#discover .card.panel,#trips .card.panel,#messages .card.panel{background:rgba(20,16,28,.90);border:1px solid rgba(255,255,255,.12);color:#f5f4f2;box-shadow:0 18px 44px rgba(0,0,0,.45)}
+/* No bright accent vertical borders on these containers */
+#profile .card.panel,#local9.card.panel,#discover .card.panel,#trips .card.panel,#messages .card.panel{border-left:1px solid rgba(255,255,255,.12)}
+#profile .card.panel h2,#profile .card.panel h3,#local9.card.panel h2,#local9.card.panel h3,
+#discover .card.panel h2,#discover .card.panel h3,#trips .card.panel h2,#trips .card.panel h3,
+#messages .card.panel h2,#messages .card.panel h3{color:#fff}
+#profile .card.panel .muted,#local9.card.panel .muted,#discover .card.panel .muted,
+#trips .card.panel .muted,#messages .card.panel .muted{color:#a3a3a3}
+/* Inner surfaces go dark too */
+#profile .card.panel .match-card,#local9.card.panel .match-card,#discover .card.panel .match-card,
+#profile .card.panel .list-item,#local9.card.panel .list-item,#trips .card.panel .list-item,#messages .card.panel .list-item,
+#profile .card.panel .sidebar-note,#local9.card.panel .sidebar-note{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);color:#f5f4f2}
+#profile .card.panel .match-card strong,#local9.card.panel .match-card strong,#discover .card.panel .match-card strong,
+#profile .card.panel .list-item strong,#local9.card.panel .list-item strong,#trips .card.panel .list-item strong,#messages .card.panel .list-item strong,
+#profile .card.panel .sidebar-note strong,#local9.card.panel .sidebar-note strong{color:#f5f4f2}
+#profile .card.panel .sidebar-note h3,#local9.card.panel .sidebar-note h3{color:#fff}
 #local9.card.panel .field label{color:rgba(255,255,255,.75)}
 #local9.card.panel .avail-cal-dow{color:rgba(255,255,255,.6)}
+#local9.card.panel .why .muted{color:#6b655d}
 /* Elevated stat cards on the dark dashboard */
 #local9.card.panel .metric{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:16px}
 #local9.card.panel .metric strong{color:#fff}
@@ -174,7 +181,7 @@ body.no-role #devBar{display:none}
 .pers-badges{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0}
 .pers-badge{display:inline-block;padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:#fff;font-size:13px;font-weight:700}
 /* Bottom breathing room so the floating dev bar never covers content */
-main.container{padding-bottom:6rem}
+main.container{padding-bottom:8rem}
 body.no-role .hero .entry-grid{margin-top:16px}
 /* Entry cards: equal heights + equal widths, dark glassmorphism, no awkward top gap */
 .hero .entry-grid{grid-template-columns:1fr 1fr!important;align-items:stretch}

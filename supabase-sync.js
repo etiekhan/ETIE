@@ -226,7 +226,7 @@
           message: localReq.message||'',
           destination: (typeof ETIE!=='undefined' && ETIE.trip && ETIE.trip.destination)||'Lisbon',
           dates: (typeof ETIE!=='undefined' && ETIE.trip && ETIE.trip.dates)||'',
-          traveller_name: (typeof ETIE!=='undefined' && ETIE.traveller && ETIE.traveller.name)||'Traveller',
+          traveller_name: (typeof ETIE!=='undefined' && ETIE.traveller && (ETIE.traveller.nickname||ETIE.traveller.name))||'Traveller',
           local_name: localReq.localName||k,
           updated_at: new Date().toISOString()
         };
@@ -319,7 +319,7 @@
           var localTs=existing&&existing.updatedAt?existing.updatedAt:0;
           if(!existing || cloudTs > localTs + 1500){
             if(!ETIE.requests)ETIE.requests={};
-            ETIE.requests[k]={status: row.status, message: row.message||'', updatedAt: cloudTs, localName: row.local_name||k};
+            ETIE.requests[k]={status: row.status, message: row.message||'', updatedAt: cloudTs, localName: row.local_name||k, travellerName: row.traveller_name||'Traveller', destination: row.destination||'', dates: row.dates||''};
             changed=true;
           }
         });

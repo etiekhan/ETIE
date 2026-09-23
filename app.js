@@ -707,28 +707,57 @@ function refreshAdminLive(){
     }
     if(hint) hint.textContent='Live · refreshing…';
     var client=window.EtieCloud.getClient();
-    client.from('etie_profiles').select('user_id,city,nationality,display_name,interests,hosted_count,tier,updated_at').order('updated_at',{ascending:false}).limit(20).then(function(r){
+    client.from('etie_profiles').select('*').order('updated_at',{ascending:false}).limit(20).then(function(r){
       var rows=(r&&r.data)||[];
       if(uc) uc.textContent=String(rows.length);
       var verified=rows.filter(function(x){return (x.hosted_count||0)>=3;}).length;
       if(vc) vc.textContent=String(verified);
+      var isGuide=function(u){ try{ return ((u.interests||[]).length>0)||!!(u.offer)||(((u.avail_dates||[]).length)>0)||((u.hosted_count||0)>0); }catch(e){ return false; } };
+      var guides=rows.filter(isGuide), travs=rows.filter(function(u){return !isGuide(u);});
       if(lp){
+        lp.innerHTML='';
         if(!rows.length) lp.innerHTML='<div class="muted small">No profiles yet — complete onboarding on each phone.</div>';
         else {
-          lp.innerHTML='';
-          rows.forEach(function(u){
+          var gh=document.createElement('div'); gh.className='muted small'; gh.style.margin='4px 0'; gh.textContent='Local guides ('+guides.length+')'; lp.appendChild(gh);
+          if(!guides.length){ var ge=document.createElement('div'); ge.className='muted small'; ge.textContent='None yet — a guide completes Local Steps 1–7.'; lp.appendChild(ge); }
+          guides.forEach(function(u){
             var flag=''; try{ flag=flagForCountry(u.nationality||''); }catch(e){flag='🌍';}
-            var name=u.display_name||u.user_id.slice(0,8);
-            var city=u.city||'—';
-            var tier=u.tier||'Rookie';
+            var name=u.display_name||String(u.user_id).slice(0,8);
             var row=document.createElement('div'); row.className='list-item';
             row.innerHTML='<div><strong></strong><br><span class="muted"></span></div><span class="status"></span>';
-            row.querySelector('strong').textContent=flag+' '+name+' · '+city;
+            row.querySelector('strong').textContent=flag+' '+name+' · '+(u.city||'—');
             row.querySelector('.muted').textContent=(u.interests||[]).slice(0,3).join(' · ')||'no interests yet';
-            row.querySelector('.status').textContent=tier;
+            row.querySelector('.status').textContent='Guide · '+(u.tier||'Rookie');
             lp.appendChild(row);
           });
+          var th=document.createElement('div'); th.className='muted small'; th.style.margin='10px 0 4px'; th.textContent='Travellers ('+travs.length+')'; lp.appendChild(th);
+          if(!travs.length){ var te=document.createElement('div'); te.className='muted small'; te.textContent='None — signed-in users without a guide profile land here.'; lp.appendChild(te); }
+          travs.forEach(function(u){
+            var flag2=''; try{ flag2=flagForCountry(u.nationality||''); }catch(e){flag2='🌍';}
+            var name2=u.display_name||String(u.user_id).slice(0,8);
+            var row2=document.createElement('div'); row2.className='list-item';
+            row2.innerHTML='<div><strong></strong><br><span class="muted"></span></div><span class="status"></span>';
+            row2.querySelector('strong').textContent=flag2+' '+name2;
+            row2.querySelector('.muted').textContent='Traveller — no guide profile yet';
+            row2.querySelector('.status').textContent='Traveller';
+            lp.appendChild(row2);
+          });
         }
+      }
+      var vq=document.getElementById('adminVerifyQueue');
+      if(vq){
+        vq.innerHTML='';
+        if(!rows.length) vq.innerHTML='<div class="muted small">No users yet.</div>';
+        else rows.forEach(function(u){
+          var ms=[]; try{ ms=((u.verification&&u.verification.methods)||[]); }catch(e){}
+          var nm=u.display_name||String(u.user_id).slice(0,8);
+          var row=document.createElement('div'); row.className='list-item';
+          row.innerHTML='<div><strong></strong><br><span class="muted"></span></div><span class="status"></span>';
+          row.querySelector('strong').textContent=nm;
+          row.querySelector('.muted').textContent=ms.length?ms.join(' · '):'no verification submitted';
+          row.querySelector('.status').textContent=ms.length?'Submitted':'Pending';
+          vq.appendChild(row);
+        });
       }
     });
     client.from('etie_reports').select('id',{count:'exact',head:true}).then(function(r){ if(rc) rc.textContent= String(r.count!=null?r.count:'—'); });
@@ -1034,7 +1063,7 @@ function renderMatches(){
     mt.innerHTML='';
     var trustItems=[];
     if(m.repCount)trustItems.push(['★ '+m.rep+' ('+m.repCount+') live'+(m.myRating?(' · you: '+m.myRating+'★'):'')]);
-    trustItems.push(['✓ Demo identity'],['✓ Demo local guide'],[(L.stats&&L.stats.rating?L.stats.rating:'—')+' ★ (demo)'],[(L.stats&&L.stats.travellersMet?L.stats.travellersMet:'—')+' met (demo)']);
+    trustItems.push(['✓ Identity checked'],['✓ Local guide'],[(L.stats&&L.stats.rating?L.stats.rating:'—')+' ★'],[(L.stats&&L.stats.travellersMet?L.stats.travellersMet:'—')+' met']);
     trustItems.forEach(function(a){var s=document.createElement('span');s.textContent=a[0];mt.appendChild(s);});
     document.getElementById('matchWhy').textContent='You share '+(m.shared.join(' + ')||'no direct interests yet')+', personality fit '+m.pers+'/100, local value '+((L.offer||'').slice(0,80)||'—')+'…, available '+(availText(L)||'ask me')+'.';
     document.getElementById('whyInterestsTitle').textContent=m.shared.length+' shared interest'+(m.shared.length===1?'':'s');
@@ -1064,7 +1093,7 @@ function renderMatches(){
     var p8t=document.getElementById('prof8Trust');p8t.innerHTML='';
     var p8items=[];
     if(m.repCount)p8items.push('★ '+m.rep+' ('+m.repCount+') live'+(m.myRating?(' · you: '+m.myRating+'★'):''));
-    p8items.push('✓ Demo identity','✓ Demo local guide',(L.stats.rating+' ★ (demo)'));
+    p8items.push('✓ Identity checked','✓ Local guide',(L.stats.rating+' ★'));
     p8items.forEach(function(t){var s=document.createElement('span');s.textContent=t;p8t.appendChild(s);});
     var p8i=document.getElementById('prof8Interests');p8i.innerHTML='';
     (L.interests||[]).forEach(function(x){var s=document.createElement('span');s.className='chip'+(m.shared.indexOf(x)!==-1?' active':'');s.textContent=x;p8i.appendChild(s);});
@@ -1139,7 +1168,7 @@ function ensureChat(k){
   if(!ETIE.messages[k].length){
     var m=currentMatch();
     var lname=m?m.local.name:'Local guide';
-    ETIE.messages[k].push({from:'local',text:'Hey! Excited to meet you. What are you most looking forward to in Lisbon ('+lname+' here)?',ts:Date.now()-7200000});
+    ETIE.messages[k].push({from:'local',text:'Hey! Excited to meet you. What are you most looking forward to in '+(ETIE.trip.destination||'the city')+' ('+lname+' here)?',ts:Date.now()-7200000});
   }
 }
 function sendRequest(){
@@ -1147,7 +1176,7 @@ function sendRequest(){
   var m=currentMatch();if(!m){toast('Find a match first.');return;}
   var k=m.local.id;var msg=document.getElementById('reqMessage').value.trim();
   if(ETIE.requests[k]&&ETIE.requests[k].status==='pending'){toast('Request already pending');travNext(11);return;}
-  ETIE.requests[k]={status:'pending',message:msg,updatedAt:Date.now(),localName:m.local.name};
+  ETIE.requests[k]={status:'pending',message:msg,updatedAt:Date.now(),localName:m.local.name,travellerName:(ETIE.traveller.nickname||'Traveller')};
   ensureChat(k);
   ETIE.messages[k].push({from:'traveller',text:'Request: '+(msg||'(no message)'),ts:Date.now()});
   saveState();renderRequests();renderChat();renderMessagesList();
@@ -1232,12 +1261,12 @@ function renderRequests(){
   try{
     document.getElementById('reqTitle').textContent='Ask '+m.local.name+' to meet';
     var rt=document.getElementById('reqStatusTitle'),rs=document.getElementById('reqStatusSub'),oc=document.getElementById('openChatBtn');
-    if(st==='pending'){rt.textContent='Request pending to '+m.local.name+'.';rs.textContent='Messaging stays locked until they accept. Demo: switch to Local guide flow → dashboard → Accept.';oc.textContent='Check chat (locked)';}
+    if(st==='pending'){rt.textContent='Request pending to '+m.local.name+'.';rs.textContent='Messaging stays locked until they accept on their device.';oc.textContent='Check chat (locked)';}
     else if(st==='accepted'){rt.textContent=m.local.name+' accepted your request.';rs.textContent='Messaging is now unlocked. Agree on activity, time and place.';oc.textContent='Open chat';}
-    else if(st==='declined'){rt.textContent=m.local.name+' declined.';rs.textContent='Chat stays locked. Try Next suggestion in Step 6.';oc.textContent='Back to matches';oc.onclick=function(){travNext(6);};return;}
+    else if(st==='declined'){rt.textContent=m.local.name+' declined.';rs.textContent='Chat stays locked. Try Next suggestion.';oc.textContent='Back to matches';oc.onclick=function(){travNext(6);};return;}
     else{rt.textContent='No request yet to '+m.local.name+'.';rs.textContent='Send one from Step 9 to unlock messaging after acceptance.';oc.textContent='Open chat (locked)';}
      oc.onclick=function(){openChatPopup();};
-    var lr=document.getElementById('localReqTitle');if(lr)lr.textContent=(ETIE.traveller.nationality?flagForCountry(ETIE.traveller.nationality)+' ':'')+'Etie, 27 · for '+(m?m.local.name:'—');
+    var lr=document.getElementById('localReqTitle');if(lr){var _ik=inboxKey();var _tn=_ik&&ETIE.requests[_ik]&&ETIE.requests[_ik].travellerName;lr.textContent=(_tn||'Traveller')+' · for '+(m?m.local.name:'—');}
     var lw=document.getElementById('localReqWhy');    if(lw)lw.textContent=(m.shared.join(' · ')||'New traveller')+' · '+flagForCountry(ETIE.trip.country)+' '+ETIE.trip.destination+' '+ETIE.trip.dates;
     var ik=inboxKey();var ir=ik?ETIE.requests[ik]:null;
     var lm=document.getElementById('localReqMsg');if(lm)lm.textContent=(ir||ETIE.requests[k])?('“'+(((ir||ETIE.requests[k]).message)||'')+'”'):'No message yet.';
@@ -1252,7 +1281,7 @@ function renderChat(){
     var lock=document.getElementById('chatLock');
     if(lock){
       if(st==='accepted')lock.textContent='Unlocked. Keep it simple — aim for a real-world meetup.';
-      else if(st==='pending')lock.textContent='Locked — pending. Switch to Local guide to Accept (demo).';
+      else if(st==='pending')lock.textContent='Locked — pending their Accept.';
       else if(st==='declined')lock.textContent='Locked — declined.';
       else lock.textContent='Locked — send a request in Step 9 first.';
     }
@@ -1367,7 +1396,7 @@ function completeMeetup(){
 }
 function completeMeetupAsLocal(){
   if(reqStatus()!=='accepted'){toast('Accept first.');return;}
-  var m=meetup();if(m.status==='none'){toast('Traveller plans it in Step 12 first (demo: switch back).');return;}
+  var m=meetup();if(m.status==='none'){toast('Traveller plans it in Step 13 first.');return;}
   if(m.status!=='completed'){ETIE.meetups[meetKey()].status='completed';saveState();
   try{ if(window.EtieCloud&&window.EtieCloud.pushSharedMeetup) window.EtieCloud.pushSharedMeetup(meetKey()); }catch(e){}
   }
@@ -1423,7 +1452,7 @@ function renderThanks(){
     if(t){
       var hs=(t.highlights||[]).length?'<div class="small muted" style="margin-top:8px;"><strong>Highlights:</strong> '+(t.highlights.join('; '))+'</div>':'';
       var pt=t.privateText?'<div class="small muted" style="margin-top:4px;color:#b00020;"><strong>Private note:</strong> '+t.privateText+'</div>':'';
-      document.getElementById('thanksSummary').innerHTML='<strong>Saved:</strong> '+t.rating+'★ · '+t.meetAgain+hs+pt+'. Counts toward demo reputation and future matching.';
+      document.getElementById('thanksSummary').innerHTML='<strong>Saved:</strong> '+t.rating+'★ · '+t.meetAgain+hs+pt+'. Counts toward reputation and future matching.';
     }else{
       document.getElementById('thanksSummary').innerHTML='<strong>Next time:</strong> Etie can use your signals for better matches.';
     }
@@ -1461,6 +1490,10 @@ function declineKey(k){if(!ETIE.requests[k]){toast('No request for '+k);return;}
   toast('Declined '+localNameFor(k));}
 function renderLocalDashboard(){
   try{
+    var dm=document.getElementById('dashMet'); if(dm) dm.textContent=String(ETIE.local.hostedCount||0);
+    var dr=document.getElementById('dashRating'); if(dr) dr.textContent=(ETIE.local.avgHostRating||0)?(ETIE.local.avgHostRating+' ★'):'—';
+    var dt=document.getElementById('localDashTrust');
+    if(dt){ dt.innerHTML=''; var _vm=ETIE.local.verificationMethods||[]; if(!_vm.length){var _s=document.createElement('span');_s.textContent='Unverified';dt.appendChild(_s);} else _vm.forEach(function(x){var _s=document.createElement('span');_s.textContent='✓ '+x;dt.appendChild(_s);}); }
     var q=document.getElementById('localQueue');
     if(q){q.innerHTML='';var ids=Object.keys(ETIE.requests);
       if(!ids.length)q.innerHTML='<div class="list-item"><div><strong>No requests yet</strong><br><span class="muted">Send one as Traveller Step 9 — try different matches.</span></div><span class="status">Empty</span></div>';

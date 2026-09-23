@@ -537,10 +537,9 @@ function saveTrav1(){
   ETIE.trip.dates=(f&&t)?formatTripDates(f,t):'';
   var nc=document.getElementById('travNationality'); ETIE.traveller.nationality=nc?nc.value:'';
   var nn=document.getElementById('travNickname'); if(nn) ETIE.traveller.nickname=nn.value.trim();
-  saveTravVerify();
   updateHookLabel();
 }
-function saveTrav2(){ETIE.traveller.interests=getChips('travInterests');}
+function saveTrav2(){ETIE.traveller.interests=getChips('travInterests');saveTravVerify();}
 var SOCIAL_VIBE_LABELS=["Solo & Quiet","Balanced","Group & Social"];
 var TRAVEL_PACE_LABELS=["Relaxed","Moderate","Packed / High-Energy"];
 function vibeToSocial(v){return v==0?2:v==2?9:5;}
@@ -592,9 +591,8 @@ function validTrav(step){
     if(ETIE.trip.dateTo<ETIE.trip.dateFrom){toast('End date must be after start date.');return false;}
     if(!ETIE.traveller.nationality){toast('Select your nationality.');return false;}
     if(!ETIE.traveller.nickname){toast('Add a nickname shown to local guides.');return false;}
-    if(!(ETIE.traveller.verificationMethods&&ETIE.traveller.verificationMethods.length)){toast('Pick at least 1 verification method to continue.');return false;}
   }
-  if(step===2){if(ETIE.traveller.interests.length===0){toast('Pick at least 1 interest.');return false;}if(ETIE.traveller.interests.length>4){toast('Pick up to 4.');return false;}}
+  if(step===2){if(!(ETIE.traveller.verificationMethods&&ETIE.traveller.verificationMethods.length)){toast('Pick at least 1 verification method to continue.');return false;}if(ETIE.traveller.interests.length===0){toast('Pick at least 1 interest.');return false;}if(ETIE.traveller.interests.length>4){toast('Pick up to 4.');return false;}}
   if(step===3){if((ETIE.traveller.styleInterests||[]).length===0){toast('Pick at least 1 style tag.');return false;}}
   if(step===4){if(ETIE.traveller.lookingFor.length===0){toast('Pick at least 1 option.');return false;}}
   if(step===5){if(ETIE.traveller.hook.length<10){toast('Add a short hook (10+ characters) so locals get you.');return false;}}
@@ -757,6 +755,9 @@ function renderRoleGate(){
       document.getElementById('localFlow').classList.toggle('hidden',ETIE.activeRole!=='local');
       document.getElementById('travRole').classList.toggle('active',ETIE.activeRole==='traveller');
       document.getElementById('localRole').classList.toggle('active',ETIE.activeRole==='local');
+      var rs=document.getElementById('roleSwitch'); if(rs) rs.style.display='none';
+    } else {
+      var rs2=document.getElementById('roleSwitch'); if(rs2) rs2.style.display='';
     }
   }catch(e){}
 }

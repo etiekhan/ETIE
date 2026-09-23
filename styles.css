@@ -12,7 +12,7 @@
   --overlay:rgba(12,9,22,.72);
 }
 body{background:#14101c url('hk-bar.jpg') center top/cover no-repeat fixed}
-.app{position:relative;min-height:100vh;background:linear-gradient(180deg,rgba(12,9,22,.60),rgba(12,9,22,.52) 40%,var(--overlay))}
+.app{position:relative;min-height:100vh;background:linear-gradient(180deg,rgba(0,0,0,.60),rgba(0,0,0,.68) 40%,rgba(0,0,0,.80))}
 header{background:rgba(18,13,26,.68);border-bottom:1px solid rgba(255,255,255,.16);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);position:sticky;top:0;z-index:20}
 .logo{color:#fff;font-size:22px;font-weight:850;letter-spacing:-.05em}
 .nav-btn,.ghost{color:rgba(255,255,255,.88);position:relative;padding:8px 10px;font-size:14px}
@@ -22,15 +22,21 @@ header .secondary{background:rgba(255,255,255,.14);border-color:rgba(255,255,255
 #authEmail{background:rgba(255,255,255,.12)!important;border-color:rgba(255,255,255,.3)!important;color:#fff;padding:8px 10px;font-size:13px}
 #authEmail::placeholder{color:rgba(255,255,255,.6)}
 
-/* Header right cluster: nav + profile bubble grouped right for cleaner layout */
+/* Header right cluster: nav + avatar menu grouped right for cleaner layout */
 header{gap:12px}
 header nav{margin-left:auto;justify-content:flex-end}
-.header-profile{margin-left:4px;flex:0 0 auto}
+.nav-divider{width:1px;align-self:stretch;background:rgba(255,255,255,.18);margin:6px 2px}
+.nav-btn.active{background:rgba(255,255,255,.10);border-radius:10px;outline:none}
+.avatar-menu{position:relative;margin-left:4px;flex:0 0 auto;display:flex}
+.avatar-dropdown{position:absolute;right:0;top:calc(100% + 8px);min-width:190px;background:rgba(20,16,28,.97);border:1px solid rgba(255,255,255,.16);border-radius:14px;padding:6px;box-shadow:0 18px 44px rgba(0,0,0,.5);z-index:90;display:flex;flex-direction:column;gap:2px}
+.menu-item{background:transparent;border:0;color:#fff;text-align:left;padding:10px 12px;border-radius:10px;cursor:pointer;font-size:14px;font-weight:600}
+.menu-item:hover{background:rgba(255,255,255,.10)}
 /* Mobile hamburger */
 .nav-toggle{display:none;background:none;border:none;color:#fff;font-size:22px;padding:8px;cursor:pointer;margin-left:auto}
 .header-profile + .nav-toggle{margin-left:0}
 @media(max-width:640px){
   header{padding:10px 14px}
+  .nav-divider{display:none}
   nav{position:absolute;top:100%;left:0;right:0;background:rgba(18,13,26,.96);backdrop-filter:blur(12px);border-bottom:1px solid rgba(255,255,255,.12);display:none;flex-direction:column;padding:10px 14px;gap:6px}
   nav.open{display:flex}
   .nav-btn{width:100%;text-align:left;padding:12px 0;border-radius:8px;background:rgba(255,255,255,.06)}
@@ -130,13 +136,24 @@ header nav{margin-left:auto;justify-content:flex-end}
 body.no-role nav .nav-btn{display:none}
 body.no-role #discover,body.no-role #trips,body.no-role #messages,body.no-role #profile{display:none}
 /* Landing is entry cards only — keep banner + intro, hide flow switcher + duplicate gate */
-body.no-role .hero .flowbar,body.no-role #roleGate,body.no-role #roleSwitch{display:none}
+body.no-role #roleGate,body.no-role #roleSwitch{display:none}
+body.no-role #devBar{display:none}
+/* Sticky bottom floating dev toolbar for the prototype loop */
+#devBar{position:fixed;left:12px;right:12px;bottom:12px;z-index:60;max-width:1180px;margin:0 auto;background:rgba(20,16,28,.92);border:1px solid rgba(255,255,255,.16);border-radius:16px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);padding:8px 12px;box-shadow:0 18px 44px rgba(0,0,0,.5)}
+#devBarToggle{background:transparent;border:0;color:rgba(255,255,255,.75);font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;padding:4px 0}
+#devBar .flowbar{background:transparent;border:0;padding:8px 0 4px;display:flex;gap:8px;overflow:auto}
+#devBar .flow-step{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.16)}
+#devBar .flow-step.active{background:#fff;color:#171717;border-color:#fff}
+#devBar.collapsed .flowbar{display:none}
+.footer{padding-bottom:120px}
 body.no-role .hero .entry-grid{margin-top:16px}
-/* Entry cards: equal heights + equal widths, no awkward top gap, black copy */
+/* Entry cards: equal heights + equal widths, dark glassmorphism, no awkward top gap */
 .hero .entry-grid{grid-template-columns:1fr 1fr!important;align-items:stretch}
-.hero .entry-grid .card{height:100%;min-height:180px;display:flex;flex-direction:column}
-.hero .entry-grid .card h3:first-child{margin-top:0}
-.hero .entry-grid .card p{color:#171717;flex:1}
+.hero .entry-grid .card{height:100%;min-height:180px;display:flex;flex-direction:column;background:rgba(20,16,28,.80);border:1px solid rgba(255,255,255,.14);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:0 18px 44px rgba(0,0,0,.45)}
+.hero .entry-grid .card h3:first-child{margin-top:0;color:#fff}
+.hero .entry-grid .card p{color:rgba(255,255,255,.78);flex:1}
+.hero .entry-grid .card .primary{background:#fff!important;color:#171717!important;border-color:#fff!important}
+.hero .entry-grid .card .secondary{background:transparent!important;color:#fff!important;border-color:rgba(255,255,255,.55)!important;box-shadow:none}
 /* Verification selectable rows */
 #localVerify .list-item,#travVerify .list-item{cursor:pointer}
 #localVerify .list-item.selected,#travVerify .list-item.selected{border-color:#171717;background:#f4f1ec}

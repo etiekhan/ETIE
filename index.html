@@ -14,27 +14,29 @@
   <button class="nav-toggle" onclick="toggleNav()" aria-label="Menu">☰</button>
   <nav id="mainNav">
     <button class="nav-btn" onclick="showScreen('home')">Home</button>
+    <span class="nav-divider" aria-hidden="true"></span>
     <button class="nav-btn" onclick="showScreen('discover')">Discover</button>
     <button class="nav-btn" onclick="showScreen('trips')">My trips</button>
     <button class="nav-btn" onclick="showScreen('messages')">Messages</button>
-    <button class="nav-btn" id="navProfileBtn" onclick="showScreen('profile')">Profile</button>
     <button class="secondary" id="adminBtn" style="display:none;" onclick="toggleAdmin()">Admin</button>
     <span class="status" id="cloudStatus" style="display:none;">Cloud: offline demo</span>
     <input id="authEmail" placeholder="email for login" style="max-width:170px;padding:9px;border:1px solid #d6d0c8;border-radius:10px;background:#faf9f7;">
     <button class="secondary" id="signInBtn" onclick="EtieCloud.signIn()">Sign in</button>
-    <button class="nav-btn" id="signOutBtn" style="display:none;" onclick="EtieCloud.signOut()">Sign out</button>
   </nav>
-  <div class="header-profile" id="headerProfile" style="display:none;" onclick="showScreen('profile')" title="Your profile"><span class="header-avatar" id="headerAvatar">+</span><span id="headerName">Guest</span></div>
+  <div class="avatar-menu" id="avatarMenu" style="display:none;">
+    <button class="header-profile" id="headerProfile" onclick="toggleAvatarMenu(event)" aria-haspopup="true" title="Your account"><span class="header-avatar" id="headerAvatar">+</span><span id="headerName">Guest</span><span aria-hidden="true">▾</span></button>
+    <div class="avatar-dropdown hidden" id="avatarDropdown" role="menu">
+      <button class="menu-item" id="navProfileBtn" onclick="closeAvatarMenu();showScreen('profile')">Profile</button>
+      <button class="menu-item" id="signOutBtn" onclick="EtieCloud.signOut()">Sign out</button>
+    </div>
+  </div>
 </header>
 
 <main class="container">
 <section class="hero" id="home">
   <div class="eyebrow">Etie MVP · user-flow prototype</div>
   <h1>A friend in every city.</h1>
-  <p>Meet local guides you'll actually get along with. This prototype turns the original wireframe into the two core journeys: Traveller and Local guide.</p>
-  <div class="flowbar" aria-label="Core loop">
-    <div class="flow-step active">1 · Discover</div><div class="flow-step">2 · Match</div><div class="flow-step">3 · Trust</div><div class="flow-step">4 · Connect</div><div class="flow-step">5 · Meet</div><div class="flow-step">6 · Review</div><div class="flow-step">7 · Better matches</div>
-  </div>
+  <p>Connect with local guides for authentic, off-the-beaten-path experiences.</p>
   <div class="grid2 entry-grid" style="margin-top:16px;"><div class="card panel" id="entryCardTrav"><h3>Travelling?</h3><p class="muted small">Find a local guide who gets you.</p><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="primary" onclick="setRole('traveller')">Find a guide</button></div></div><div class="card panel" id="entryCardLocal"><h3>Know your city?</h3><p class="muted small">Host travellers and earn trust.</p><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="secondary" onclick="setRole('local')">Become a guide</button></div></div></div>
 </section>
 
@@ -195,6 +197,12 @@
 </div>
 <!-- compat: old #admin id still exists for JS that queries it -->
 <div id="admin" style="display:none;"></div>
+<div id="devBar">
+  <button id="devBarToggle" onclick="toggleDevBar()" aria-expanded="true">Prototype ▾</button>
+  <div class="flowbar" aria-label="Core loop">
+    <div class="flow-step active">1 · Discover</div><div class="flow-step">2 · Match</div><div class="flow-step">3 · Trust</div><div class="flow-step">4 · Connect</div><div class="flow-step">5 · Meet</div><div class="flow-step">6 · Review</div><div class="flow-step">7 · Better matches</div>
+  </div>
+</div>
 <div class="toast" id="toast"></div>
 
 <script src="data/locations.js"></script>

@@ -782,6 +782,8 @@ function refreshAdminLive(){
   }catch(e){ try{ var h=document.getElementById('adminLiveHint'); if(h) h.textContent='Live refresh failed.'; }catch(e2){}}
 }
 function toggleNav(){try{var n=document.getElementById('mainNav');var t=document.querySelector('.nav-toggle');if(n&&t){n.classList.toggle('open');t.textContent=n.classList.contains('open')?'✕':'☰';}}catch(e){}}
+function toggleDevBar(){try{var b=document.getElementById('devBar');if(!b)return;b.classList.toggle('collapsed');var c=b.classList.contains('collapsed');try{localStorage.setItem('etie-devbar',c?'1':'0');}catch(e){}var t=document.getElementById('devBarToggle');if(t){t.textContent=c?'Prototype ▸':'Prototype ▾';t.setAttribute('aria-expanded',c?'false':'true');}}catch(e){}}
+function restoreDevBar(){try{var c=false;try{c=localStorage.getItem('etie-devbar')==='1';}catch(e){}var b=document.getElementById('devBar');if(b)b.classList.toggle('collapsed',c);var t=document.getElementById('devBarToggle');if(t){t.textContent=c?'Prototype ▸':'Prototype ▾';t.setAttribute('aria-expanded',c?'false':'true');}}catch(e){}}
 function setRole(role){try{ETIE.activeRole=role;}catch(e){}try{var u=new URL(window.location.href);u.searchParams.set('role',role);window.history.replaceState(null,'','?role='+role);}catch(e){}document.getElementById('travRole').classList.toggle('active',role==='traveller');document.getElementById('localRole').classList.toggle('active',role==='local');document.getElementById('travellerFlow').classList.toggle('hidden',role!=='traveller');document.getElementById('localFlow').classList.toggle('hidden',role!=='local');saveState();renderRoleGate();if(role==='traveller')travNext(Math.min(17,Math.max(1,ETIE._lastTrav||1)));else localNext(Math.min(11,Math.max(1,ETIE._lastLocal||1)));showScreen('home');}
 function hasAnyLocalData(){try{var l=ETIE.local||{};if(l.city||l.age||l.nationality||l.displayName)return true;if((l.interests||[]).length)return true;if((l.styleInterests||[]).length)return true;if(l.offer)return true;if(l.photo)return true;if((l.travelPhotos||[]).filter(Boolean).length)return true;if((l.availDates||[]).length)return true;if((l.verificationMethods||[]).length)return true;return false;}catch(e){return false;}}
 function renderRoleGate(){
@@ -865,10 +867,13 @@ function updateAuthHeader(){
     var in_=isSignedIn();
     var em=document.getElementById('authEmail'); if(em) em.style.display=in_?'none':'';
     var si=document.getElementById('signInBtn'); if(si) si.style.display=in_?'none':'';
-    var so=document.getElementById('signOutBtn'); if(so) so.style.display=in_?'':'none';
+    var am=document.getElementById('avatarMenu'); if(am) am.style.display=in_?'':'none';
+    if(!in_) closeAvatarMenu();
     try{ if(typeof updateAdminVisibility==='function') updateAdminVisibility(); }catch(e){}
   }catch(e){}
 }
+function toggleAvatarMenu(e){ try{ if(e&&e.stopPropagation) e.stopPropagation(); var d=document.getElementById('avatarDropdown'); if(d) d.classList.toggle('hidden'); }catch(_){} }
+function closeAvatarMenu(){ try{ var d=document.getElementById('avatarDropdown'); if(d) d.classList.add('hidden'); }catch(_){} }
 function renderHeaderProfile(){
   try{
     var box=document.getElementById('headerProfile'); if(!box)return;
@@ -878,7 +883,7 @@ function renderHeaderProfile(){
     var photo=t.photo||ETIE.local.photo||null;
     var name=t.nickname||ETIE.local.displayName||'';
     var flag=''; try{ flag=flagForCountry(t.nationality||ETIE.local.nationality||''); }catch(e){}
-    if(!name && !photo){ box.style.display='none'; return; }
+    if(!name && !photo){ try{ var _s=window.EtieCloud&&window.EtieCloud.getSession&&window.EtieCloud.getSession(); var _em=_s&&_s.user&&_s.user.email; name=_em?_em.split('@')[0]:'Account'; }catch(e){ name='Account'; } }
     box.style.display='';
     var av=document.getElementById('headerAvatar');
     if(av){ if(photo) av.innerHTML='<img src="'+photo+'">'; else av.textContent=(name||'?').charAt(0).toUpperCase(); }
@@ -1666,6 +1671,7 @@ document.addEventListener('DOMContentLoaded',function(){
   alphabetisePickers();
   buildCountrySelects();
   restoreAll();
+  restoreDevBar();
   try{
     var r=new URLSearchParams(window.location.search).get('role');
     if(r==='traveller'||r==='local') setRole(r);
@@ -1688,7 +1694,8 @@ document.addEventListener('DOMContentLoaded',function(){
   var li=document.getElementById('localChatInput');if(li)li.addEventListener('keydown',function(e){if(e.key==='Enter')sendChat('local','localChatInput');});
   var li9=document.getElementById('localChatInput9');if(li9)li9.addEventListener('keydown',function(e){if(e.key==='Enter')sendChat('local','localChatInput9');});
   var pi=document.getElementById('chatPopupInput');if(pi)pi.addEventListener('keydown',function(e){if(e.key==='Enter')sendChatPopup();});
-  document.addEventListener('keydown',function(e){if(e.key==='Escape'){try{closeChatPopup();}catch(e2){}try{closeAdmin();}catch(e3){}}});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'){try{closeChatPopup();}catch(e2){}try{closeAdmin();}catch(e3){}try{closeAvatarMenu();}catch(e4){}}});
+  document.addEventListener('click',function(e){try{var m=document.getElementById('avatarMenu');if(m&&e.target&&!m.contains(e.target))closeAvatarMenu();}catch(err){}});
   // Subscribe to reviews/reports when cloud is on
   setTimeout(function(){
     if(window.EtieCloud && window.EtieCloud.subscribeReviews) window.EtieCloud.subscribeReviews();

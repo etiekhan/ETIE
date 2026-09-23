@@ -129,6 +129,12 @@ header nav{margin-left:auto;justify-content:flex-end}
 /* Pre-role: hide nav links + product sections until Traveller/Local chosen */
 body.no-role nav .nav-btn{display:none}
 body.no-role #discover,body.no-role #trips,body.no-role #messages,body.no-role #profile{display:none}
+/* Landing is entry cards only — hide hero intro, flowbar and duplicate gate */
+body.no-role .hero .eyebrow,body.no-role .hero h1,body.no-role .hero > p,body.no-role .hero .flowbar,body.no-role #roleGate{display:none}
+body.no-role .hero .entry-grid{margin-top:0}
+/* Entry cards: no awkward top gap, black copy */
+.hero .entry-grid .card h3:first-child{margin-top:0}
+.hero .entry-grid .card p{color:#171717}
 /* Verification selectable rows */
 #localVerify .list-item,#travVerify .list-item{cursor:pointer}
 #localVerify .list-item.selected,#travVerify .list-item.selected{border-color:#171717;background:#f4f1ec}

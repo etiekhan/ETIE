@@ -747,6 +747,7 @@ function renderRoleGate(){
   try{
     var gate=document.getElementById('roleGate'); if(!gate)return;
     var fresh=!hasAnyTravellerData()&&!hasAnyLocalData()&&!ETIE.activeRole;
+    try{ document.body.classList.toggle('no-role',!!fresh); }catch(e){}
     gate.style.display=fresh?'':'none';
     if(fresh){
       document.getElementById('travellerFlow').classList.add('hidden');

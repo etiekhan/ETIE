@@ -82,7 +82,7 @@ header nav{margin-left:auto;justify-content:flex-end}
 
 /* Larger, clearer headings */
 .panel h2{font-size:clamp(28px,4.5vw,40px);letter-spacing:-.03em;margin:2px 0 10px;line-height:1.15}
-.panel h3{font-size:clamp(18px,2.5vw,22px);margin:24px 0 10px;color:rgba(255,255,255,.95);text-shadow:0 1px 4px rgba(0,0,0,.3)}
+.panel h3{font-size:clamp(18px,2.5vw,22px);margin:24px 0 10px;color:#171717}
 .hero h1{font-size:clamp(48px,8vw,88px);line-height:.9;letter-spacing:-.06em;max-width:880px;margin:18px 0}
 .hero .eyebrow{color:var(--home);font-size:12px;letter-spacing:.18em}
 
@@ -126,6 +126,9 @@ header nav{margin-left:auto;justify-content:flex-end}
 .avail-cal.locked .avail-cal-day{cursor:default}
 .avail-cal-day.avail{background:#1d9e6b;color:#fff;border-color:#1d9e6b;font-weight:800}
 .avail-cal-day.unavail{background:#f3c1c1;color:#7a1f1f;border-color:#e8a0a0}
+/* Pre-role: hide nav links + product sections until Traveller/Local chosen */
+body.no-role nav .nav-btn{display:none}
+body.no-role #discover,body.no-role #trips,body.no-role #messages,body.no-role #profile{display:none}
 /* Verification selectable rows */
 #localVerify .list-item,#travVerify .list-item{cursor:pointer}
 #localVerify .list-item.selected,#travVerify .list-item.selected{border-color:#171717;background:#f4f1ec}

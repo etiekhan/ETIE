@@ -847,6 +847,18 @@ function exitDemo(){
   }catch(e){}
 }
 
+function persBadges(el,o){
+  try{
+    if(!el) return;
+    el.innerHTML=''; el.className='pers-badges';
+    [['Social',o.social],['Spontaneous',o.spontaneous],['Curious',o.curious]].forEach(function(p){
+      var s=document.createElement('span'); s.className='pers-badge'; s.textContent=p[0]+': '+p[1]+'/10'; el.appendChild(s);
+    });
+    if(o.vibe){var v=document.createElement('span');v.className='pers-badge';v.textContent='Vibe: '+o.vibe;el.appendChild(v);}
+    if(o.pace){var pc=document.createElement('span');pc.className='pers-badge';pc.textContent='Pace: '+o.pace;el.appendChild(pc);}
+    (o.extra||[]).forEach(function(x){var s=document.createElement('span');s.className='pers-badge';s.textContent=x;el.appendChild(s);});
+  }catch(e){}
+}
 function hasAnyTravellerData(){
   try{
     if(ETIE.trip&&(ETIE.trip.destination||ETIE.trip.country||ETIE.trip.dates))return true;
@@ -936,12 +948,11 @@ function renderProfiles(){
       var vibeTouched = !!(ETIE.traveller._vibeSet && ETIE.traveller.socialVibe!=null);
       var styleTouched = !!((ETIE.traveller.styleInterests||[]).length);
       if(!vibeTouched && !styleTouched){
-        pp.textContent='Not set yet — set in Step 4.';
+        pp.className='muted'; pp.textContent='Not set yet — set in Step 4.';
       } else {
         var _sv=ETIE.traveller.socialVibe, _tp=ETIE.traveller.travelPace;
-        var svl=(_sv!=null?SOCIAL_VIBE_LABELS[_sv]:'')||'', tpl=(_tp!=null?TRAVEL_PACE_LABELS[_tp]:'')||'';
-        pp.textContent=(svl?('Social vibe: '+svl+' · '):'')+(tpl?('Pace: '+tpl+' · '):'')+'Social '+ETIE.traveller.personality.social+'/10 · Spontaneous '+ETIE.traveller.personality.spontaneous+'/10 · Curious '+ETIE.traveller.personality.curious+'/10';
-        if((ETIE.traveller.styleInterests||[]).length) pp.textContent+=' · '+(ETIE.traveller.styleInterests||[]).join(' · ');
+        persBadges(pp,{social:ETIE.traveller.personality.social,spontaneous:ETIE.traveller.personality.spontaneous,curious:ETIE.traveller.personality.curious,
+          vibe:(_sv!=null?SOCIAL_VIBE_LABELS[_sv]:'')||null,pace:(_tp!=null?TRAVEL_PACE_LABELS[_tp]:'')||null,extra:(ETIE.traveller.styleInterests||[])});
       }
     }
     var pl=document.getElementById('profLookingFor');
@@ -994,12 +1005,11 @@ function renderProfiles(){
     var lpp2=document.getElementById('localProfPersonality');
     if(lpp2){
       var lStyle=(ETIE.local.styleInterests||[]).length, lInt=(ETIE.local.interests||[]).length;
-      if(!lStyle && !lInt){ lpp2.textContent='Not set yet — set in Local Step 4.'; }
+      if(!lStyle && !lInt){ lpp2.className='muted'; lpp2.textContent='Not set yet — set in Local Step 4.'; }
       else {
         var _lsv=ETIE.local.socialVibe, _ltp=ETIE.local.travelPace;
-        var lsvl=(_lsv!=null?SOCIAL_VIBE_LABELS[_lsv]:'')||'', ltpl=(_ltp!=null?TRAVEL_PACE_LABELS[_ltp]:'')||'';
-        lpp2.textContent=(lsvl?('Social vibe: '+lsvl+' · '):'')+(ltpl?('Pace: '+ltpl+' · '):'')+'Social '+ETIE.local.personality.social+'/10 · Spontaneous '+ETIE.local.personality.spontaneous+'/10 · Curious '+ETIE.local.personality.curious+'/10';
-        if((ETIE.local.styleInterests||[]).length) lpp2.textContent+=' · '+(ETIE.local.styleInterests||[]).join(' · ');
+        persBadges(lpp2,{social:ETIE.local.personality.social,spontaneous:ETIE.local.personality.spontaneous,curious:ETIE.local.personality.curious,
+          vibe:(_lsv!=null?SOCIAL_VIBE_LABELS[_lsv]:'')||null,pace:(_ltp!=null?TRAVEL_PACE_LABELS[_ltp]:'')||null,extra:(ETIE.local.styleInterests||[])});
       }
     }
     var lpo=document.getElementById('localProfOffer');

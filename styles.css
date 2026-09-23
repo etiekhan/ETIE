@@ -152,6 +152,29 @@ body.no-role #devBar{display:none}
 #devBar .flow-step.active{background:#fff;color:#171717;border-color:#fff}
 #devBar.collapsed .flowbar{display:none}
 .footer{padding-bottom:120px}
+/* Dark dashboard + profile: glass panels, light text; light inner surfaces keep dark text */
+#profile .card.panel,#local9.card.panel{background:rgba(20,16,28,.90);border:1px solid rgba(255,255,255,.12);color:#f5f4f2;box-shadow:0 18px 44px rgba(0,0,0,.45)}
+#profile .card.panel h2,#profile .card.panel h3,#local9.card.panel h2,#local9.card.panel h3{color:#fff}
+#profile .card.panel .muted,#local9.card.panel .muted{color:rgba(255,255,255,.72)}
+#profile .card.panel .sidebar-note,#local9.card.panel .sidebar-note{color:#171717}
+#profile .card.panel .sidebar-note h3,#local9.card.panel .sidebar-note h3{color:#171717}
+#profile .card.panel .sidebar-note .muted,#local9.card.panel .sidebar-note .muted,
+#profile .card.panel .match-card .muted,#local9.card.panel .match-card .muted,
+#profile .card.panel .list-item .muted,#local9.card.panel .list-item .muted{color:#6b655d}
+#profile .card.panel .sidebar-note strong,#local9.card.panel .sidebar-note strong,
+#profile .card.panel .match-card strong,#local9.card.panel .match-card strong,
+#profile .card.panel .list-item strong,#local9.card.panel .list-item strong{color:#171717}
+#local9.card.panel .field label{color:rgba(255,255,255,.75)}
+#local9.card.panel .avail-cal-dow{color:rgba(255,255,255,.6)}
+/* Elevated stat cards on the dark dashboard */
+#local9.card.panel .metric{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:16px}
+#local9.card.panel .metric strong{color:#fff}
+#local9.card.panel .metric .muted{color:rgba(255,255,255,.65)}
+/* Personality badges */
+.pers-badges{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0}
+.pers-badge{display:inline-block;padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:#fff;font-size:13px;font-weight:700}
+/* Bottom breathing room so the floating dev bar never covers content */
+main.container{padding-bottom:6rem}
 body.no-role .hero .entry-grid{margin-top:16px}
 /* Entry cards: equal heights + equal widths, dark glassmorphism, no awkward top gap */
 .hero .entry-grid{grid-template-columns:1fr 1fr!important;align-items:stretch}

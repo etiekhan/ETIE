@@ -27,8 +27,12 @@ header{gap:12px}
 header nav{margin-left:auto;justify-content:flex-end}
 .nav-divider{width:1px;align-self:stretch;background:rgba(255,255,255,.18);margin:6px 2px}
 .nav-btn.active{background:rgba(255,255,255,.10);border-radius:10px;outline:none}
-.avatar-menu{position:relative;margin-left:4px;flex:0 0 auto;display:flex}
-.avatar-dropdown{position:absolute;right:0;top:calc(100% + 8px);min-width:190px;background:rgba(20,16,28,.97);border:1px solid rgba(255,255,255,.16);border-radius:14px;padding:6px;box-shadow:0 18px 44px rgba(0,0,0,.5);z-index:90;display:flex;flex-direction:column;gap:2px}
+.avatar-menu{position:relative;margin-left:4px;flex:0 0 auto;display:flex;min-width:0}
+.avatar-dropdown{position:absolute;right:0;top:calc(100% + 8px);min-width:190px;max-width:calc(100vw - 24px);background:rgba(20,16,28,.97);border:1px solid rgba(255,255,255,.16);border-radius:14px;padding:6px;box-shadow:0 18px 44px rgba(0,0,0,.5);z-index:90;display:flex;flex-direction:column;gap:2px}
+header{flex-wrap:nowrap}
+.logo{flex-shrink:0;white-space:nowrap}
+.header-profile{min-width:0}
+#headerName{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .menu-item{background:transparent;border:0;color:#fff;text-align:left;padding:10px 12px;border-radius:10px;cursor:pointer;font-size:14px;font-weight:600}
 .menu-item:hover{background:rgba(255,255,255,.10)}
 /* Mobile hamburger */
@@ -270,4 +274,4 @@ header .secondary{background:rgba(255,255,255,.96)!important;color:#171717!impor
 .header-profile{display:flex;align-items:center;gap:8px;padding:6px 12px 6px 6px;border:1px solid rgba(255,255,255,.25);border-radius:999px;background:rgba(255,255,255,.12);color:#fff;font-size:13px;font-weight:700;cursor:pointer;max-width:220px;white-space:nowrap;overflow:hidden}
 .header-avatar{width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:14px;flex:0 0 auto}
 .header-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}
-@media(max-width:640px){.header-profile{max-width:150px;font-size:12px}}
+@media(max-width:640px){.header-profile{max-width:132px;font-size:12px;padding:5px 10px 5px 5px}}

@@ -747,24 +747,21 @@ function renderRoleGate(){
     var fresh=!hasAnyTravellerData()&&!hasAnyLocalData()&&!ETIE.activeRole;
     try{ document.body.classList.toggle('no-role',!!fresh); }catch(e){}
     gate.style.display=fresh?'':'none';
+    // both door cards always stay visible — they are the side switcher
+    var et0=document.getElementById('entryCardTrav'); if(et0) et0.style.display='';
+    var el0=document.getElementById('entryCardLocal'); if(el0) el0.style.display='';
     if(fresh){
       document.getElementById('travellerFlow').classList.add('hidden');
       document.getElementById('localFlow').classList.add('hidden');
       var rs0=document.getElementById('roleSwitch'); if(rs0) rs0.style.display='';
-      var et0=document.getElementById('entryCardTrav'); if(et0) et0.style.display='';
-      var el0=document.getElementById('entryCardLocal'); if(el0) el0.style.display='';
     } else if(ETIE.activeRole){
       document.getElementById('travellerFlow').classList.toggle('hidden',ETIE.activeRole!=='traveller');
       document.getElementById('localFlow').classList.toggle('hidden',ETIE.activeRole!=='local');
       document.getElementById('travRole').classList.toggle('active',ETIE.activeRole==='traveller');
       document.getElementById('localRole').classList.toggle('active',ETIE.activeRole==='local');
       var rs=document.getElementById('roleSwitch'); if(rs) rs.style.display='none';
-      var et=document.getElementById('entryCardTrav'); if(et) et.style.display=ETIE.activeRole==='traveller'?'':'none';
-      var el=document.getElementById('entryCardLocal'); if(el) el.style.display=ETIE.activeRole==='local'?'':'none';
     } else {
       var rs2=document.getElementById('roleSwitch'); if(rs2) rs2.style.display='';
-      var et2=document.getElementById('entryCardTrav'); if(et2) et2.style.display='';
-      var el2=document.getElementById('entryCardLocal'); if(el2) el2.style.display='';
     }
   }catch(e){}
 }

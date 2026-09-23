@@ -153,10 +153,12 @@ body.no-role #devBar{display:none}
 #devBar .flow-step.active{background:#fff;color:#171717;border-color:#fff}
 #devBar.collapsed .flowbar{display:none}
 .footer{padding-bottom:120px}
-/* Unified dark system: dashboard, profile, discover, trips, messages */
-#profile .card.panel,#local9.card.panel,#discover .card.panel,#trips .card.panel,#messages .card.panel{background:rgba(20,16,28,.90);border:1px solid rgba(255,255,255,.12);color:#f5f4f2;box-shadow:0 18px 44px rgba(0,0,0,.45)}
+/* Unified dark system: dashboard, profile, discover, trips, messages — subtle neon glass */
+#profile .card.panel,#local9.card.panel,#discover .card.panel{background:rgba(20,16,28,.60);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(136,19,55,.40);color:#f5f4f2;box-shadow:0 0 28px rgba(244,63,94,.06),0 8px 28px rgba(0,0,0,.35)}
+#trips .card.panel,#messages .card.panel{background:rgba(20,16,28,.60);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(46,16,101,.40);color:#f5f4f2;box-shadow:0 0 28px rgba(139,92,246,.06),0 8px 28px rgba(0,0,0,.35)}
 /* No bright accent vertical borders on these containers */
-#profile .card.panel,#local9.card.panel,#discover .card.panel,#trips .card.panel,#messages .card.panel{border-left:1px solid rgba(255,255,255,.12)}
+#profile .card.panel,#local9.card.panel,#discover .card.panel,#trips .card.panel,#messages .card.panel{border-left:1px solid rgba(136,19,55,.40)}
+#trips .card.panel,#messages .card.panel{border-left:1px solid rgba(46,16,101,.40)}
 #profile .card.panel h2,#profile .card.panel h3,#local9.card.panel h2,#local9.card.panel h3,
 #discover .card.panel h2,#discover .card.panel h3,#trips .card.panel h2,#trips .card.panel h3,
 #messages .card.panel h2,#messages .card.panel h3{color:#fff}
@@ -164,8 +166,14 @@ body.no-role #devBar{display:none}
 #trips .card.panel .muted,#messages .card.panel .muted{color:#a3a3a3}
 /* Inner surfaces go dark too */
 #profile .card.panel .match-card,#local9.card.panel .match-card,#discover .card.panel .match-card,
-#profile .card.panel .list-item,#local9.card.panel .list-item,#trips .card.panel .list-item,#messages .card.panel .list-item,
-#profile .card.panel .sidebar-note,#local9.card.panel .sidebar-note{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);color:#f5f4f2}
+#profile .card.panel .list-item,#local9.card.panel .list-item,
+#profile .card.panel .sidebar-note,#local9.card.panel .sidebar-note{background:rgba(255,255,255,.05);border:1px solid rgba(136,19,55,.40);color:#f5f4f2;box-shadow:0 0 18px rgba(244,63,94,.05);transition:border-color .15s ease,box-shadow .15s ease}
+#trips .card.panel .list-item,#messages .card.panel .list-item{background:rgba(255,255,255,.05);border:1px solid rgba(46,16,101,.40);color:#f5f4f2;box-shadow:0 0 18px rgba(139,92,246,.05);transition:border-color .15s ease,box-shadow .15s ease}
+#profile .card.panel .match-card:hover,#local9.card.panel .match-card:hover,#discover .card.panel .match-card:hover,
+#profile .card.panel .list-item:hover,#local9.card.panel .list-item:hover{border-color:#f43f5e;box-shadow:0 0 22px rgba(244,63,94,.14)}
+#trips .card.panel .list-item:hover,#messages .card.panel .list-item:hover{border-color:#8b5cf6;box-shadow:0 0 22px rgba(139,92,246,.14)}
+#local9.card.panel .field input{border-color:rgba(136,19,55,.40)}
+#local9.card.panel .field input:focus{border-color:#f43f5e;box-shadow:0 0 16px rgba(244,63,94,.12);outline:none}
 #profile .card.panel .match-card strong,#local9.card.panel .match-card strong,#discover .card.panel .match-card strong,
 #profile .card.panel .list-item strong,#local9.card.panel .list-item strong,#trips .card.panel .list-item strong,#messages .card.panel .list-item strong,
 #profile .card.panel .sidebar-note strong,#local9.card.panel .sidebar-note strong{color:#f5f4f2}

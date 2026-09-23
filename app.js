@@ -1495,8 +1495,9 @@ function renderLocalDashboard(){
     var dt=document.getElementById('localDashTrust');
     if(dt){ dt.innerHTML=''; var _vm=ETIE.local.verificationMethods||[]; if(!_vm.length){var _s=document.createElement('span');_s.textContent='Unverified';dt.appendChild(_s);} else _vm.forEach(function(x){var _s=document.createElement('span');_s.textContent='✓ '+x;dt.appendChild(_s);}); }
     var q=document.getElementById('localQueue');
-    if(q){q.innerHTML='';var ids=Object.keys(ETIE.requests);
-      if(!ids.length)q.innerHTML='<div class="list-item"><div><strong>No requests yet</strong><br><span class="muted">Send one as Traveller Step 9 — try different matches.</span></div><span class="status">Empty</span></div>';
+    if(q){q.innerHTML='';var ids=Object.keys(ETIE.requests||{});
+      if(isCleanLive()){var demoIds=['local-marta','local-javier','local-sofia'];ids=ids.filter(function(k){return demoIds.indexOf(k)===-1;});}
+      if(!ids.length)q.innerHTML='<div class="list-item"><div><strong>No requests yet</strong><br><span class="muted">Send one as Traveller — try different matches.</span></div><span class="status">Empty</span></div>';
       ids.forEach(function(k){
         var r=ETIE.requests[k];var row=document.createElement('div');row.className='list-item';
         row.innerHTML='<div><strong></strong><br><span class="muted"></span></div>';

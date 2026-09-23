@@ -35,11 +35,11 @@
   <div class="flowbar" aria-label="Core loop">
     <div class="flow-step active">1 · Discover</div><div class="flow-step">2 · Match</div><div class="flow-step">3 · Trust</div><div class="flow-step">4 · Connect</div><div class="flow-step">5 · Meet</div><div class="flow-step">6 · Review</div><div class="flow-step">7 · Better matches</div>
   </div>
-  <div class="grid2 entry-grid" style="margin-top:16px;"><div class="card panel"><h3>Travelling?</h3><p class="muted small">Find a local guide who gets you.</p><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="primary" onclick="setRole('traveller')">Find a guide</button></div></div><div class="card panel"><h3>Know your city?</h3><p class="muted small">Host travellers and earn trust.</p><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="secondary" onclick="setRole('local')">Become a guide</button></div></div></div>
+  <div class="grid2 entry-grid" style="margin-top:16px;"><div class="card panel" id="entryCardTrav"><h3>Travelling?</h3><p class="muted small">Find a local guide who gets you.</p><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="primary" onclick="setRole('traveller')">Find a guide</button></div></div><div class="card panel" id="entryCardLocal"><h3>Know your city?</h3><p class="muted small">Host travellers and earn trust.</p><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="secondary" onclick="setRole('local')">Become a guide</button></div></div></div>
 </section>
 
 <section class="section" data-section="home">
-  <div class="card panel" id="roleGate" style="display:none;"><div class="eyebrow">Start</div><h2>Which side are you on?</h2><p class="muted">Choose one to begin — you can switch sides later, but each side has its own steps and verification.</p><div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;"><button class="primary" onclick="setRole('traveller')">I'm a Traveller</button><button class="secondary" onclick="setRole('local')">I'm a Local guide</button></div></div>
+  <div class="card panel" id="roleGate" style="display:none;"><div class="eyebrow">Start</div><h2>Which side are you on?</h2><p class="muted">Choose one to begin — each side has its own steps and verification. Use the cards above to switch sides.</p><div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;"><button class="primary" onclick="setRole('traveller')">I'm a Traveller</button><button class="secondary" onclick="setRole('local')">I'm a Local guide</button></div></div>
   <div class="role-switch" id="roleSwitch">
     <button class="role active" id="travRole" onclick="setRole('traveller')">Traveller flow</button>
     <button class="role" id="localRole" onclick="setRole('local')">Local guide flow</button>

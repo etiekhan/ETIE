@@ -741,7 +741,7 @@ function refreshAdminLive(){
   }catch(e){ try{ var h=document.getElementById('adminLiveHint'); if(h) h.textContent='Live refresh failed.'; }catch(e2){}}
 }
 function toggleNav(){try{var n=document.getElementById('mainNav');var t=document.querySelector('.nav-toggle');if(n&&t){n.classList.toggle('open');t.textContent=n.classList.contains('open')?'✕':'☰';}}catch(e){}}
-function setRole(role){try{ETIE.activeRole=role;}catch(e){}document.getElementById('travRole').classList.toggle('active',role==='traveller');document.getElementById('localRole').classList.toggle('active',role==='local');document.getElementById('travellerFlow').classList.toggle('hidden',role!=='traveller');document.getElementById('localFlow').classList.toggle('hidden',role!=='local');saveState();renderRoleGate();if(role==='traveller')travNext(Math.min(16,Math.max(1,ETIE._lastTrav||1)));else localNext(Math.min(11,Math.max(1,ETIE._lastLocal||1)));showScreen('home');}
+function setRole(role){try{ETIE.activeRole=role;}catch(e){}try{var u=new URL(window.location.href);u.searchParams.set('role',role);window.history.replaceState(null,'','?role='+role);}catch(e){}document.getElementById('travRole').classList.toggle('active',role==='traveller');document.getElementById('localRole').classList.toggle('active',role==='local');document.getElementById('travellerFlow').classList.toggle('hidden',role!=='traveller');document.getElementById('localFlow').classList.toggle('hidden',role!=='local');saveState();renderRoleGate();if(role==='traveller')travNext(Math.min(16,Math.max(1,ETIE._lastTrav||1)));else localNext(Math.min(11,Math.max(1,ETIE._lastLocal||1)));showScreen('home');}
 function hasAnyLocalData(){try{var l=ETIE.local||{};if(l.city||l.age||l.nationality||l.displayName)return true;if((l.interests||[]).length)return true;if((l.styleInterests||[]).length)return true;if(l.offer)return true;if(l.photo)return true;if((l.travelPhotos||[]).filter(Boolean).length)return true;if((l.availDates||[]).length)return true;if((l.verificationMethods||[]).length)return true;return false;}catch(e){return false;}}
 function renderRoleGate(){
   try{
@@ -1595,6 +1595,10 @@ document.addEventListener('DOMContentLoaded',function(){
   alphabetisePickers();
   buildCountrySelects();
   restoreAll();
+  try{
+    var r=new URLSearchParams(window.location.search).get('role');
+    if(r==='traveller'||r==='local') setRole(r);
+  }catch(e){}
   document.addEventListener('click',function(e){
     try{
       if(!e.target||!e.target.closest)return;

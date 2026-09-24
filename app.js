@@ -987,7 +987,7 @@ function renderProfiles(){
     }
     // Local photo in dashboard
     var lp=document.getElementById('localDashPhoto');
-    if(lp){lp.innerHTML='';if(ETIE.local.photo){lp.innerHTML='<img src="'+ETIE.local.photo+'" style="width:100%;height:100%;border-radius:50%;object-fit:cover;aspect-ratio:1/1;">';}else{lp.textContent=(ETIE.local.displayName||'Y').charAt(0).toUpperCase();}}
+    if(lp){lp.innerHTML='';lp.style.background='rgba(255,255,255,.15)';if(ETIE.local.photo){lp.innerHTML='<img src="'+ETIE.local.photo+'" style="width:100%;height:100%;border-radius:50%;object-fit:cover;aspect-ratio:1/1;">';lp.style.borderStyle='solid';}else{lp.textContent=(ETIE.local.displayName||'Y').charAt(0).toUpperCase();lp.style.borderStyle='dashed';}}
     // Traveller verification line in Profile
     var pv=document.getElementById('profVerify');
     if(pv){ var vm=ETIE.traveller.verificationMethods||[]; pv.textContent=vm.length?('Verified: '+vm.join(' · ')):'Not verified yet — pick at least one in Step 1.'; }

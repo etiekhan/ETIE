@@ -966,7 +966,7 @@ function renderProfiles(){
     }
     // Traveller photo in profile
     var tp=document.getElementById('profTravPhoto');
-    if(tp){tp.innerHTML=ETIE.traveller.photo?('<img src="'+ETIE.traveller.photo+'" style="width:100%;height:100%;border-radius:50%;object-fit:cover;aspect-ratio:1/1;">'):'<span style="color:rgba(255,255,255,.5);font-size:36px;">+</span>';tp.style.borderStyle=ETIE.traveller.photo?'solid':'dashed';}
+    if(tp){tp.innerHTML=ETIE.traveller.photo?('<img src="'+ETIE.traveller.photo+'" style="width:100%;height:100%;border-radius:50%;object-fit:cover;aspect-ratio:1/1;">'):'<span style="color:rgba(255,255,255,.5);font-size:30px;">+</span>';tp.style.borderStyle=ETIE.traveller.photo?'solid':'dashed';}
     var ln=document.getElementById('localDashName');
     var lflag=flagForCountry(ETIE.local.nationality);
     if(ln)ln.textContent=lflag+' You · '+(ETIE.local.city||'—');
@@ -999,7 +999,7 @@ function renderProfiles(){
     var lpc=document.getElementById('localProfCity');
     if(lpc){ if(!hasAnyLocalData()) lpc.textContent='No local base yet — complete Local Step 1'; else lpc.textContent=(ETIE.local.nationality?flagForCountry(ETIE.local.nationality)+' ':'')+(ETIE.local.city||'—')+(ETIE.local.age?' · '+ETIE.local.age:'')+' · Local guide'; }
     var lpp=document.getElementById('localProfPhoto');
-    if(lpp){ lpp.innerHTML=ETIE.local.photo?('<img src="'+ETIE.local.photo+'" style="width:100%;height:100%;border-radius:50%;object-fit:cover;aspect-ratio:1/1;">'):'<span style="color:rgba(255,255,255,.5);font-size:36px;">+</span>'; lpp.style.borderStyle=ETIE.local.photo?'solid':'dashed'; }
+    if(lpp){ lpp.innerHTML=ETIE.local.photo?('<img src="'+ETIE.local.photo+'" style="width:100%;height:100%;border-radius:50%;object-fit:cover;aspect-ratio:1/1;">'):'<span style="color:rgba(255,255,255,.5);font-size:30px;">+</span>'; lpp.style.borderStyle=ETIE.local.photo?'solid':'dashed'; }
     var lpi=document.getElementById('localProfInterests');
     if(lpi){ lpi.innerHTML=''; if(!(ETIE.local.interests||[]).length){var e=document.createElement('span');e.className='muted small';e.textContent='No interests yet — Local Step 4.';lpi.appendChild(e);} else ETIE.local.interests.forEach(function(x){var s=document.createElement('span');s.className='chip active';s.textContent=x;lpi.appendChild(s);}); }
     var lpp2=document.getElementById('localProfPersonality');

@@ -181,6 +181,10 @@ body.no-role #devBar{display:none}
 #local9.card.panel .field label{color:rgba(255,255,255,.75)}
 #local9.card.panel .avail-cal-dow{color:rgba(255,255,255,.6)}
 #local9.card.panel .why .muted{color:#6b655d}
+/* Headings inherit per surface: dark on light boxes, light on dark cards */
+.match-card .why strong{color:#171717}
+#localReqCard .why{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+#localReqCard .why .muted,.match-card .why .muted{color:#404040}
 /* Elevated stat cards on the dark dashboard */
 #local9.card.panel .metric{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:16px}
 #local9.card.panel .metric strong{color:#fff}

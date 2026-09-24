@@ -144,7 +144,7 @@
       var base={
         user_id: session.user.id,
         display_name: chosen,
-        city: p.city || ETIE.trip && ETIE.trip.destination || 'Lisbon',
+        city: p.city || ETIE.trip && ETIE.trip.destination || 'Hong Kong',
         age: parseInt(p.age,10)||28,
         interests: p.interests||[],
         personality: p.personality||{},
@@ -158,6 +158,7 @@
       var extra={
         nationality: p.nationality || 'PT',
         traveller_nationality: (typeof ETIE!=='undefined'&&ETIE.traveller&&ETIE.traveller.nationality)||'HK',
+        district: p.district || 'Central / Soho',
         tier: p.tier || 'Rookie',
         hosted_count: p.hostedCount || 0,
         avg_host_rating: p.avgHostRating || 0,
@@ -523,8 +524,9 @@
       return {
         id: row.user_id,
         name: row.display_name || 'Guide',
-        city: row.city || 'Lisbon',
-        nationality: row.nationality || 'PT',
+        city: row.city || 'Hong Kong',
+        district: row.district || row.city || 'Central / Soho',
+        nationality: row.nationality || 'HK',
         age: row.age || 28,
         interests: row.interests || [],
         personality: row.personality || {social:5, spontaneous:5, curious:5},

@@ -135,7 +135,7 @@ header{flex-wrap:nowrap}
 .avail-cal-day.empty{border:0;background:transparent;cursor:default}
 .avail-cal-day.sel{background:rgba(16,185,129,.20);color:#065f46;border-color:rgba(16,185,129,.45);font-weight:800}
 .avail-cal-day.past{opacity:.35;cursor:default}
-.avail-cal.locked .avail-cal-day{cursor:default;background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.14);color:#d6d3d1}
+.avail-cal.locked .avail-cal-day{cursor:default;background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.14);color:#a3a3a3}
 .avail-cal.locked .avail-cal-day.empty{background:transparent;border:0}
 .avail-cal.locked .avail-cal-day.sel,.avail-cal-day.avail{background:rgba(16,185,129,.20);color:#6ee7b7;border-color:rgba(16,185,129,.40);font-weight:800}
 .avail-cal.locked .avail-cal-day.past{opacity:.3}
@@ -310,6 +310,11 @@ header .secondary{background:rgba(255,255,255,.96)!important;color:#171717!impor
 .travel-strip{padding:16px 18px;margin-bottom:14px}
 .travel-thumbs{display:flex;gap:8px;overflow-x:auto;margin-top:10px;padding-bottom:4px;-webkit-overflow-scrolling:touch}
 .travel-thumbs img{width:64px;height:64px;border-radius:14px;object-fit:cover;flex:0 0 auto;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+/* Large avatars: strict 1:1, circular fill, subtle border, balanced header alignment */
+.avatar{background:#26232e;color:#fff;border:2px solid rgba(255,255,255,.18);aspect-ratio:1/1;flex:0 0 auto}
+.avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%;aspect-ratio:1/1}
+.person-top>div{min-width:0;flex:1}
+#profTravPhoto img,#localProfPhoto img,#localDashPhoto img{width:100%!important;height:100%!important;object-fit:cover;border-radius:50%}
 /* Header mini profile: nickname + flag + selfie */
 .header-profile{display:flex;align-items:center;gap:8px;padding:6px 12px 6px 6px;border:1px solid rgba(255,255,255,.25);border-radius:999px;background:rgba(255,255,255,.12);color:#fff;font-size:13px;font-weight:700;cursor:pointer;max-width:220px;white-space:nowrap;overflow:hidden}
 .header-avatar{width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:14px;flex:0 0 auto}

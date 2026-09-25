@@ -893,7 +893,10 @@ function validTrav(step){
     if((ETIE.traveller.styleInterests||[]).length===0){toast('Pick at least 1 style tag.');return false;}
     if(ETIE.traveller.lookingFor.length===0){toast('Pick at least 1 option.');return false;}
   }
-  if(step===4||step===5){return true;}
+  if(step===4||step===5){
+    if(step===5 && !ETIE.traveller.sidequestChallenge){toast('Pick a challenge for your vibe.');return false;}
+    return true;
+  }
   if(step===6){if(ETIE.traveller.hook.length<10){toast('Add a short hook (10+ characters) so locals get you.');return false;}}
   if(step===7||step===8||step===9){return true;}
   return true;
@@ -901,7 +904,10 @@ function validTrav(step){
 function validLocal(step){
   if(step===1){if(!ETIE.local.city){toast('Add your home city.');return false;}var a=parseInt(ETIE.local.age,10);if(isNaN(a)||a<18){toast('Age must be 18+.');return false;}if(!ETIE.local.nationality){toast('Select your nationality.');return false;}if(!ETIE.local.displayName){toast('Add a nickname shown to travellers.');return false;}}
   if(step===2){if(!(ETIE.local.verificationMethods&&ETIE.local.verificationMethods.length)){toast('Pick at least 1 verification method to continue.');return false;}}
-  if(step===3){return true; /* merged into Step 1 */}
+  if(step===3){
+    var hc=document.querySelectorAll('#localHostChallenges .chip.active');
+    if(!hc.length){toast('Pick at least 1 sidequest you can host.');return false;}
+  }
   if(step===4){if(ETIE.local.interests.length===0){toast('Pick at least 1 interest.');return false;}if(ETIE.local.interests.length>4){toast('Pick up to 4.');return false;}}
   if(step===6){if(ETIE.local.offer.length<10){toast('Add what you can offer (10+ characters).');return false;}}
   return true;
@@ -934,7 +940,10 @@ function travNext(n){
       renderMatches(); hideGroup('trav'); var e7=document.getElementById('trav8'); if(e7) e7.classList.remove('hidden'); showScreen('trav8'); return;
     }
   }
-  hideGroup('trav');var e=document.getElementById('trav'+n);if(e)e.classList.remove('hidden');try{ETIE._lastTrav=n;saveState();}catch(_){}updateCounts();renderProfiles();if(n===8||n===9||n===10||n===11)renderMatches();if(n===10||n===11||n===12||n===13){renderRequests();renderChat();renderMessagesList();}if(n>=13&&n<=17){renderMeetup();renderTrips();renderThanks();paintStars('travStars',ETIE._travStars||0);}showScreen('trav'+n);
+  hideGroup('trav');var e=document.getElementById('trav'+n);if(e)e.classList.remove('hidden');try{ETIE._lastTrav=n;saveState();}catch(_){}updateCounts();renderProfiles();
+  if(n===5) try{ renderSidequestChallenges(); }catch(e){}
+  if(n===8||n===11) try{ updatePactDisplays(); var ta=document.getElementById('reqMessage'); if(ta && ETIE.traveller.sidequestChallenge) ta.value='Hey — '+ETIE.traveller.sidequestChallenge+' — are you down to sidequest in '+(ETIE.trip.district||'Hong Kong')+'?'; }catch(e){}
+  if(n===8||n===9||n===10||n===11)renderMatches();if(n===10||n===11||n===12||n===13){renderRequests();renderChat();renderMessagesList();}if(n>=13&&n<=17){renderMeetup();renderTrips();renderThanks();paintStars('travStars',ETIE._travStars||0);}showScreen('trav'+n);
 }
 function localNext(n){
   var cur=currentLocalStep();

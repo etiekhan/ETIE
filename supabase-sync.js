@@ -66,11 +66,33 @@
       var email=(em&&em.value||'').trim();
       if(!email||email.indexOf('@')===-1){toast('Enter a valid email for magic link.');return;}
       if(!client){toast('Add Supabase keys first (supabase-config.js).');return;}
-      client.auth.signInWithOtp({email:email, options:{emailRedirectTo: window.location.href}}).then(function(r){
-        if(r&&r.error)toast('Sign-in error: '+r.error.message);
-        else toast('Check your email for the login link.');
+      var redirect=window.location.origin + window.location.pathname;
+      client.auth.signInWithOtp({email:email, options:{emailRedirectTo: redirect}}).then(function(r){
+        if(r&&r.error){toast('Sign-in error: '+r.error.message);return;}
+        try{window.ETIE_AWAITING_OTP=email;}catch(e){}
+        try{
+          var oc=document.getElementById('otpCode'); if(oc){oc.style.display='';oc.value='';}
+          var ob=document.getElementById('otpBtn'); if(ob)ob.style.display='';
+        }catch(e){}
+        toast('Code sent — enter the 6-digit code from your email, no link needed.');
       });
     }catch(e){toast('Sign-in unavailable offline.');}
+  }
+  function verifyCode(){
+    try{
+      var em=document.getElementById('authEmail');
+      var oc=document.getElementById('otpCode');
+      var email=((em&&em.value)||window.ETIE_AWAITING_OTP||'').trim();
+      var code=(oc&&oc.value||'').replace(/\D/g,'');
+      if(!email||email.indexOf('@')===-1){toast('Enter your email first.');return;}
+      if(code.length<6){toast('Enter the 6-digit code from your email.');return;}
+      if(!client){toast('Sign-in unavailable offline.');return;}
+      client.auth.verifyOtp({email:email, token:code, type:'email'}).then(function(r){
+        if(r&&r.error){toast('Code rejected: '+r.error.message);return;}
+        try{window.ETIE_AWAITING_OTP=null;}catch(e){}
+        toast('Signed in — welcome back.');
+      }).catch(function(err){toast('Code rejected: '+((err&&err.message)||'try again'));});
+    }catch(e){toast('Verification failed — try again.');}
   }
   function signOut(){
     try{ if(!confirm('Are you sure you want to sign out?')) return; }catch(e){ return; }
@@ -612,7 +634,7 @@
   }
   // ---- Expose ----
   window.EtieCloud={
-    init:init, signIn:signIn, signOut:signOut,
+    init:init, signIn:signIn, signOut:signOut, verifyCode:verifyCode,
     push:push, pull:pull, status:status,
     syncProfile:syncProfile, pushSharedRequest:pushSharedRequest, pushSharedMessage:pushSharedMessage, pushSharedMeetup:pushSharedMeetup,
     pushSharedReview:pushSharedReview, pushSharedReport:pushSharedReport,

@@ -22,6 +22,8 @@
     <span class="status" id="cloudStatus" style="display:none;">Cloud: offline demo</span>
     <input id="authEmail" placeholder="email for login" style="max-width:170px;padding:9px;border:1px solid #d6d0c8;border-radius:10px;background:#faf9f7;">
     <button class="secondary" id="signInBtn" onclick="EtieCloud.signIn()">Sign in</button>
+    <input id="otpCode" inputmode="numeric" autocomplete="one-time-code" placeholder="6-digit code" maxlength="6" style="display:none;max-width:110px;padding:9px;border:1px solid #d6d0c8;border-radius:10px;background:#faf9f7;">
+    <button class="secondary" id="otpBtn" style="display:none;" onclick="EtieCloud.verifyCode()">Verify</button>
   </nav>
   <div class="avatar-menu" id="avatarMenu" style="display:none;">
     <button class="header-profile" id="headerProfile" onclick="toggleAvatarMenu(event)" aria-haspopup="true" title="Your account"><span class="header-avatar" id="headerAvatar">+</span><span id="headerName">Guest</span><span aria-hidden="true">▾</span></button>

@@ -572,7 +572,7 @@
         // drop legacy kan_win demo row (old Kevin account) — never match it
         rows=rows.filter(function(x){ var n=((x&&x.display_name)||'').toLowerCase().trim(); return n!=='kan_win'&&n!=='kan win'&&n!=='kanwin'; });
         window.ETIE_LIVE_LOCALS = rows.map(profileToLocal).filter(Boolean);
-        try{ if(typeof renderMatches==='function') renderMatches(); if(typeof renderLocalDashboard==='function') renderLocalDashboard(); }catch(e){}
+        try{ if(typeof renderMatches==='function') renderMatches(); if(typeof renderLocalDashboard==='function') renderLocalDashboard(); if(typeof renderMapPins==='function') renderMapPins(); }catch(e){}
       });
     }catch(e){ console.warn('pullLiveProfiles skipped', e); }
   }

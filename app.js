@@ -107,6 +107,7 @@ function loadState() {
     if(!s.meetups)s.meetups={};
     if(!s.reviews)s.reviews={};
     if(!s.reports)s.reports=[];
+    if(s.mapPins==null)s.mapPins=defaultMapPins();
     // one-time clean-defaults migration: wipe demo pre-fills for fresh traveller flow (only start date = today)
     if(!s._cleanDefaultsV1){
       var hasRealActivity = s.requests && Object.keys(s.requests).length>0;
@@ -574,7 +575,7 @@ function flagEmoji(code){if(!code)return '';return String.fromCodePoint(...code.
 function flagForCountry(countryCode){var map={'PT':'🇵🇹','ES':'🇪🇸','FR':'🇫🇷','IT':'🇮🇹','JP':'🇯🇵','TH':'🇹🇭','US':'🇺🇸','AU':'🇦🇺','HK':'🇭🇰','SG':'🇸🇬'};return map[countryCode]||flagEmoji(countryCode)||'🌍';}
 
 function toast(msg){var t=document.getElementById('toast');if(!t){alert(msg);return;}t.textContent=msg;t.style.display='block';clearTimeout(t._h);t._h=setTimeout(function(){t.style.display='none';},2200);}
-function showScreen(id){var el=document.getElementById(id);if(id==='profile'){renderProfiles();updateProfileVisibility();}if(id==='messages')renderMessagesList();if(id==='trips'){renderTrips();renderMeetup();}if(el&&el.scrollIntoView)el.scrollIntoView({behavior:'smooth',block:'start'});}
+function showScreen(id){var el=document.getElementById(id);if(id==='profile'){renderProfiles();updateProfileVisibility();}if(id==='messages')renderMessagesList();if(id==='trips'){renderTrips();renderMeetup();}if(id==='map'){try{initHKMap();var mm=null;try{mm=document.getElementById('hkMap');}catch(e){}if(mm&&window.L&&_map){setTimeout(function(){try{_map.invalidateSize();}catch(e){}},120);}renderMapPins();}catch(e){}}if(el&&el.scrollIntoView)el.scrollIntoView({behavior:'smooth',block:'start'});}
 function hideGroup(prefix){for(var i=1;i<=17;i++){var e=document.getElementById(prefix+i);if(e)e.classList.add('hidden');}}
 
 function getChips(containerId){
@@ -2016,12 +2017,170 @@ function alphabetisePickers(){
     });
   }catch(e){}
 }
+// ---- Interest-Anchored Map Sidequests (Leaflet, Hong Kong) ----
+var MAP_CATS=[{id:'All',emoji:'🗺️'},{id:'Sports',emoji:'⚽'},{id:'Food',emoji:'🥟'},{id:'Photo',emoji:'📸'},{id:'Nightlife',emoji:'🍷'},{id:'Vintage',emoji:'🛍️'}];
+var MAP_DISTRICT_LATLNG={'Central / Soho':[22.2819,114.1577],'Lan Kwai Fong':[22.2810,114.1550],'Tsim Sha Tsui':[22.2980,114.1722],'Mong Kok':[22.3193,114.1694]};
+var MAP_FILTER='All';
+var _map=null,_mapLayer=null,_openPinId=null;
+var _hookDraft={interest:'Sports',district:'Central / Soho'};
+function defaultMapPins(){
+  return [
+    {id:'seed-sports',kind:'user',interest:'Sports',role:'traveller',name:'Sam',district:'Central / Soho',lat:22.2750,lng:114.1750,location:'Morrison Hill Hardcourt Pitch',hook:'2v2 street match — non-dominant foot only',bio:'Visiting hooper here for one night. Bring your worst foot and your best banter.',tags:['Football'],ts:Date.now()-86400000},
+    {id:'seed-food',kind:'user',interest:'Food',role:'local',name:'Mei',district:'Central / Soho',lat:22.2820,lng:114.1580,location:'Central Dai Pai Dong Row',hook:'Order everything in Cantonese — no pointing allowed',bio:'Soho local. I eat where the aunties eat and I know every wok hei corner.',tags:['Street Food','Cooking'],ts:Date.now()-80000000},
+    {id:'seed-photo',kind:'user',interest:'Photo',role:'traveller',name:'Jonas',district:'Central / Soho',lat:22.2815,lng:114.1535,location:'Soho Stairwell, Dusk',hook:'B&W stranger portraits, Wong Kar-wai edition',bio:'Film shooter chasing neon and rain. Happy to trade portraits.',tags:['Photography'],ts:Date.now()-70000000},
+    {id:'seed-night',kind:'user',interest:'Nightlife',role:'local',name:'Kim',district:'Lan Kwai Fong',lat:22.2810,lng:114.1550,location:'LKF Back Alley Entry',hook:'Hidden club crawl — find the door with no sign',bio:'LKF regular. I know which doors matter and which queues to skip.',tags:['Music'],ts:Date.now()-60000000},
+    {id:'seed-vintage',kind:'user',interest:'Vintage',role:'local',name:'Yuki',district:'Mong Kok',lat:22.3010,lng:114.1690,location:'Temple Street Night Market',hook:'Haggle a full fit in Cantonese under HK$150',bio:'Thrift gremlin. Temple Street is my second home.',tags:['Thrift shopping'],ts:Date.now()-50000000}
+  ];
+}
+function mapCatEmoji(cat){for(var i=0;i<MAP_CATS.length;i++)if(MAP_CATS[i].id===cat)return MAP_CATS[i].emoji;return '📍';}
+function districtCoords(d){return MAP_DISTRICT_LATLNG[d]||[22.3000,114.1690];}
+function jitterFor(id){var h=0;try{for(var i=0;i<id.length;i++)h=(h*31+id.charCodeAt(i))%1000;}catch(e){}return [(h%7-3)*0.0011,((h>>3)%7-3)*0.0011];}
+function guideCategory(g){
+  try{
+    var pool=((g.interests||[]).concat(g.offerTags||[]).concat([g.offer||''])).join(' ').toLowerCase();
+    if(/salsa|music|nightlife|bar|loungeben|club/.test(pool))return 'Nightlife';
+    if(/street food|foodie|cook|dai pai|snack|dining|restaurant/.test(pool))return 'Food';
+    if(/photo|museum|art|architect|sunset|neon|gallery/.test(pool))return 'Photo';
+    if(/thrift|vintage|market|shop|haggle/.test(pool))return 'Vintage';
+    return 'Sports';
+  }catch(e){return 'Sports';}
+}
+function allMapPins(){
+  var pins=[];
+  try{pins=(ETIE.mapPins||[]).slice();}catch(e){}
+  try{
+    var live=liveLocals()||[];
+    live.forEach(function(g,i){
+      pins.push({id:'guide:'+g.id,kind:'guide',guideId:g.id,interest:guideCategory(g),role:'local',name:g.name||'Guide',district:(typeof sqDistrictFor==='function'?sqDistrictFor(g):(g.city||'Central / Soho')),lat:null,lng:null,location:(g.city||'Hong Kong'),hook:g.offer||'Open sidequest — pitch me your challenge',bio:'HK local guide'+(g.age?(' · '+g.age):'')+' · '+(g.tier||'Rookie'),tags:(g.interests||[]).slice(0,4),ts:0,idx:i});
+    });
+  }catch(e){}
+  return pins;
+}
+function pinLatLng(p){
+  try{
+    if(p.lat!=null&&p.lng!=null)return [p.lat,p.lng];
+    var c=districtCoords(p.district||'Central / Soho');
+    var j=jitterFor(p.id||'x');
+    return [c[0]+j[0],c[1]+j[1]];
+  }catch(e){return [22.3000,114.1690];}
+}
+function visibleMapPins(){
+  var all=allMapPins();
+  if(MAP_FILTER!=='All')all=all.filter(function(p){return p.interest===MAP_FILTER;});
+  return all;
+}
+function initHKMap(){
+  try{
+    if(_map||!window.L)return;
+    var el=document.getElementById('hkMap');if(!el)return;
+    _map=L.map('hkMap',{zoomControl:true}).setView([22.3000,114.1690],12);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{attribution:'© OpenStreetMap · © CARTO',maxZoom:19}).addTo(_map);
+    renderMapFilter();renderMapPins();
+  }catch(e){}
+}
+function renderMapFilter(){
+  try{
+    var bar=document.getElementById('mapFilterBar');if(!bar)return;
+    bar.innerHTML='';
+    MAP_CATS.forEach(function(c){
+      var b=document.createElement('button');b.className='chip'+(MAP_FILTER===c.id?' active':'');b.textContent=c.emoji+' '+c.id;b.style.padding='8px 12px';
+      b.onclick=(function(id){return function(){setMapFilter(id);};})(c.id);
+      bar.appendChild(b);
+    });
+  }catch(e){}
+}
+function setMapFilter(cat){MAP_FILTER=cat;renderMapFilter();renderMapPins();}
+function renderMapPins(){
+  try{
+    if(!window.L||!document.getElementById('hkMap'))return;
+    initHKMap();if(!_map)return;
+    if(_mapLayer){try{_map.removeLayer(_mapLayer);}catch(e){}}
+    _mapLayer=L.layerGroup().addTo(_map);
+    var pins=visibleMapPins();
+    pins.forEach(function(p){
+      try{
+        var ll=pinLatLng(p);
+        var icon=L.divIcon({className:'',html:'<div class="sq-pin sq-pin-'+p.interest.toLowerCase()+'">'+mapCatEmoji(p.interest)+'</div>',iconSize:[36,36],iconAnchor:[18,18]});
+        var mk=L.marker(ll,{icon:icon,title:(p.name||'Sidequest')+' · '+p.interest});
+        mk.on('click',(function(id){return function(){openPinDetail(id);};})(p.id));
+        _mapLayer.addLayer(mk);
+      }catch(e){}
+    });
+    var c=document.getElementById('mapPinCount');if(c)c.textContent=pins.length+' pin'+(pins.length===1?'':'s')+' live in HK';
+  }catch(e){}
+}
+function selectHookInterest(el,v){try{var c=document.getElementById('hookInterestPills');if(c)Array.prototype.forEach.call(c.querySelectorAll('.chip'),function(x){x.classList.remove('active');});el.classList.add('active');_hookDraft.interest=v;}catch(e){}}
+function selectHookDistrict(el,v){try{var c=document.getElementById('hookDistrictPills');if(c)Array.prototype.forEach.call(c.querySelectorAll('.chip'),function(x){x.classList.remove('active');});el.classList.add('active');_hookDraft.district=v;}catch(e){}}
+function openDropHook(){
+  try{
+    _hookDraft={interest:'Sports',district:(ETIE.trip&&ETIE.trip.district)||'Central / Soho'};
+    var o=document.getElementById('dropHookModal');if(o)o.classList.remove('hidden');
+    var li=document.getElementById('hookLocation');if(li)li.value='';
+    var tw=document.getElementById('hookTwist');if(tw)tw.value='';
+    var bio=document.getElementById('hookBio');if(bio)bio.value='';
+  }catch(e){}
+}
+function closeDropHook(){try{var o=document.getElementById('dropHookModal');if(o)o.classList.add('hidden');}catch(e){}}
+function saveDropHook(){
+  try{
+    var loc=(document.getElementById('hookLocation')||{}).value||'';
+    var twist=(document.getElementById('hookTwist')||{}).value||'';
+    var bio=(document.getElementById('hookBio')||{}).value||'';
+    loc=loc.trim();twist=twist.trim();bio=bio.trim();
+    if(!loc){toast('Name the pin location first.');return;}
+    if(!twist){toast('Add the 1-sentence twist.');return;}
+    var isLocal=false;try{isLocal=ETIE.activeRole==='local';}catch(e){}
+    var nm='You';try{nm=isLocal?(ETIE.local.displayName||'You'):(ETIE.traveller.nickname||'You');}catch(e){}
+    var c=districtCoords(_hookDraft.district);
+    if(!ETIE.mapPins)ETIE.mapPins=[];
+    ETIE.mapPins.push({id:'pin-'+Date.now(),kind:'user',interest:_hookDraft.interest,role:isLocal?'local':'traveller',name:nm,district:_hookDraft.district,lat:c[0]+(Math.random()-0.5)*0.004,lng:c[1]+(Math.random()-0.5)*0.004,location:loc,hook:twist,bio:bio||'No bio yet — ask me anything.',tags:[_hookDraft.interest],ts:Date.now()});
+    saveState();closeDropHook();renderMapPins();toast('Hook dropped on the map.');
+  }catch(e){toast('Could not drop pin.');}
+}
+function findPin(id){var all=allMapPins();for(var i=0;i<all.length;i++)if(all[i].id===id)return all[i];return null;}
+function openPinDetail(id){
+  try{
+    var p=findPin(id);if(!p){toast('Pin not found.');return;}
+    _openPinId=id;
+    var roleBadge=p.role==='local'?'🇭🇰 Local':'✈️ Traveller';
+    var t=document.getElementById('pinDetailTitle');if(t)t.textContent=(p.location||'Sidequest');
+    var bdg=document.getElementById('pinDetailBadge');if(bdg)bdg.textContent=mapCatEmoji(p.interest)+' '+p.interest+' · '+roleBadge+' · '+(p.name||'');
+    var hk=document.getElementById('pinDetailHook');if(hk)hk.textContent=(p.district?('📍 '+p.district+' — '):'')+(p.hook||'');
+    var bio=document.getElementById('pinDetailBio');if(bio)bio.textContent=(p.name?p.name+': ':'')+(p.bio||'');
+    var sh=document.getElementById('pinDetailShared');if(sh){
+      sh.innerHTML='';
+      var mine=[];try{mine=ETIE.traveller.interests||[];}catch(e){}
+      var overlap=(p.tags||[]).filter(function(t){return mine.indexOf(t)!==-1;});
+      var show=overlap.length?overlap:(p.tags||[]).slice(0,3);
+      if(!show.length){var s=document.createElement('span');s.className='muted small';s.textContent='No overlap yet — still say hi.';sh.appendChild(s);}
+      show.forEach(function(t){var s=document.createElement('span');s.className='chip'+(overlap.length?' active':'');s.textContent=t;sh.appendChild(s);});
+    }
+    var acc=document.getElementById('pinDetailAccept');if(acc)acc.style.display=p.guideId?'':'none';
+    var del=document.getElementById('pinDetailDelete');if(del)del.style.display=(!p.guideId&&p.kind==='user')?'':'none';
+    var o=document.getElementById('pinDetailModal');if(o)o.classList.remove('hidden');
+  }catch(e){}
+}
+function closePinDetail(){try{_openPinId=null;var o=document.getElementById('pinDetailModal');if(o)o.classList.add('hidden');}catch(e){}}
+function acceptPinSidequest(){
+  try{
+    var p=findPin(_openPinId);if(!p||!p.guideId){toast('No guide attached.');return;}
+    closePinDetail();focusMatch(p.guideId);travNext(11);
+  }catch(e){}
+}
+function deletePinSidequest(){
+  try{
+    if(!_openPinId)return;
+    ETIE.mapPins=(ETIE.mapPins||[]).filter(function(p){return p.id!==_openPinId;});
+    saveState();closePinDetail();renderMapPins();toast('Pin deleted.');
+  }catch(e){}
+}
 document.addEventListener('DOMContentLoaded',function(){
   alphabetisePickers();
   buildCountrySelects();
   restoreAll();
   restoreDevBar();
   try{ renderSQFilterBar(); }catch(e){}
+  try{ initHKMap(); renderMapFilter(); renderMapPins(); }catch(e){}
   try{
     var r=new URLSearchParams(window.location.search).get('role');
     if(r==='traveller'||r==='local') setRole(r);

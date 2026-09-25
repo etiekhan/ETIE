@@ -145,8 +145,9 @@ body.no-role #discover,body.no-role #trips,body.no-role #messages,body.no-role #
 /* Landing is entry cards only — keep banner + intro, hide flow switcher + duplicate gate */
 body.no-role #roleGate,body.no-role #roleSwitch{display:none}
 body.no-role #devBar{display:none}
-/* Fixed prototype bar pinned to bottom */
-#devBar{position:fixed;bottom:0;left:0;right:0;z-index:9999;display:flex;align-items:center;gap:.75rem;padding:12px;background:rgba(15,15,15,0.95);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-top:1px solid rgba(255,255,255,.08);box-shadow:0 -8px 24px rgba(0,0,0,.4)}
+/* Fixed prototype bar pinned to bottom — non-blocking */
+#devBar{position:fixed;bottom:0;left:0;right:0;z-index:9999;display:flex;align-items:center;gap:.75rem;padding:12px 12px calc(12px + env(safe-area-inset-bottom));background:rgba(15,15,15,0.95);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-top:1px solid rgba(255,255,255,.08);box-shadow:0 -8px 24px rgba(0,0,0,.4);pointer-events:none}
+#devBar > *{pointer-events:auto}
 #devBarToggle{background:transparent;border:0;color:rgba(255,255,255,.75);font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;padding:4px 0;white-space:nowrap}
 #devBar .flowbar{background:transparent!important;border:0!important;border-radius:0;padding:0;display:flex;gap:8px;overflow:auto;box-shadow:none;flex:1}
 #devBar .flow-step{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.16)}

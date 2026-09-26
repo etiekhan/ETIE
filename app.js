@@ -2046,7 +2046,7 @@ function alphabetisePickers(){
 // ---- Friend in Every City — map-first hooks (Leaflet, Hong Kong) ----
 // Pins render ONLY from live hooks: Supabase etie_pins (origin 'cloud') + local testing state.
 // No seed/demo/guide-presence pins. Empty map shows the first-pin banner.
-var MAP_CATS=[{id:'All',emoji:'🗺️'},{id:'Food',emoji:'🥟'},{id:'Nightlife',emoji:'🍺'},{id:'Photo',emoji:'📸'},{id:'Sports',emoji:'⚽'},{id:'Cafe',emoji:'☕'}];
+var MAP_CATS=[{id:'All',emoji:'🗺️'},{id:'Food',emoji:'🥟'},{id:'Nightlife',emoji:'🍺'},{id:'Photo',label:'Photo Walk',emoji:'📸'},{id:'Sports',emoji:'⚽'},{id:'Cafe',emoji:'☕'}];
 var MAP_ROLES=[{id:'All',label:'All Roles'},{id:'traveller',label:'✈️ Travellers Only'},{id:'local',label:'🇭🇰 HK Locals Only'}];
 var MAP_DISTRICT_LATLNG={'Central / Soho':[22.2819,114.1577],'Lan Kwai Fong':[22.2810,114.1550],'Sheung Wan':[22.2867,114.1520],'Tsim Sha Tsui':[22.2980,114.1722],'Mong Kok':[22.3193,114.1694],'Sham Shui Po':[22.3307,114.1625]};
 var HK_CENTER=[22.2819,114.1581],HK_ZOOM=13;
@@ -2111,7 +2111,7 @@ function initHKMap(){
     if(_map||!window.L)return;
     var el=document.getElementById('hkMap');if(!el)return;
     _map=L.map('hkMap',{zoomControl:true}).setView(HK_CENTER,HK_ZOOM);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19,subdomains:'abcd',attribution:'© OpenStreetMap © CARTO'}).addTo(_map);
+    L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png',{maxZoom:20,attribution:'&copy; <a href="https://stadiamaps.com/">Stadia Maps</a> &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}).addTo(_map);
     _map.on('click',onMapTap);
     renderMapFilter();renderMapPins();
   }catch(e){}
@@ -2131,7 +2131,7 @@ function renderMapFilter(){
     var bar=document.getElementById('mapFilterBar');if(!bar)return;
     bar.innerHTML='';
     MAP_CATS.forEach(function(c){
-      var b=document.createElement('button');b.className='chip'+(MAP_FILTER===c.id?' active':'');b.textContent=c.emoji+' '+c.id;b.style.padding='8px 12px';
+      var b=document.createElement('button');b.className='chip'+(MAP_FILTER===c.id?' active':'');b.textContent=c.emoji+' '+(c.label||c.id);b.style.padding='8px 12px';
       b.onclick=(function(id){return function(){setMapFilter(id);};})(c.id);
       bar.appendChild(b);
     });

@@ -763,7 +763,7 @@
   }
   // ---- Hook group chat: etie_hook_messages (run supabase-schema-hook-chat.sql once) ----
   var hookChatChannels={};
-  function hookMsgTable(){return 'etie_hook_messages';}
+  function hookMsgTable(){return 'messages';}
   function pushHookMessage(pin,msg){
     try{
       if(!client||!session||!pin||!msg||!msg.text)return; // logged-out chat stays local-only

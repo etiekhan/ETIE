@@ -76,6 +76,16 @@
       });
     }catch(e){paint('offline','Cloud: offline');}
   }
+  function signInWithGoogle(){
+    try{
+      if(!client){toast('Add Supabase keys first (supabase-config.js).');return;}
+      var redirect=window.location.origin + window.location.pathname;
+      client.auth.signInWithOAuth({provider:'google',options:{redirectTo:redirect}}).then(function(r){
+        if(r&&r.error){toast('Google sign-in error: '+r.error.message);return;}
+        // browser now redirects to Google; callback lands back here (?code=) and handleAuthCallback finishes it
+      }).catch(function(err){toast('Google sign-in failed: '+((err&&err.message)||'try again'));});
+    }catch(e){toast('Google sign-in unavailable.');}
+  }
   function handleAuthCallback(){
     // Magic-link landing (?code=… or ?error=…): exchange explicitly so failures are visible, not silent.
     var q;
@@ -734,7 +744,7 @@
   }
   // ---- Expose ----
   window.EtieCloud={
-    init:init, signIn:signIn, signOut:signOut,
+    init:init, signIn:signIn, signInWithGoogle:signInWithGoogle, signOut:signOut,
     push:push, pull:pull, status:status,
     pullPins:pullPins, pushPin:pushPin, deletePin:deletePin,
     syncProfile:syncProfile, pushSharedRequest:pushSharedRequest, pushSharedMessage:pushSharedMessage, pushSharedMeetup:pushSharedMeetup,

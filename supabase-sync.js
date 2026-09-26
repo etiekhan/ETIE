@@ -48,6 +48,8 @@
         else paint('offline','Cloud: offline — sign in');
         try{ if(typeof updateAdminVisibility==='function')updateAdminVisibility(); }catch(e){}
         try{ if(typeof updateAuthHeader==='function')updateAuthHeader(); if(typeof renderHeaderProfile==='function')renderHeaderProfile(); }catch(e){}
+        // safety net: session can land a beat after first paint — re-sync header once settled
+        setTimeout(function(){try{ if(typeof updateAuthHeader==='function')updateAuthHeader(); if(typeof renderHeaderProfile==='function')renderHeaderProfile(); }catch(e){}},800);
       }).catch(function(){paint('offline','Cloud: offline');});
       client.auth.onAuthStateChange(function(ev,s){
         session=s;
@@ -59,6 +61,7 @@
         else paint('offline','Cloud: offline — sign in');
         try{ if(typeof updateAdminVisibility==='function')updateAdminVisibility(); }catch(e){}
         try{ if(typeof updateAuthHeader==='function')updateAuthHeader(); if(typeof renderHeaderProfile==='function')renderHeaderProfile(); }catch(e){}
+        setTimeout(function(){try{ if(typeof updateAuthHeader==='function')updateAuthHeader(); if(typeof renderHeaderProfile==='function')renderHeaderProfile(); }catch(e){}},800);
       });
     }catch(e){paint('offline','Cloud: offline');}
   }

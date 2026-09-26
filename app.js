@@ -2401,6 +2401,11 @@ document.addEventListener('DOMContentLoaded',function(){
   var ae=document.getElementById('authEmail');if(ae)ae.addEventListener('keydown',function(e){if(e.key==='Enter'){try{window.EtieCloud.signIn();}catch(_){}}});
   document.addEventListener('keydown',function(e){if(e.key==='Escape'){try{closeChatPopup();}catch(e2){}try{closeAdmin();}catch(e3){}try{closeAvatarMenu();}catch(e4){}}});
   document.addEventListener('click',function(e){try{var m=document.getElementById('avatarMenu');if(m&&e.target&&!m.contains(e.target))closeAvatarMenu();}catch(err){}});
+  // re-sync header whenever the tab regains focus (session may have landed elsewhere)
+  try{
+    document.addEventListener('visibilitychange',function(){if(!document.hidden){try{updateAuthHeader();renderHeaderProfile();}catch(e){}}});
+    window.addEventListener('focus',function(){try{updateAuthHeader();renderHeaderProfile();}catch(e){}});
+  }catch(e){}
   // Subscribe to reviews/reports when cloud is on
   setTimeout(function(){
     if(window.EtieCloud && window.EtieCloud.subscribeReviews) window.EtieCloud.subscribeReviews();

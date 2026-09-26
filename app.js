@@ -107,7 +107,20 @@ function loadState() {
     if(!s.meetups)s.meetups={};
     if(!s.reviews)s.reviews={};
     if(!s.reports)s.reports=[];
-    if(s.mapPins==null)s.mapPins=defaultMapPins();
+    if(s.mapPins==null)s.mapPins=[];
+    // v4 map-first: purge all legacy seed/demo/guide pins — live hooks only
+    if(!s._pinsV4){
+      try{
+        s.mapPins=(s.mapPins||[]).filter(function(p){
+          if(!p||!p.id)return false;
+          if(p.id.indexOf('seed-')===0)return false;
+          if(p.kind==='guide')return false;
+          return true;
+        });
+      }catch(e){ s.mapPins=[]; }
+      s._pinsV4=true;
+      try{ localStorage.setItem(ETIE_KEY, JSON.stringify(s)); }catch(e){}
+    }
     // one-time clean-defaults migration: wipe demo pre-fills for fresh traveller flow (only start date = today)
     if(!s._cleanDefaultsV1){
       var hasRealActivity = s.requests && Object.keys(s.requests).length>0;
@@ -2014,66 +2027,89 @@ function alphabetisePickers(){
     });
   }catch(e){}
 }
-// ---- Interest-Anchored Map Sidequests (Leaflet, Hong Kong) ----
-var MAP_CATS=[{id:'All',emoji:'🗺️'},{id:'Sports',emoji:'⚽'},{id:'Food',emoji:'🥟'},{id:'Photo',emoji:'📸'},{id:'Nightlife',emoji:'🍷'},{id:'Vintage',emoji:'🛍️'}];
-var MAP_DISTRICT_LATLNG={'Central / Soho':[22.2819,114.1577],'Lan Kwai Fong':[22.2810,114.1550],'Tsim Sha Tsui':[22.2980,114.1722],'Mong Kok':[22.3193,114.1694]};
-var MAP_FILTER='All';
+// ---- Friend in Every City — map-first hooks (Leaflet, Hong Kong) ----
+// Pins render ONLY from live hooks: Supabase etie_pins (origin 'cloud') + local testing state.
+// No seed/demo/guide-presence pins. Empty map shows the first-pin banner.
+var MAP_CATS=[{id:'All',emoji:'🗺️'},{id:'Food',emoji:'🥟'},{id:'Nightlife',emoji:'🍺'},{id:'Photo',emoji:'📸'},{id:'Sports',emoji:'⚽'},{id:'Cafe',emoji:'☕'}];
+var MAP_ROLES=[{id:'All',label:'All Roles'},{id:'traveller',label:'✈️ Travellers Only'},{id:'local',label:'🇭🇰 HK Locals Only'}];
+var MAP_DISTRICT_LATLNG={'Central / Soho':[22.2819,114.1577],'Lan Kwai Fong':[22.2810,114.1550],'Sheung Wan':[22.2867,114.1520],'Tsim Sha Tsui':[22.2980,114.1722],'Mong Kok':[22.3193,114.1694],'Sham Shui Po':[22.3307,114.1625]};
+var HK_CENTER=[22.2819,114.1581],HK_ZOOM=13;
+var MAP_FILTER='All',MAP_ROLE='All';
 var _map=null,_mapLayer=null,_openPinId=null;
-var _hookDraft={interest:'Sports',district:'Central / Soho'};
-function defaultMapPins(){
-  return [
-    {id:'seed-sports',kind:'user',interest:'Sports',role:'traveller',name:'Sam',district:'Central / Soho',lat:22.2750,lng:114.1750,location:'Morrison Hill Hardcourt Pitch',hook:'2v2 street match — non-dominant foot only',bio:'Visiting hooper here for one night. Bring your worst foot and your best banter.',tags:['Football'],ts:Date.now()-86400000},
-    {id:'seed-food',kind:'user',interest:'Food',role:'local',name:'Mei',district:'Central / Soho',lat:22.2820,lng:114.1580,location:'Central Dai Pai Dong Row',hook:'Order everything in Cantonese — no pointing allowed',bio:'Soho local. I eat where the aunties eat and I know every wok hei corner.',tags:['Street Food','Cooking'],ts:Date.now()-80000000},
-    {id:'seed-photo',kind:'user',interest:'Photo',role:'traveller',name:'Jonas',district:'Central / Soho',lat:22.2815,lng:114.1535,location:'Soho Stairwell, Dusk',hook:'B&W stranger portraits, Wong Kar-wai edition',bio:'Film shooter chasing neon and rain. Happy to trade portraits.',tags:['Photography'],ts:Date.now()-70000000},
-    {id:'seed-night',kind:'user',interest:'Nightlife',role:'local',name:'Kim',district:'Lan Kwai Fong',lat:22.2810,lng:114.1550,location:'LKF Back Alley Entry',hook:'Hidden club crawl — find the door with no sign',bio:'LKF regular. I know which doors matter and which queues to skip.',tags:['Music'],ts:Date.now()-60000000},
-    {id:'seed-vintage',kind:'user',interest:'Vintage',role:'local',name:'Yuki',district:'Mong Kok',lat:22.3010,lng:114.1690,location:'Temple Street Night Market',hook:'Haggle a full fit in Cantonese under HK$150',bio:'Thrift gremlin. Temple Street is my second home.',tags:['Thrift shopping'],ts:Date.now()-50000000}
-  ];
-}
+var _dropPoint=null; // {lat,lng} set by tapping the map
+var _dropMarker=null;
+var _hookDraft={category:'Food',role:'traveller'};
 function mapCatEmoji(cat){for(var i=0;i<MAP_CATS.length;i++)if(MAP_CATS[i].id===cat)return MAP_CATS[i].emoji;return '📍';}
-function districtCoords(d){return MAP_DISTRICT_LATLNG[d]||[22.3000,114.1690];}
-function jitterFor(id){var h=0;try{for(var i=0;i<id.length;i++)h=(h*31+id.charCodeAt(i))%1000;}catch(e){}return [(h%7-3)*0.0011,((h>>3)%7-3)*0.0011];}
-function guideCategory(g){
+function nearestDistrictLabel(lat,lng){
+  var best='Central / Soho',bd=1e9;
   try{
-    var pool=((g.interests||[]).concat(g.offerTags||[]).concat([g.offer||''])).join(' ').toLowerCase();
-    if(/salsa|music|nightlife|bar|loungeben|club/.test(pool))return 'Nightlife';
-    if(/street food|foodie|cook|dai pai|snack|dining|restaurant/.test(pool))return 'Food';
-    if(/photo|museum|art|architect|sunset|neon|gallery/.test(pool))return 'Photo';
-    if(/thrift|vintage|market|shop|haggle/.test(pool))return 'Vintage';
-    return 'Sports';
-  }catch(e){return 'Sports';}
+    for(var k in MAP_DISTRICT_LATLNG){
+      var c=MAP_DISTRICT_LATLNG[k];
+      var d=(c[0]-lat)*(c[0]-lat)+(c[1]-lng)*(c[1]-lng);
+      if(d<bd){bd=d;best=k;}
+    }
+  }catch(e){}
+  return best;
+}
+function hookNick(){try{return ETIE.traveller.nickname||ETIE.local.displayName||'You';}catch(e){return 'You';}}
+function hookVerified(){try{return ((ETIE.traveller.verificationMethods||[]).length+(ETIE.local.verificationMethods||[]).length)>0;}catch(e){return false;}}
+function normHookPin(p){
+  // normalize legacy user pins into the hook shape; drop anything without real coords
+  if(!p||p.lat==null||p.lng==null)return null;
+  var cat=p.category||p.interest||'Food';
+  var known=['Food','Nightlife','Photo','Sports','Cafe'];
+  if(known.indexOf(cat)===-1)cat='Food';
+  var role=(p.role==='local')?'local':'traveller';
+  return {
+    id:String(p.id),kind:'hook',category:cat,role:role,
+    name:p.name||'Someone',verified:!!p.verified,
+    location:p.location||nearestDistrictLabel(p.lat,p.lng),
+    lat:p.lat,lng:p.lng,hook:String(p.hook||'').slice(0,140),
+    members:p.members||[{nick:(p.name||'Someone'),role:role,verified:!!p.verified}],
+    pending:p.pending||[],status:p.status||'open',
+    ts:p.ts||Date.now(),origin:p.origin||'local',cloudId:p.cloudId||null
+  };
 }
 function allMapPins(){
-  var pins=[];
-  try{pins=(ETIE.mapPins||[]).slice();}catch(e){}
+  var out=[];
   try{
-    var live=liveLocals()||[];
-    live.forEach(function(g,i){
-      pins.push({id:'guide:'+g.id,kind:'guide',guideId:g.id,interest:guideCategory(g),role:'local',name:g.name||'Guide',district:(typeof sqDistrictFor==='function'?sqDistrictFor(g):(g.city||'Central / Soho')),lat:null,lng:null,location:(g.city||'Hong Kong'),hook:g.offer||'Open sidequest — pitch me your challenge',bio:'HK local guide'+(g.age?(' · '+g.age):'')+' · '+(g.tier||'Rookie'),tags:(g.interests||[]).slice(0,4),ts:0,idx:i});
+    (ETIE.mapPins||[]).forEach(function(p){
+      if(!p||!p.id)return;
+      if(String(p.id).indexOf('seed-')===0)return;
+      if(p.kind==='guide')return;
+      var n=normHookPin(p);
+      if(n)out.push(n);
     });
   }catch(e){}
-  return pins;
+  return out;
 }
-function pinLatLng(p){
-  try{
-    if(p.lat!=null&&p.lng!=null)return [p.lat,p.lng];
-    var c=districtCoords(p.district||'Central / Soho');
-    var j=jitterFor(p.id||'x');
-    return [c[0]+j[0],c[1]+j[1]];
-  }catch(e){return [22.3000,114.1690];}
-}
+function pinLatLng(p){return [p.lat,p.lng];}
 function visibleMapPins(){
   var all=allMapPins();
-  if(MAP_FILTER!=='All')all=all.filter(function(p){return p.interest===MAP_FILTER;});
+  if(MAP_FILTER!=='All')all=all.filter(function(p){return p.category===MAP_FILTER;});
+  if(MAP_ROLE!=='All')all=all.filter(function(p){return p.role===MAP_ROLE;});
   return all;
 }
 function initHKMap(){
   try{
     if(_map||!window.L)return;
     var el=document.getElementById('hkMap');if(!el)return;
-    _map=L.map('hkMap',{zoomControl:true}).setView([22.3000,114.1690],12);
+    _map=L.map('hkMap',{zoomControl:true}).setView(HK_CENTER,HK_ZOOM);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{attribution:'© OpenStreetMap · © CARTO',maxZoom:19}).addTo(_map);
+    _map.on('click',onMapTap);
     renderMapFilter();renderMapPins();
   }catch(e){}
+}
+function onMapTap(e){
+  try{
+    _dropPoint={lat:e.latlng.lat,lng:e.latlng.lng};
+    if(_dropMarker){try{_map.removeLayer(_dropMarker);}catch(_){}}
+    _dropMarker=L.marker([_dropPoint.lat,_dropPoint.lng],{title:'Your pin location'}).addTo(_map);
+    var guess='Near '+nearestDistrictLabel(_dropPoint.lat,_dropPoint.lng);
+    var li=document.getElementById('hookLocation');
+    if(li&&!document.getElementById('dropHookModal').classList.contains('hidden')){li.value=guess;li.focus();}
+    else{window._pendingDropGuess=guess;toast('Pin location set — tap + Drop a Hook.');}
+  }catch(err){}
 }
 function renderMapFilter(){
   try{
@@ -2084,9 +2120,19 @@ function renderMapFilter(){
       b.onclick=(function(id){return function(){setMapFilter(id);};})(c.id);
       bar.appendChild(b);
     });
+    var rb=document.getElementById('mapRoleBar');
+    if(rb){
+      rb.innerHTML='';
+      MAP_ROLES.forEach(function(r){
+        var b=document.createElement('button');b.className='chip'+(MAP_ROLE===r.id?' active':'');b.textContent=r.label;b.style.padding='8px 12px';
+        b.onclick=(function(id){return function(){setMapRole(id);};})(r.id);
+        rb.appendChild(b);
+      });
+    }
   }catch(e){}
 }
 function setMapFilter(cat){MAP_FILTER=cat;renderMapFilter();renderMapPins();}
+function setMapRole(role){MAP_ROLE=role;renderMapFilter();renderMapPins();}
 function renderMapPins(){
   try{
     if(!window.L||!document.getElementById('hkMap'))return;
@@ -2097,78 +2143,230 @@ function renderMapPins(){
     pins.forEach(function(p){
       try{
         var ll=pinLatLng(p);
-        var icon=L.divIcon({className:'',html:'<div class="sq-pin sq-pin-'+p.interest.toLowerCase()+'">'+mapCatEmoji(p.interest)+'</div>',iconSize:[36,36],iconAnchor:[18,18]});
-        var mk=L.marker(ll,{icon:icon,title:(p.name||'Sidequest')+' · '+p.interest});
+        var icon=L.divIcon({className:'',html:'<div class="sq-pin sq-pin-'+p.category.toLowerCase()+'">'+mapCatEmoji(p.category)+'</div>',iconSize:[36,36],iconAnchor:[18,18]});
+        var mk=L.marker(ll,{icon:icon,title:(p.name||'Hook')+' · '+p.category});
         mk.on('click',(function(id){return function(){openPinDetail(id);};})(p.id));
         _mapLayer.addLayer(mk);
       }catch(e){}
     });
-    var c=document.getElementById('mapPinCount');if(c)c.textContent=pins.length+' pin'+(pins.length===1?'':'s')+' live in HK';
+    var c=document.getElementById('mapPinCount');
+    if(c)c.textContent=pins.length?pins.length+' hook'+(pins.length===1?'':'s')+' live in HK':'';
+    var eb=document.getElementById('mapEmptyBanner');
+    if(eb)eb.classList.toggle('hidden',pins.length>0);
   }catch(e){}
 }
-function selectHookInterest(el,v){try{var c=document.getElementById('hookInterestPills');if(c)Array.prototype.forEach.call(c.querySelectorAll('.chip'),function(x){x.classList.remove('active');});el.classList.add('active');_hookDraft.interest=v;}catch(e){}}
-function selectHookDistrict(el,v){try{var c=document.getElementById('hookDistrictPills');if(c)Array.prototype.forEach.call(c.querySelectorAll('.chip'),function(x){x.classList.remove('active');});el.classList.add('active');_hookDraft.district=v;}catch(e){}}
+function selectHookCategory(el,v){try{var c=document.getElementById('hookInterestPills');if(c)Array.prototype.forEach.call(c.querySelectorAll('.chip'),function(x){x.classList.remove('active');});if(el)el.classList.add('active');_hookDraft.category=v;}catch(e){_hookDraft.category=v;}}
+function setHookRole(v){
+  try{
+    _hookDraft.role=(v==='local')?'local':'traveller';
+    var t=document.getElementById('hookRoleTrav'),l=document.getElementById('hookRoleLocal');
+    if(t)t.classList.toggle('active',_hookDraft.role==='traveller');
+    if(l)l.classList.toggle('active',_hookDraft.role==='local');
+  }catch(e){}
+}
+function hookCountTick(){
+  try{
+    var t=document.getElementById('hookText');var c=document.getElementById('hookCount');
+    if(t&&c)c.textContent=(t.value||'').length+' / 140';
+  }catch(e){}
+}
 function openDropHook(){
   try{
-    _hookDraft={interest:'Sports',district:(ETIE.trip&&ETIE.trip.district)||'Central / Soho'};
+    var startRole='traveller';
+    try{startRole=(ETIE.activeRole==='local')?'local':'traveller';}catch(e){}
+    _hookDraft={category:'Food',role:startRole};
+    // default coords: last map tap, else live map center
+    if(!_dropPoint){
+      try{if(_map)_dropPoint={lat:_map.getCenter().lat,lng:_map.getCenter().lng};}catch(e){}
+      if(!_dropPoint)_dropPoint={lat:HK_CENTER[0],lng:HK_CENTER[1]};
+    }
     var o=document.getElementById('dropHookModal');if(o)o.classList.remove('hidden');
-    var li=document.getElementById('hookLocation');if(li)li.value='';
-    var tw=document.getElementById('hookTwist');if(tw)tw.value='';
-    var bio=document.getElementById('hookBio');if(bio)bio.value='';
+    var li=document.getElementById('hookLocation');
+    if(li){li.value=window._pendingDropGuess||('Near '+nearestDistrictLabel(_dropPoint.lat,_dropPoint.lng));window._pendingDropGuess=null;}
+    var ht=document.getElementById('hookText');if(ht)ht.value='';
+    hookCountTick();setHookRole(_hookDraft.role);selectHookCategory(null,_hookDraft.category);
+    if(_dropMarker){try{_map.removeLayer(_dropMarker);}catch(e){}_dropMarker=null;}
+    try{_dropMarker=L.marker([_dropPoint.lat,_dropPoint.lng],{title:'Your pin location'}).addTo(_map);}catch(e){}
   }catch(e){}
 }
 function closeDropHook(){try{var o=document.getElementById('dropHookModal');if(o)o.classList.add('hidden');}catch(e){}}
+function persistPinCloud(pin){
+  try{if(window.EtieCloud&&window.EtieCloud.pushPin)window.EtieCloud.pushPin(pin);}catch(e){}
+}
 function saveDropHook(){
   try{
-    var loc=(document.getElementById('hookLocation')||{}).value||'';
-    var twist=(document.getElementById('hookTwist')||{}).value||'';
-    var bio=(document.getElementById('hookBio')||{}).value||'';
-    loc=loc.trim();twist=twist.trim();bio=bio.trim();
+    if(!_dropPoint){toast('Tap the map first to place your pin.');return;}
+    var loc=((document.getElementById('hookLocation')||{}).value||'').trim();
+    var hook=((document.getElementById('hookText')||{}).value||'').trim();
     if(!loc){toast('Name the pin location first.');return;}
-    if(!twist){toast('Add the 1-sentence twist.');return;}
-    var isLocal=false;try{isLocal=ETIE.activeRole==='local';}catch(e){}
-    var nm='You';try{nm=isLocal?(ETIE.local.displayName||'You'):(ETIE.traveller.nickname||'You');}catch(e){}
-    var c=districtCoords(_hookDraft.district);
+    if(!hook){toast('Write your hook first.');return;}
+    if(hook.length>140){toast('Keep the hook under 140 characters.');return;}
+    var nm=hookNick(),vf=hookVerified();
+    var pin={id:'pin-'+Date.now(),kind:'hook',category:_hookDraft.category,role:_hookDraft.role,
+      name:nm,verified:vf,location:loc,lat:_dropPoint.lat,lng:_dropPoint.lng,hook:hook,
+      members:[{nick:nm,role:_hookDraft.role,verified:vf}],pending:[],status:'open',
+      ts:Date.now(),origin:'local',cloudId:null};
     if(!ETIE.mapPins)ETIE.mapPins=[];
-    ETIE.mapPins.push({id:'pin-'+Date.now(),kind:'user',interest:_hookDraft.interest,role:isLocal?'local':'traveller',name:nm,district:_hookDraft.district,lat:c[0]+(Math.random()-0.5)*0.004,lng:c[1]+(Math.random()-0.5)*0.004,location:loc,hook:twist,bio:bio||'No bio yet — ask me anything.',tags:[_hookDraft.interest],ts:Date.now()});
-    saveState();closeDropHook();renderMapPins();toast('Hook dropped on the map.');
+    ETIE.mapPins.push(pin);
+    saveState();persistPinCloud(pin);
+    _dropPoint=null;
+    if(_dropMarker){try{_map.removeLayer(_dropMarker);}catch(e){}_dropMarker=null;}
+    closeDropHook();renderMapPins();toast('Hook dropped — live on the map.');
   }catch(e){toast('Could not drop pin.');}
 }
 function findPin(id){var all=allMapPins();for(var i=0;i<all.length;i++)if(all[i].id===id)return all[i];return null;}
+function storePin(p){
+  // write a normalized pin back into ETIE.mapPins (matched by id or cloudId)
+  try{
+    var arr=ETIE.mapPins||[];
+    for(var i=0;i<arr.length;i++){
+      if(arr[i]&&(arr[i].id===p.id||(p.cloudId&&arr[i].cloudId===p.cloudId))){arr[i]=p;break;}
+    }
+    ETIE.mapPins=arr;saveState();persistPinCloud(p);
+  }catch(e){}
+}
+function groupBadgeText(p){
+  var n=(p.members||[]).length;
+  if(p.status==='trio'||n>=3)return '3 Connected';
+  if(p.status==='pair'||n===2)return '1-on-1 Meetup';
+  return 'Open hook · be the first';
+}
 function openPinDetail(id){
   try{
     var p=findPin(id);if(!p){toast('Pin not found.');return;}
     _openPinId=id;
-    var roleBadge=p.role==='local'?'🇭🇰 Local':'✈️ Traveller';
-    var t=document.getElementById('pinDetailTitle');if(t)t.textContent=(p.location||'Sidequest');
-    var bdg=document.getElementById('pinDetailBadge');if(bdg)bdg.textContent=mapCatEmoji(p.interest)+' '+p.interest+' · '+roleBadge+' · '+(p.name||'');
-    var hk=document.getElementById('pinDetailHook');if(hk)hk.textContent=(p.district?('📍 '+p.district+' — '):'')+(p.hook||'');
-    var bio=document.getElementById('pinDetailBio');if(bio)bio.textContent=(p.name?p.name+': ':'')+(p.bio||'');
-    var sh=document.getElementById('pinDetailShared');if(sh){
-      sh.innerHTML='';
-      var mine=[];try{mine=ETIE.traveller.interests||[];}catch(e){}
-      var overlap=(p.tags||[]).filter(function(t){return mine.indexOf(t)!==-1;});
-      var show=overlap.length?overlap:(p.tags||[]).slice(0,3);
-      if(!show.length){var s=document.createElement('span');s.className='muted small';s.textContent='No overlap yet — still say hi.';sh.appendChild(s);}
-      show.forEach(function(t){var s=document.createElement('span');s.className='chip'+(overlap.length?' active':'');s.textContent=t;sh.appendChild(s);});
+    var me=hookNick();
+    var isMember=(p.members||[]).some(function(m){return m.nick===me;});
+    var isPending=(p.pending||[]).some(function(r){return r.nick===me;});
+    var nn=document.getElementById('pinNick');if(nn)nn.textContent=p.name||'Someone';
+    var vb=document.getElementById('pinVerified');if(vb){vb.textContent=p.verified?'✅ Verified':'';vb.style.display=p.verified?'':'none';}
+    var rb=document.getElementById('pinRoleBadge');if(rb)rb.textContent=p.role==='local'?'🇭🇰 Local':'✈️ Traveller';
+    var lc=document.getElementById('pinLoc');if(lc)lc.textContent=mapCatEmoji(p.category)+' '+(p.location||'Hong Kong');
+    var hk=document.getElementById('pinHook');if(hk)hk.textContent='“'+(p.hook||'')+'”';
+    var gb=document.getElementById('pinGroupBadge');if(gb)gb.textContent=groupBadgeText(p);
+    var mem=document.getElementById('pinMembers');
+    if(mem){mem.innerHTML='';(p.members||[]).forEach(function(m){var s=document.createElement('span');s.className='chip';s.textContent=(m.role==='local'?'🇭🇰 ':'✈️ ')+m.nick;mem.appendChild(s);});}
+    var req=document.getElementById('pinRequestBtn');
+    if(req){
+      req.style.display=(!isMember&&!isPending&&(p.members||[]).length<3)?'':'none';
+      req.textContent=p.status==='pair'?'Request to Join Group':'Request to Connect';
     }
-    var acc=document.getElementById('pinDetailAccept');if(acc)acc.style.display=p.guideId?'':'none';
-    var del=document.getElementById('pinDetailDelete');if(del)del.style.display=(!p.guideId&&p.kind==='user')?'':'none';
-    var o=document.getElementById('pinDetailModal');if(o)o.classList.remove('hidden');
+    var wait=document.getElementById('pinPendingNote');
+    if(wait)wait.style.display=isPending?'':'none';
+    // host controls: author sees incoming requests
+    var hostBox=document.getElementById('pinHostBox');
+    var mine=isMember&&(p.members||[])[0]&&(p.members||[])[0].nick===me;
+    if(hostBox){
+      hostBox.innerHTML='';
+      if(mine&&(p.pending||[]).length){
+        p.pending.forEach(function(r,idx){
+          var row=document.createElement('div');row.style.cssText='display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;';
+          var lab=document.createElement('span');lab.className='small';lab.textContent='✋ '+(r.nick||'Someone')+' wants to join';
+          var ok=document.createElement('button');ok.className='primary';ok.style.padding='8px 12px';ok.textContent='Accept';
+          ok.onclick=(function(i){return function(){acceptHookRequest(i);};})(idx);
+          var no=document.createElement('button');no.className='secondary';no.style.padding='8px 12px';no.textContent='Decline';
+          no.onclick=(function(i){return function(){declineHookRequest(i);};})(idx);
+          row.appendChild(lab);row.appendChild(ok);row.appendChild(no);
+          hostBox.appendChild(row);
+        });
+      }
+    }
+    var del=document.getElementById('pinDeleteBtn');
+    if(del)del.style.display=mine?'':'none';
+    var d=document.getElementById('pinDrawer');if(d)d.classList.remove('hidden');
   }catch(e){}
 }
-function closePinDetail(){try{_openPinId=null;var o=document.getElementById('pinDetailModal');if(o)o.classList.add('hidden');}catch(e){}}
-function acceptPinSidequest(){
+function closePinDetail(){try{_openPinId=null;var d=document.getElementById('pinDrawer');if(d)d.classList.add('hidden');}catch(e){}}
+function acceptPinSidequest(){requestPinConnect();}
+function requestPinConnect(){
   try{
-    var p=findPin(_openPinId);if(!p||!p.guideId){toast('No guide attached.');return;}
-    closePinDetail();focusMatch(p.guideId);travNext(11);
+    var p=findPin(_openPinId);if(!p)return;
+    var me={nick:hookNick(),role:(_hookDraft.role)||'traveller',verified:hookVerified(),ts:Date.now()};
+    try{me.role=(ETIE.activeRole==='local')?'local':'traveller';}catch(e){}
+    if((p.members||[]).some(function(m){return m.nick===me.nick;})){toast('You are already in this hangout.');return;}
+    if((p.pending||[]).some(function(r){return r.nick===me.nick;})){toast('Request already sent — waiting for the group.');return;}
+    if((p.members||[]).length>=3){toast('This group is full (3 max).');return;}
+    p.pending.push({nick:me.nick,role:me.role,verified:me.verified,ts:me.ts,approvals:[]});
+    storePin(p);
+    if(p.status==='pair')openGroupModal(p.id,(p.pending.length-1));
+    else{openPinDetail(p.id);toast('Request sent — the host approves.');}
+  }catch(e){toast('Could not send request.');}
+}
+function acceptHookRequest(idx){
+  try{
+    var p=findPin(_openPinId);if(!p||!p.pending||!p.pending[idx])return;
+    var req=p.pending[idx];
+    if(p.status==='pair'||(p.members||[]).length>=2){
+      // 3rd joiner: needs EVERY existing member to accept → group modal
+      openGroupModal(p.id,idx);return;
+    }
+    p.members.push({nick:req.nick,role:req.role,verified:req.verified});
+    p.pending.splice(idx,1);
+    p.status=(p.members.length>=2)?'pair':'open';
+    storePin(p);openPinDetail(p.id);renderMapPins();
+    toast('Connected — 1-on-1 hangout on.');
+  }catch(e){}
+}
+function declineHookRequest(idx){
+  try{
+    var p=findPin(_openPinId);if(!p||!p.pending||!p.pending[idx])return;
+    p.pending.splice(idx,1);
+    storePin(p);openPinDetail(p.id);renderMapPins();toast('Request declined.');
   }catch(e){}
 }
 function deletePinSidequest(){
   try{
     if(!_openPinId)return;
-    ETIE.mapPins=(ETIE.mapPins||[]).filter(function(p){return p.id!==_openPinId;});
+    var p=findPin(_openPinId);
+    ETIE.mapPins=(ETIE.mapPins||[]).filter(function(x){return x&&x.id!==_openPinId;});
+    try{if(window.EtieCloud&&window.EtieCloud.deletePin&&p)window.EtieCloud.deletePin(p);}catch(e){}
     saveState();closePinDetail();renderMapPins();toast('Pin deleted.');
+  }catch(e){}
+}
+// ---- Mutual Consensus Group Expansion: 3rd joiner needs ALL members to accept ----
+var _groupCtx={pinId:null,reqIdx:0};
+function openGroupModal(pinId,reqIdx){
+  try{
+    var p=findPin(pinId);if(!p||!p.pending||!p.pending[reqIdx])return;
+    _groupCtx={pinId:pinId,reqIdx:reqIdx};
+    var req=p.pending[reqIdx];
+    var who=document.getElementById('groupJoiner');if(who)who.textContent=(req.nick||'Someone')+' wants to join your hangout. Accept & expand group?';
+    renderGroupApprovals();
+    var o=document.getElementById('groupModal');if(o)o.classList.remove('hidden');
+  }catch(e){}
+}
+function closeGroupModal(){try{var o=document.getElementById('groupModal');if(o)o.classList.add('hidden');}catch(e){}}
+function renderGroupApprovals(){
+  try{
+    var p=findPin(_groupCtx.pinId);if(!p)return;
+    var req=p.pending[_groupCtx.reqIdx];if(!req)return;
+    var box=document.getElementById('groupMembers');if(!box)return;
+    box.innerHTML='';
+    (p.members||[]).forEach(function(m){
+      var ok=(req.approvals||[]).indexOf(m.nick)!==-1;
+      var row=document.createElement('div');row.style.cssText='display:flex;gap:8px;align-items:center;margin-top:8px;';
+      var lab=document.createElement('span');lab.className='small';lab.style.flex='1';
+      lab.textContent=(m.role==='local'?'🇭🇰 ':'✈️ ')+m.nick+(ok?' — accepted ✅':'');
+      var b=document.createElement('button');b.className=ok?'secondary':'primary';b.style.padding='8px 12px';b.textContent=ok?'Accepted':'Accept';
+      b.onclick=(function(nick){return function(){approveGroupJoin(nick);};})(m.nick);
+      row.appendChild(lab);row.appendChild(b);box.appendChild(row);
+    });
+  }catch(e){}
+}
+function approveGroupJoin(memberNick){
+  try{
+    var p=findPin(_groupCtx.pinId);if(!p)return;
+    var req=p.pending[_groupCtx.reqIdx];if(!req)return;
+    req.approvals=req.approvals||[];
+    if(req.approvals.indexOf(memberNick)===-1)req.approvals.push(memberNick);
+    var allOk=(p.members||[]).every(function(m){return req.approvals.indexOf(m.nick)!==-1;});
+    if(allOk){
+      p.members.push({nick:req.nick,role:req.role,verified:req.verified});
+      p.pending.splice(_groupCtx.reqIdx,1);
+      p.status='trio';
+      storePin(p);closeGroupModal();renderMapPins();openPinDetail(p.id);
+      toast('Everyone accepted — group expanded to 3.');
+    }else{storePin(p);renderGroupApprovals();toast('Waiting on the other member…');}
   }catch(e){}
 }
 document.addEventListener('DOMContentLoaded',function(){

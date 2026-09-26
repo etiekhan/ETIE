@@ -40,9 +40,10 @@
       if(!k.url||!k.key){paint('off','Cloud: offline demo');return;}
       if(!window.supabase||!window.supabase.createClient){paint('offline','Cloud: offline (CDN blocked)');return;}
       client=window.supabase.createClient(k.url,k.key);
+      try{pullPins();subscribePins();}catch(e){}
       client.auth.getSession().then(function(r){
         session=r&&r.data&&r.data.session?r.data.session:null;
-        if(session){paint('on','Cloud: on');pull();pullShared();subscribeShared();subscribeLiveProfiles();syncProfile();}
+        if(session){paint('on','Cloud: on');pull();pullShared();subscribeShared();subscribeLiveProfiles();syncProfile();try{pullPins();}catch(e){}}
         else paint('offline','Cloud: offline — sign in');
         try{ if(typeof updateAdminVisibility==='function')updateAdminVisibility(); }catch(e){}
         try{ if(typeof updateAuthHeader==='function')updateAuthHeader(); if(typeof renderHeaderProfile==='function')renderHeaderProfile(); }catch(e){}
@@ -53,7 +54,7 @@
         try{ if(reviewChannel){ client.removeChannel(reviewChannel); reviewChannel=null; } }catch(e){}
         try{ if(reportChannel){ client.removeChannel(reportChannel); reportChannel=null; } }catch(e){}
         try{ if(profileLiveChannel){ client.removeChannel(profileLiveChannel); profileLiveChannel=null; } }catch(e){}
-        if(s){paint('on','Cloud: on');pull();pullShared();subscribeShared();subscribeLiveProfiles();syncProfile();}
+        if(s){paint('on','Cloud: on');pull();pullShared();subscribeShared();subscribeLiveProfiles();syncProfile();try{pullPins();subscribePins();}catch(e){}}
         else paint('offline','Cloud: offline — sign in');
         try{ if(typeof updateAdminVisibility==='function')updateAdminVisibility(); }catch(e){}
         try{ if(typeof updateAuthHeader==='function')updateAuthHeader(); if(typeof renderHeaderProfile==='function')renderHeaderProfile(); }catch(e){}
@@ -81,7 +82,7 @@
   }
   function signOut(){
     try{ if(!confirm('Are you sure you want to sign out?')) return; }catch(e){ return; }
-    try{if(client)try{ client.removeChannel(realtimeChannel); client.removeChannel(reviewChannel); client.removeChannel(reportChannel); client.removeChannel(profileLiveChannel); }catch(e){};realtimeChannel=reviewChannel=reportChannel=profileLiveChannel=null; if(client)client.auth.signOut();}catch(e){}
+    try{if(client)try{ client.removeChannel(realtimeChannel); client.removeChannel(reviewChannel); client.removeChannel(reportChannel); client.removeChannel(profileLiveChannel); if(pinChannel)client.removeChannel(pinChannel); }catch(e){};realtimeChannel=reviewChannel=reportChannel=profileLiveChannel=pinChannel=null; if(client)client.auth.signOut();}catch(e){}
     session=null;window.ETIE_LIVE_LOCALS=[];paint('offline','Cloud: offline — sign in');
     // privacy: clear local profile/trips/chats so next user on a public device sees blank (cloud copy stays for next sign-in)
     try{ localStorage.removeItem('etie-v1'); localStorage.removeItem('etie-v1-user-backup'); localStorage.removeItem('etie-v1-backup'); }catch(e){}
@@ -618,10 +619,80 @@
       }).catch(reject);
     });
   }
+  // ---- Map-first hooks: Supabase etie_pins (run supabase-schema-pins.sql once) ----
+  var pinChannel=null, pinPullTimer=null;
+  function pinTable(){return 'etie_pins';}
+  function pinRowToPin(r){
+    try{
+      return {id:String(r.id),kind:'hook',category:r.category||'Food',role:(r.role==='local'?'local':'traveller'),
+        name:r.nickname||'Someone',verified:!!r.verified,location:r.location||'Hong Kong',
+        lat:r.lat,lng:r.lng,hook:String(r.hook||'').slice(0,140),
+        members:r.members||[{nick:r.nickname||'Someone',role:(r.role==='local'?'local':'traveller'),verified:!!r.verified}],
+        pending:r.pending||[],status:r.status||'open',ts:(r.updated_at?new Date(r.updated_at).getTime():Date.now()),
+        origin:'cloud',cloudId:String(r.id)};
+    }catch(e){return null;}
+  }
+  function pinToRow(p){
+    return {id:String(p.cloudId||p.id),user_id:(session&&session.user&&session.user.id)||null,
+      nickname:p.name||'Someone',verified:!!p.verified,role:p.role||'traveller',category:p.category||'Food',
+      location:p.location||'Hong Kong',lat:p.lat,lng:p.lng,hook:String(p.hook||'').slice(0,140),
+      members:p.members||[],pending:p.pending||[],status:p.status||'open',updated_at:new Date().toISOString()};
+  }
+  function pullPins(){
+    try{
+      if(!client)return;
+      client.from(pinTable()).select('*').order('updated_at',{ascending:false}).limit(200).then(function(r){
+        try{
+          if(r&&(r.error||!r.data))return; // table not migrated yet → stay local-only
+          var cloud=(r.data||[]).map(pinRowToPin).filter(Boolean);
+          if(typeof ETIE==='undefined')return;
+          var local=(ETIE.mapPins||[]).filter(function(p){return p&&p.origin!=='cloud';});
+          cloud.forEach(function(c){
+            // local edits win for pins we also hold locally
+            var dup=local.some(function(l){return l&&(l.cloudId===c.cloudId||l.id===c.id);});
+            if(!dup)local.push(c);
+          });
+          ETIE.mapPins=local;
+          try{if(typeof renderMapPins==='function')renderMapPins();}catch(e){}
+        }catch(e){}
+      }).catch(function(){});
+    }catch(e){}
+  }
+  function pushPin(pin){
+    try{
+      if(!client||!session||!pin||pin.lat==null)return; // logged-out pins stay local-only
+      var row=pinToRow(pin);
+      client.from(pinTable()).upsert(row).then(function(r){
+        try{
+          if(r&&!r.error&&typeof ETIE!=='undefined'){
+            (ETIE.mapPins||[]).forEach(function(p){if(p&&(p.id===pin.id))p.cloudId=String(row.id);});
+          }
+        }catch(e){}
+      }).catch(function(){});
+    }catch(e){}
+  }
+  function deletePin(pin){
+    try{
+      if(!client||!session||!pin)return;
+      var id=pin.cloudId||pin.id;
+      client.from(pinTable()).delete().eq('id',String(id)).then(function(){}).catch(function(){});
+    }catch(e){}
+  }
+  function subscribePins(){
+    try{
+      if(!client||pinChannel)return;
+      pinChannel=client.channel('etie-pins-live')
+        .on('postgres_changes',{event:'*',schema:'public',table:pinTable()},function(){
+          try{clearTimeout(pinPullTimer);}catch(e){}
+          pinPullTimer=setTimeout(function(){try{pullPins();}catch(e){}},1200);
+        }).subscribe();
+    }catch(e){}
+  }
   // ---- Expose ----
   window.EtieCloud={
     init:init, signIn:signIn, signOut:signOut,
     push:push, pull:pull, status:status,
+    pullPins:pullPins, pushPin:pushPin, deletePin:deletePin,
     syncProfile:syncProfile, pushSharedRequest:pushSharedRequest, pushSharedMessage:pushSharedMessage, pushSharedMeetup:pushSharedMeetup,
     pushSharedReview:pushSharedReview, pushSharedReport:pushSharedReport,
     uploadPhoto:uploadPhoto,

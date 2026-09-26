@@ -36,11 +36,24 @@
 
 <main class="container">
 <section class="hero" id="home">
-  <div class="eyebrow">Sidequest Feed · Hong Kong 🇭🇰</div>
-  <h1>Step outside your comfort zone.</h1>
-  <p>Etie pairs visitors with HK locals to tackle real-world <strong>micro-challenges</strong> rather than standard itineraries. Every sidequest is a duo mission, not a tour.</p>
+  <div class="eyebrow">ETIE · Hong Kong 🇭🇰</div>
+  <h1>A friend in every city.</h1>
+  <p>Have you ever felt lonely in a foreign country? Wanting more from your travels—a real local touch? What if someone local was seeking you out too? ETIE is your solution.</p>
   <div class="card panel" id="conceptCard" style="margin-top:16px;background:rgba(20,16,28,.75);border:1px solid rgba(255,123,0,0.4);box-shadow:0 0 15px rgba(255,123,0,0.08);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);"><div class="eyebrow" style="color:#ff7b00;font-weight:700;letter-spacing:1px;">WHAT IS A SIDEQUEST?</div><p class="muted" style="color:rgba(255,255,255,.82);margin:6px 0 0;"><strong style="color:#fff;">Shared interest + comfort-zone constraint.</strong> e.g., playing football while attempting 3 new skill moves, or dining by letting the local order mystery dishes blind. You pick the interest, you pick the constraint — your match agrees to do it with you.</p></div>
   <div class="grid2 entry-grid" style="margin-top:16px;"><div class="card panel" id="entryCardTrav"><h3>Travelling?</h3><p class="muted small">Find a local guide who gets you.</p><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="primary" onclick="setRole('traveller')">Initiate Sidequest</button></div></div><div class="card panel" id="entryCardLocal"><h3>Know your city?</h3><p class="muted small">Host travellers and earn trust.</p><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="secondary" onclick="setRole('local')">Accept Sidequest</button></div></div></div>
+</section>
+
+<section class="section map-first" id="map" data-section="map">
+  <div class="map-stack">
+    <div id="mapFilterBar" class="map-filter"></div>
+    <div id="mapRoleBar" class="map-filter"></div>
+    <div class="map-wrap2">
+      <div id="hkMap"></div>
+      <div id="mapEmptyBanner" class="map-empty hidden">No active hooks nearby yet. Be the first to drop a pin in Hong Kong!</div>
+      <button class="fab" onclick="openDropHook()">+ Drop a Hook</button>
+    </div>
+    <div class="map-foot"><span class="muted small" id="mapPinCount"></span><span class="muted small">Tap anywhere on the map to place your pin.</span></div>
+  </div>
 </section>
 
 <section class="section" data-section="home">
@@ -164,7 +177,6 @@
 
 <!-- Supporting product views -->
 <section class="section" id="discover" data-section="discover"><div class="card panel"><div class="eyebrow">Sidequest Feed · Hong Kong</div><h2>Sidequests</h2><p class="muted">Verified HK locals ranked for your vibe, district and dates.</p><p id="discoverTierNote" class="small muted"></p><div id="sqFilterBar" style="display:flex;flex-wrap:wrap;gap:10px;margin:12px 0 14px;"></div><div id="sqFilterNotice" class="muted small" style="display:none;margin-bottom:10px;"></div><div class="grid3" id="discoverGrid"></div></div></section>
-<section class="section" id="map" data-section="map"><div class="card panel"><div class="eyebrow">Sidequest Map · Hong Kong</div><h2>Sidequest Map</h2><p class="muted">Tap a pin for the pact. Drop your own hook anywhere in HK.</p><div id="mapFilterBar" style="display:flex;flex-wrap:wrap;gap:8px;margin:12px 0;"></div><div class="map-wrap"><div id="hkMap"></div></div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;"><button class="primary" onclick="openDropHook()">📍 Drop a Hook</button><span class="muted small" id="mapPinCount" style="align-self:center;"></span></div></div></section>
 <section class="section" id="trips" data-section="trips"><div class="card panel"><div class="eyebrow">My trips</div><h2>My trips</h2><div class="list" id="tripsList"></div></div></section>
 <section class="section" id="messages" data-section="messages"><div class="card panel"><div class="eyebrow">Messages</div><h2>Messages</h2><div class="list" id="messagesList"></div></div></section>
 <section class="section" id="profile" data-section="profile"><div class="card panel"><div class="eyebrow">Profile</div><h2>Your profile</h2><div id="profileLocked"><p class="muted">No profile yet — complete Traveller Steps 1–7 and your profile will appear here.</p><div class="actions"><button class="primary" onclick="setRole('traveller');showScreen('home')">Start Step 1</button></div></div><div class="grid2" id="profileContent"><div><p><strong id="profTrip">No trip yet — complete Step 1</strong></p><div style="display:flex;align-items:center;gap:12px;margin:12px 0;"><div id="profTravPhoto" style="width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,.15);border:2px dashed rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;overflow:hidden;"><span style="color:rgba(255,255,255,.5);font-size:30px;">+</span></div></div><div class="chips" id="profInterests"></div><h3>Personality</h3><p class="muted" id="profPersonality">Not set yet — set in Step 4.</p><h3>What I'm looking for</h3><p class="muted" id="profLookingFor">Not set yet — pick in Step 5.</p><h3>My hook</h3><p class="muted" id="profHook">Not set yet — write in Step 6.</p><div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;"><button class="secondary" onclick="travNext(1);showScreen('home')">Edit trip</button><button class="secondary" onclick="travNext(3);showScreen('home')">Edit interests</button><button class="secondary" onclick="travNext(6);showScreen('home')">Edit hook</button></div></div><div class="sidebar-note"><strong>Reputation</strong><p class="muted" id="profStats">No trips yet — complete a meetup to build reputation.</p><strong>Verification</strong><p class="muted" id="profVerify">Not verified yet — real checks in Phase 9</p><div class="trust" id="profVerifyTrust"><span>Unverified</span></div><div style="margin-top:14px;padding-top:12px;border-top:1px solid #ece7e0;"><button class="secondary" style="background:#fff0f0!important;border-color:#e8b4b4!important;color:#b00020!important;" onclick="wipeEverything()">Reset my data</button><p class="muted small" style="margin:6px 0 0;">Deletes your profile, trips and chats on this device + cloud for this login.</p></div></div></div><div class="grid2" id="localProfileContent" style="margin-top:18px;"><div><h3>Local guide profile</h3><p><strong id="localProfCity">No local base yet — complete Local Steps 1–3</strong></p><div style="display:flex;align-items:center;gap:12px;margin:12px 0;"><div id="localProfPhoto" style="width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,.15);border:2px dashed rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;overflow:hidden;"><span style="color:rgba(255,255,255,.5);font-size:30px;">+</span></div></div><div class="chips" id="localProfInterests"></div><h3>Personality</h3><p class="muted" id="localProfPersonality">Not set yet — set in Local Step 4.</p><h3>What I offer</h3><p class="muted" id="localProfOffer">Not set yet — Local Step 5.</p><p class="muted small" id="localProfAvail"></p><div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;"><button class="secondary" onclick="setRole('local');showScreen('home')">Edit local profile</button><button class="secondary" onclick="setRole('local');localNext(8);showScreen('home')">Edit availability</button></div></div><div class="sidebar-note"><strong>Hosting</strong><p class="muted" id="localProfStats">No guests yet — complete a meetup to build reputation.</p><strong>Verification</strong><p class="muted" id="localProfVerify">Not verified yet — Local Step 2.</p><div class="trust" id="localProfVerifyTrust"><span>Unverified</span></div></div></div></div></section>
@@ -210,40 +222,45 @@
 </div>
 <div class="chat-overlay hidden" id="dropHookModal" onclick="if(event.target===this)closeDropHook()">
   <div class="chat-popup" role="dialog" aria-modal="true" aria-label="Drop a Hook" style="width:min(560px,calc(100vw - 24px));">
-    <div class="chat-popup-head"><div><strong>📍 Drop a Hook</strong><div class="muted small">Pin a sidequest on the HK map</div></div><button class="secondary" onclick="closeDropHook()" aria-label="Close" style="padding:8px 12px;">✕</button></div>
+    <div class="chat-popup-head"><div><strong>📍 Drop a Hook</strong><div class="muted small">Pin a hangout on the HK map</div></div><button class="secondary" onclick="closeDropHook()" aria-label="Close" style="padding:8px 12px;">✕</button></div>
     <div class="chat-popup-body" style="background:#fff;">
-      <div class="field"><label>Primary Interest Tag</label><div class="chips" id="hookInterestPills"><button class="chip active" onclick="selectHookInterest(this,'Sports')">⚽ Sports</button><button class="chip" onclick="selectHookInterest(this,'Food')">🥟 Food</button><button class="chip" onclick="selectHookInterest(this,'Photo')">📸 Photo</button><button class="chip" onclick="selectHookInterest(this,'Nightlife')">🍷 Nightlife</button><button class="chip" onclick="selectHookInterest(this,'Vintage')">🛍️ Vintage</button></div></div>
-      <div class="field"><label>HK District</label><div class="chips" id="hookDistrictPills"><button class="chip active" onclick="selectHookDistrict(this,'Central / Soho')">Central / Soho</button><button class="chip" onclick="selectHookDistrict(this,'Lan Kwai Fong')">Lan Kwai Fong</button><button class="chip" onclick="selectHookDistrict(this,'Tsim Sha Tsui')">Tsim Sha Tsui</button><button class="chip" onclick="selectHookDistrict(this,'Mong Kok')">Mong Kok</button></div></div>
-      <div class="field"><label>Specific Pin Location</label><input id="hookLocation" placeholder='e.g. "Morrison Hill Hardcourt Pitch"'></div>
-      <div class="field"><label>The Sidequest Twist (1 sentence)</label><input id="hookTwist" placeholder="e.g. Score using only your non-dominant foot"></div>
-      <div class="field"><label>Companion Pitch & Profile</label><textarea id="hookBio" placeholder="Who are you, what's your vibe?"></textarea></div>
+      <div class="field"><label>Pin Location Name</label><input id="hookLocation" placeholder='e.g. "Sham Shui Po Street Market" or "Soho Escalators"'><p class="muted small" style="margin:4px 0 0;">Auto-filled from your map tap — edit freely.</p></div>
+      <div class="field"><label>I am a…</label><div class="chips" id="hookRolePills"><button class="chip" id="hookRoleTrav" onclick="setHookRole('traveller')">Traveller ✈️</button><button class="chip" id="hookRoleLocal" onclick="setHookRole('local')">Local Host 🇭🇰</button></div><p class="muted small" style="margin:4px 0 0;">Travellers seek local context · Locals offer insider access.</p></div>
+      <div class="field"><label>Category Tag</label><div class="chips" id="hookInterestPills"><button class="chip" onclick="selectHookCategory(this,'Food')">🥟 Food</button><button class="chip" onclick="selectHookCategory(this,'Nightlife')">🍺 Nightlife</button><button class="chip" onclick="selectHookCategory(this,'Photo')">📸 Photo Walk</button><button class="chip" onclick="selectHookCategory(this,'Sports')">⚽ Sports</button><button class="chip" onclick="selectHookCategory(this,'Cafe')">☕ Cafe</button></div></div>
+      <div class="field"><label>Your Hook</label><textarea id="hookText" maxlength="140" rows="2" oninput="hookCountTick()" placeholder="e.g. Grabbing late-night claypot rice in Sham Shui Po—who's down to join?"></textarea><p class="muted small" style="margin:4px 0 0;text-align:right;"><span id="hookCount">0 / 140</span></p></div>
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;"><button class="secondary" onclick="closeDropHook()">Cancel</button><button class="primary" onclick="saveDropHook()">Drop Pin</button></div>
     </div>
   </div>
 </div>
-<div class="chat-overlay hidden" id="pinDetailModal" onclick="if(event.target===this)closePinDetail()">
-  <div class="chat-popup" role="dialog" aria-modal="true" aria-label="Sidequest detail" style="width:min(560px,calc(100vw - 24px));">
-    <div class="chat-popup-head"><div><strong id="pinDetailTitle">Sidequest</strong><div class="muted small" id="pinDetailBadge">—</div></div><button class="secondary" onclick="closePinDetail()" aria-label="Close" style="padding:8px 12px;">✕</button></div>
+<div id="pinDrawer" class="pin-drawer hidden" role="dialog" aria-label="Hook preview">
+  <div class="drawer-grab"></div>
+  <div class="drawer-top"><div><strong id="pinNick">—</strong> <span id="pinVerified" class="small"></span><div><span id="pinRoleBadge" class="role-badge">—</span></div></div><button class="secondary" onclick="closePinDetail()" aria-label="Close" style="padding:8px 12px;">✕</button></div>
+  <div class="muted small" id="pinLoc">—</div>
+  <p class="pin-hook" id="pinHook">—</p>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;"><span class="group-badge" id="pinGroupBadge">—</span><div class="chips" id="pinMembers" style="margin:0;"></div></div>
+  <p class="muted small" id="pinPendingNote" style="display:none;">Request sent — waiting for the group to approve.</p>
+  <div id="pinHostBox"></div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;"><button class="primary" id="pinRequestBtn" onclick="requestPinConnect()">Request to Connect</button><button class="secondary" id="pinDeleteBtn" onclick="deletePinSidequest()" style="display:none;">Delete Pin</button></div>
+</div>
+<div class="chat-overlay hidden" id="groupModal">
+  <div class="chat-popup" role="dialog" aria-modal="true" aria-label="Expand group" style="width:min(480px,calc(100vw - 24px));">
+    <div class="chat-popup-head"><div><strong>Expand the group?</strong><div class="muted small" id="groupJoiner">—</div></div><button class="secondary" onclick="closeGroupModal()" aria-label="Close" style="padding:8px 12px;">✕</button></div>
     <div class="chat-popup-body" style="background:#fff;">
-      <div class="eyebrow">Location & Sidequest</div>
-      <p style="margin:6px 0 12px;" id="pinDetailHook">—</p>
-      <div class="eyebrow">Companion Pitch</div>
-      <p class="muted" id="pinDetailBio" style="margin:6px 0 12px;">—</p>
-      <div class="eyebrow">Shared Interests</div>
-      <div class="chips" id="pinDetailShared" style="margin:6px 0 12px;"></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="primary" id="pinDetailAccept" onclick="acceptPinSidequest()">Accept Sidequest & Chat</button><button class="secondary" id="pinDetailDelete" onclick="deletePinSidequest()" style="display:none;">Delete Pin</button></div>
+      <p class="muted small">The group expands to 3 only if <strong>all</strong> existing members accept.</p>
+      <div id="groupMembers"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;"><button class="secondary" onclick="closeGroupModal()">Not now</button></div>
     </div>
   </div>
 </div>
 <div class="toast" id="toast"></div>
 
-  <script src="data/locations.js?v=10"></script>
-  <script src="data/mock.js?v=10"></script>
-  <script src="match.js?v=10"></script>
+  <script src="data/locations.js?v=11"></script>
+  <script src="data/mock.js?v=11"></script>
+  <script src="match.js?v=11"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="supabase-config.js?v=10"></script>
-  <script src="app.js?v=10"></script>
-  <script src="supabase-sync.js?v=10"></script>
+  <script src="supabase-config.js?v=11"></script>
+  <script src="app.js?v=11"></script>
+  <script src="supabase-sync.js?v=11"></script>
 </body>
 </html>

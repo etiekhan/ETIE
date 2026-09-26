@@ -2111,7 +2111,7 @@ function initHKMap(){
     if(_map||!window.L)return;
     var el=document.getElementById('hkMap');if(!el)return;
     _map=L.map('hkMap',{zoomControl:true}).setView(HK_CENTER,HK_ZOOM);
-    L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png',{maxZoom:20,attribution:'&copy; <a href="https://stadiamaps.com/">Stadia Maps</a> &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}).addTo(_map);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19,subdomains:'abcd',attribution:'© OpenStreetMap © CARTO'}).addTo(_map);
     _map.on('click',onMapTap);
     renderMapFilter();renderMapPins();
   }catch(e){}

@@ -11,3 +11,4 @@ alter table public.etie_profiles add column if not exists social_vibe int defaul
 alter table public.etie_profiles add column if not exists travel_pace int default 1;
 alter table public.etie_profiles add column if not exists style_interests jsonb default '[]'::jsonb;
 alter table public.etie_profiles add column if not exists traveller_nationality text default 'HK';
+alter table public.etie_profiles add column if not exists district text default 'Central / Soho';

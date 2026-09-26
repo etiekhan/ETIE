@@ -182,7 +182,8 @@
           if(r&&r.error){
             var msg=(r.error.message||'').toLowerCase();
             // if column missing (migrate not run), retry with base only
-            if(msg.indexOf('column')!==-1 && msg.indexOf('does not exist')!==-1){
+            // PostgREST says either "column X does not exist" or "Could not find the 'X' column ... in the schema cache"
+            if(msg.indexOf('column')!==-1 && (msg.indexOf('does not exist')!==-1||msg.indexOf('could not find')!==-1||msg.indexOf('schema cache')!==-1)){
               console.warn('Etie profile sync: extra columns missing, retrying base only', r.error.message);
               return client.from(profTable()).upsert(base).then(function(r2){
                 if(r2&&r2.error) console.warn('Etie profile sync (base) failed', r2.error.message);

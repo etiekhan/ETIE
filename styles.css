@@ -424,8 +424,7 @@ html,body{height:100%;width:100%;margin:0;padding:0;overflow:hidden;background:#
 @media(max-width:900px){#hkMap{height:100%}}
 /* Leaflet controls: hide attribution, dark glass zoom */
 .leaflet-control-attribution{display:none!important;}
-/* dark-mode the keyless OSM tiles (filter applies to tile pane only — pins/popups untouched) */
-.leaflet-tile-pane{filter:grayscale(1) invert(1) hue-rotate(180deg) brightness(.92) contrast(.92);}
+
 .map-credit{position:absolute;right:8px;bottom:8px;z-index:500;font-size:10px;color:rgba(255,255,255,.6);background:rgba(0,0,0,.4);padding:2px 8px;border-radius:99px;pointer-events:none;}
 .leaflet-control-zoom{border:1px solid rgba(255,255,255,.15)!important;box-shadow:none!important;overflow:hidden;border-radius:12px!important;}
 .leaflet-control-zoom a{background:#0c0d10!important;color:#fff!important;border:0!important;box-shadow:none!important;width:34px!important;height:34px!important;line-height:34px!important;}

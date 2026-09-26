@@ -20,6 +20,7 @@
     var b=badge();if(!b)return;
     b.textContent=text||('Cloud: '+status);
     b.dataset.cloud=status;
+    try{b.style.display='';}catch(e){}
   }
   function status(){
     var k=keys();

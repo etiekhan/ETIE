@@ -1175,9 +1175,6 @@ function updateAuthHeader(){
     var em=document.getElementById('authEmail'); if(em) em.style.display=in_?'none':'';
     var si=document.getElementById('signInBtn'); if(si) si.style.display=in_?'none':'';
     var am=document.getElementById('avatarMenu'); if(am) am.style.display=in_?'':'none';
-    var awaiting=!in_&&!!window.ETIE_AWAITING_OTP;
-    var oc=document.getElementById('otpCode'); if(oc) oc.style.display=awaiting?'':'none';
-    var ob=document.getElementById('otpBtn'); if(ob) ob.style.display=awaiting?'':'none';
     if(!in_) closeAvatarMenu();
     try{ if(typeof updateAdminVisibility==='function') updateAdminVisibility(); }catch(e){}
   }catch(e){}
@@ -2204,7 +2201,6 @@ document.addEventListener('DOMContentLoaded',function(){
   var li9=document.getElementById('localChatInput9');if(li9)li9.addEventListener('keydown',function(e){if(e.key==='Enter')sendChat('local','localChatInput9');});
   var pi=document.getElementById('chatPopupInput');if(pi)pi.addEventListener('keydown',function(e){if(e.key==='Enter')sendChatPopup();});
   var ae=document.getElementById('authEmail');if(ae)ae.addEventListener('keydown',function(e){if(e.key==='Enter'){try{window.EtieCloud.signIn();}catch(_){}}});
-  var oc=document.getElementById('otpCode');if(oc)oc.addEventListener('keydown',function(e){if(e.key==='Enter'){try{window.EtieCloud.verifyCode();}catch(_){}}});
   document.addEventListener('keydown',function(e){if(e.key==='Escape'){try{closeChatPopup();}catch(e2){}try{closeAdmin();}catch(e3){}try{closeAvatarMenu();}catch(e4){}}});
   document.addEventListener('click',function(e){try{var m=document.getElementById('avatarMenu');if(m&&e.target&&!m.contains(e.target))closeAvatarMenu();}catch(err){}});
   // Subscribe to reviews/reports when cloud is on

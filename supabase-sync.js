@@ -67,9 +67,15 @@
       if(!email||email.indexOf('@')===-1){toast('Enter a valid email for magic link.');return;}
       if(!client){toast('Add Supabase keys first (supabase-config.js).');return;}
       var redirect=window.location.origin + window.location.pathname;
+      var btn=document.getElementById('signInBtn');
+      if(btn){btn.disabled=true;btn.textContent='Sending…';}
       client.auth.signInWithOtp({email:email, options:{emailRedirectTo: redirect}}).then(function(r){
+        if(btn){btn.disabled=false;btn.textContent='Sign in';}
         if(r&&r.error){toast('Sign-in error: '+r.error.message);return;}
         toast('Check your email for the sign-in link.');
+      }).catch(function(err){
+        if(btn){btn.disabled=false;btn.textContent='Sign in';}
+        toast('Sign-in failed: '+((err&&err.message)||'network error — try again'));
       });
     }catch(e){toast('Sign-in unavailable offline.');}
   }

@@ -23,7 +23,7 @@
     <button class="secondary" id="adminBtn" style="display:none;" onclick="toggleAdmin()">Admin</button>
     <span class="status" id="cloudStatus" style="display:none;">Cloud: offline demo</span>
     <input id="authEmail" placeholder="email for login" style="max-width:170px;padding:9px;border:1px solid #d6d0c8;border-radius:10px;background:#faf9f7;">
-    <button class="secondary" id="signInBtn" onclick="EtieCloud.signIn()">Sign in</button>
+    <button class="secondary" id="signInBtn" onclick="if(window.EtieCloud&&EtieCloud.signIn)EtieCloud.signIn();else alert('App scripts still loading — hard-refresh the page and try again.')">Sign in</button>
   </nav>
   <div class="avatar-menu" id="avatarMenu" style="display:none;">
     <button class="header-profile" id="headerProfile" onclick="toggleAvatarMenu(event)" aria-haspopup="true" title="Your account"><span class="header-avatar" id="headerAvatar">+</span><span id="headerName">Guest</span><span aria-hidden="true">▾</span></button>
@@ -237,13 +237,13 @@
 </div>
 <div class="toast" id="toast"></div>
 
-<script src="data/locations.js"></script>
-<script src="data/mock.js"></script>
-<script src="match.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="supabase-config.js"></script>
-<script src="app.js"></script>
-<script src="supabase-sync.js"></script>
+  <script src="data/locations.js?v=10"></script>
+  <script src="data/mock.js?v=10"></script>
+  <script src="match.js?v=10"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="supabase-config.js?v=10"></script>
+  <script src="app.js?v=10"></script>
+  <script src="supabase-sync.js?v=10"></script>
 </body>
 </html>

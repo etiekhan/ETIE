@@ -155,7 +155,7 @@
   }
   function signOut(){
     try{ if(!confirm('Are you sure you want to sign out?')) return; }catch(e){ return; }
-    try{if(client)try{ client.removeChannel(realtimeChannel); client.removeChannel(reviewChannel); client.removeChannel(reportChannel); client.removeChannel(profileLiveChannel); if(pinChannel)client.removeChannel(pinChannel); }catch(e){};realtimeChannel=reviewChannel=reportChannel=profileLiveChannel=pinChannel=null; if(client)client.auth.signOut();}catch(e){}
+    try{if(client)try{ client.removeChannel(realtimeChannel); client.removeChannel(reviewChannel); client.removeChannel(reportChannel); client.removeChannel(profileLiveChannel); if(pinChannel)client.removeChannel(pinChannel); }catch(e){};realtimeChannel=reviewChannel=reportChannel=profileLiveChannel=pinChannel=null; try{for(var hk in hookChatChannels){try{client.removeChannel(hookChatChannels[hk]);}catch(e){}} hookChatChannels={};}catch(e){} if(client)client.auth.signOut();}catch(e){}
     session=null;window.ETIE_LIVE_LOCALS=[];paint('offline','Cloud: offline — sign in');
     // privacy: clear local profile/trips/chats so next user on a public device sees blank (cloud copy stays for next sign-in)
     try{ localStorage.removeItem('etie-v1'); localStorage.removeItem('etie-v1-user-backup'); localStorage.removeItem('etie-v1-backup'); }catch(e){}
@@ -761,11 +761,63 @@
         }).subscribe();
     }catch(e){}
   }
+  // ---- Hook group chat: etie_hook_messages (run supabase-schema-hook-chat.sql once) ----
+  var hookChatChannels={};
+  function hookMsgTable(){return 'etie_hook_messages';}
+  function pushHookMessage(pin,msg){
+    try{
+      if(!client||!session||!pin||!msg||!msg.text)return; // logged-out chat stays local-only
+      client.from(hookMsgTable()).insert({
+        hook_id:String((pin.cloudId||pin.id)),
+        sender_id:session.user.id, sender_nick:msg.nick||'Someone',
+        sender_role:(msg.role==='local'?'local':'traveller'), text:String(msg.text).slice(0,500)
+      }).then(function(){}).catch(function(){});
+    }catch(e){}
+  }
+  function subscribeHookChat(pinId,cb){
+    try{
+      if(!client||typeof cb!=='function')return function(){};
+      var key=String(pinId);
+      try{if(hookChatChannels[key])client.removeChannel(hookChatChannels[key]);}catch(e){}
+      var ch=client.channel('hook-chat-'+key)
+        .on('postgres_changes',{event:'INSERT',schema:'public',table:hookMsgTable(),filter:'hook_id=eq.'+key},function(payload){
+          try{if(payload&&payload.new)cb(payload.new);}catch(e){}
+        }).subscribe();
+      hookChatChannels[key]=ch;
+      // seed recent history (best effort — table may not exist yet)
+      try{
+        client.from(hookMsgTable()).select('*').eq('hook_id',key).order('created_at',{ascending:true}).limit(100).then(function(r){
+          try{
+            if(r&&(r.error||!r.data))return;
+            var all=(typeof ETIE==='undefined')?null:ETIE;
+            (r.data||[]).forEach(function(row){
+              try{
+                if(!all||!all.mapPins)return;
+                for(var i=0;i<all.mapPins.length;i++){
+                  var p=all.mapPins[i];
+                  if(p&&(String(p.cloudId||p.id)===key)){
+                    var rts=0;try{rts=new Date(row.created_at).getTime();}catch(e){}
+                    p.chat=p.chat||[];
+                    var dup=p.chat.some(function(m){return m&&m.text===row.text&&m.nick===(row.sender_nick||'Someone')&&Math.abs((m.ts||0)-rts)<8000;});
+                    if(!dup)p.chat.push({nick:row.sender_nick||'Someone',role:row.sender_role||'traveller',text:row.text||'',ts:rts||Date.now()});
+                    break;
+                  }
+                }
+              }catch(e){}
+            });
+            try{if(typeof renderHookChat==='function')renderHookChat();}catch(e){}
+          }catch(e){}
+        }).catch(function(){});
+      }catch(e){}
+      return function(){try{client.removeChannel(ch);delete hookChatChannels[key];}catch(e){}};
+    }catch(e){return function(){};}
+  }
   // ---- Expose ----
   window.EtieCloud={
     init:init, signIn:signIn, signInWithGoogle:signInWithGoogle, signOut:signOut,
     push:push, pull:pull, status:status,
     pullPins:pullPins, pushPin:pushPin, deletePin:deletePin,
+    pushHookMessage:pushHookMessage, subscribeHookChat:subscribeHookChat,
     syncProfile:syncProfile, pushSharedRequest:pushSharedRequest, pushSharedMessage:pushSharedMessage, pushSharedMeetup:pushSharedMeetup,
     pushSharedReview:pushSharedReview, pushSharedReport:pushSharedReport,
     uploadPhoto:uploadPhoto,

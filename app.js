@@ -588,7 +588,19 @@ function flagEmoji(code){if(!code)return '';return String.fromCodePoint(...code.
 function flagForCountry(countryCode){var map={'PT':'🇵🇹','ES':'🇪🇸','FR':'🇫🇷','IT':'🇮🇹','JP':'🇯🇵','TH':'🇹🇭','US':'🇺🇸','AU':'🇦🇺','HK':'🇭🇰','SG':'🇸🇬'};return map[countryCode]||flagEmoji(countryCode)||'🌍';}
 
 function toast(msg){var t=document.getElementById('toast');if(!t){alert(msg);return;}t.textContent=msg;t.style.display='block';clearTimeout(t._h);t._h=setTimeout(function(){t.style.display='none';},2200);}
-function showScreen(id){var el=document.getElementById(id);if(id==='profile'){renderProfiles();updateProfileVisibility();}if(id==='messages')renderMessagesList();if(id==='trips'){renderTrips();renderMeetup();}if(id==='map'){try{initHKMap();var mm=null;try{mm=document.getElementById('hkMap');}catch(e){}if(mm&&window.L&&_map){setTimeout(function(){try{_map.invalidateSize();}catch(e){}},120);}renderMapPins();}catch(e){}}if(el&&el.scrollIntoView)el.scrollIntoView({behavior:'smooth',block:'start'});}
+function showScreen(id){
+  try{
+    var panels=['home','homeFlows','trips','messages','profile','discover'];
+    var want=(id==='home')?['home','homeFlows']:[id];
+    panels.forEach(function(p){var el=document.getElementById(p);if(el)el.classList.toggle('panel-open',want.indexOf(p)!==-1);});
+    if(id!=='map')dismissWelcome();
+    if(id==='profile'){renderProfiles();updateProfileVisibility();}
+    if(id==='messages')renderMessagesList();
+    if(id==='trips'){renderTrips();renderMeetup();}
+    if(id==='map'){try{initHKMap();if(window.L&&_map){setTimeout(function(){try{_map.invalidateSize();}catch(e){}},120);}renderMapPins();}catch(e){}}
+  }catch(e){}
+}
+function dismissWelcome(){try{var w=document.getElementById('welcomeCard');if(w)w.classList.add('hidden');}catch(e){}}
 function hideGroup(prefix){for(var i=1;i<=17;i++){var e=document.getElementById(prefix+i);if(e)e.classList.add('hidden');}}
 
 function getChips(containerId){
@@ -2099,7 +2111,7 @@ function initHKMap(){
     if(_map||!window.L)return;
     var el=document.getElementById('hkMap');if(!el)return;
     _map=L.map('hkMap',{zoomControl:true}).setView(HK_CENTER,HK_ZOOM);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:19}).addTo(_map);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19,subdomains:'abcd',attribution:'© OpenStreetMap © CARTO'}).addTo(_map);
     _map.on('click',onMapTap);
     renderMapFilter();renderMapPins();
   }catch(e){}
@@ -2110,9 +2122,8 @@ function onMapTap(e){
     if(_dropMarker){try{_map.removeLayer(_dropMarker);}catch(_){}}
     _dropMarker=L.marker([_dropPoint.lat,_dropPoint.lng],{title:'Your pin location'}).addTo(_map);
     var guess='Near '+nearestDistrictLabel(_dropPoint.lat,_dropPoint.lng);
-    var li=document.getElementById('hookLocation');
-    if(li&&!document.getElementById('dropHookModal').classList.contains('hidden')){li.value=guess;li.focus();}
-    else{window._pendingDropGuess=guess;toast('Pin location set — tap + Drop a Hook.');}
+    window._pendingDropGuess=guess;
+    openDropHook();
   }catch(err){}
 }
 function renderMapFilter(){
@@ -2243,6 +2254,8 @@ function openPinDetail(id){
     var isMember=(p.members||[]).some(function(m){return m.nick===me;});
     var isPending=(p.pending||[]).some(function(r){return r.nick===me;});
     var nn=document.getElementById('pinNick');if(nn)nn.textContent=p.name||'Someone';
+    var av2=document.getElementById('pinAvatar');if(av2)av2.textContent=((p.name||'?').charAt(0)||'?').toUpperCase();
+    var cb=document.getElementById('pinChatBtn');if(cb)cb.style.display=isMember?'':'none';
     var vb=document.getElementById('pinVerified');if(vb){vb.textContent=p.verified?'✅ Verified':'';vb.style.display=p.verified?'':'none';}
     var rb=document.getElementById('pinRoleBadge');if(rb)rb.textContent=p.role==='local'?'🇭🇰 Local':'✈️ Traveller';
     var lc=document.getElementById('pinLoc');if(lc)lc.textContent=mapCatEmoji(p.category)+' '+(p.location||'Hong Kong');
@@ -2253,7 +2266,7 @@ function openPinDetail(id){
     var req=document.getElementById('pinRequestBtn');
     if(req){
       req.style.display=(!isMember&&!isPending&&(p.members||[]).length<3)?'':'none';
-      req.textContent='Connect';
+      req.textContent='Request to Connect';
     }
     var wait=document.getElementById('pinPendingNote');
     if(wait)wait.style.display=isPending?'':'none';
@@ -2309,6 +2322,7 @@ function acceptHookRequest(idx){
     p.status=(p.members.length>=2)?'pair':'open';
     storePin(p);openPinDetail(p.id);renderMapPins();
     toast('Connected — 1-on-1 hangout on.');
+    try{openChatDrawer(p.id);}catch(e){}
   }catch(e){}
 }
 function declineHookRequest(idx){
@@ -2370,7 +2384,70 @@ function approveGroupJoin(memberNick){
       p.status='trio';
       storePin(p);closeGroupModal();renderMapPins();openPinDetail(p.id);
       toast('Everyone accepted — group expanded to 3.');
+      try{openChatDrawer(p.id);}catch(e){}
     }else{storePin(p);renderGroupApprovals();toast('Waiting on the other member…');}
+  }catch(e){}
+}
+// ---- Hook group chat drawer (Supabase etie_hook_messages realtime, local fallback) ----
+var _chatPinId=null,_chatUnsub=null;
+function openChatDrawer(pinId){
+  try{
+    var p=findPin(pinId);if(!p){toast('Hook not found.');return;}
+    _chatPinId=pinId;
+    var t=document.getElementById('chatHookTitle');if(t)t.textContent=p.location||'Group chat';
+    var s=document.getElementById('chatHookSub');
+    if(s)s.textContent=((p.members||[]).map(function(m){return m.nick;}).join(' · ')||'Open hook');
+    renderHookChat();
+    var d=document.getElementById('chatDrawer');if(d)d.classList.remove('hidden');
+    try{
+      if(window.EtieCloud&&window.EtieCloud.subscribeHookChat){
+        try{if(_chatUnsub)_chatUnsub();}catch(e){}
+        _chatUnsub=window.EtieCloud.subscribeHookChat(pinId,function(row){
+          try{
+            var pp=findPin(pinId);if(!pp)return;
+            var rts=0;try{rts=new Date(row.created_at).getTime();}catch(e){}
+            var arr=pp.chat||(pp.chat=[]);
+            var dup=arr.some(function(m){return m&&m.text===row.text&&m.nick===(row.sender_nick||'Someone')&&Math.abs((m.ts||0)-rts)<8000;});
+            if(!dup){arr.push({nick:row.sender_nick||'Someone',role:row.sender_role||'traveller',text:row.text||'',ts:rts||Date.now()});saveState();}
+            if(_chatPinId===pinId)renderHookChat();
+          }catch(e){}
+        });
+      }
+    }catch(e){}
+  }catch(e){}
+}
+function closeChatDrawer(){try{_chatPinId=null;try{if(_chatUnsub)_chatUnsub();}catch(e){}_chatUnsub=null;var d=document.getElementById('chatDrawer');if(d)d.classList.add('hidden');}catch(e){}}
+function renderHookChat(){
+  try{
+    var p=findPin(_chatPinId);if(!p)return;
+    var box=document.getElementById('chatMsgList');if(!box)return;
+    box.innerHTML='';
+    var me=hookNick();
+    (p.chat||[]).forEach(function(m){
+      try{
+        var d=document.createElement('div');
+        var mine=m&&m.nick===me;
+        d.className='hchat'+(mine?' me':'');
+        var w=document.createElement('span');w.className='who';
+        w.textContent=((m.role==='local'?'🇭🇰 ':'✈️ ')+(m.nick||'Someone'));
+        d.appendChild(w);d.appendChild(document.createTextNode(m.text||''));
+        box.appendChild(d);
+      }catch(e){}
+    });
+    if(!(p.chat||[]).length){var e=document.createElement('div');e.className='muted small';e.textContent='No messages yet — say hi to the group.';box.appendChild(e);}
+    try{box.scrollTop=box.scrollHeight;}catch(e2){}
+  }catch(e){}
+}
+function sendHookMessage(){
+  try{
+    var inp=document.getElementById('chatMsgInput');if(!inp)return;
+    var text=(inp.value||'').trim();if(!text)return;
+    var p=findPin(_chatPinId);if(!p){toast('Hook not found.');return;}
+    var role='traveller';try{role=(ETIE.activeRole==='local')?'local':'traveller';}catch(e){}
+    var msg={nick:hookNick(),role:role,text:text,ts:Date.now()};
+    if(!p.chat)p.chat=[];
+    p.chat.push(msg);saveState();inp.value='';renderHookChat();
+    try{if(window.EtieCloud&&window.EtieCloud.pushHookMessage)window.EtieCloud.pushHookMessage(p,msg);}catch(e){}
   }catch(e){}
 }
 document.addEventListener('DOMContentLoaded',function(){
@@ -2403,7 +2480,7 @@ document.addEventListener('DOMContentLoaded',function(){
   var li9=document.getElementById('localChatInput9');if(li9)li9.addEventListener('keydown',function(e){if(e.key==='Enter')sendChat('local','localChatInput9');});
   var pi=document.getElementById('chatPopupInput');if(pi)pi.addEventListener('keydown',function(e){if(e.key==='Enter')sendChatPopup();});
   var ae=document.getElementById('authEmail');if(ae)ae.addEventListener('keydown',function(e){if(e.key==='Enter'){try{window.EtieCloud.signIn();}catch(_){}}});
-  document.addEventListener('keydown',function(e){if(e.key==='Escape'){try{closeChatPopup();}catch(e2){}try{closeAdmin();}catch(e3){}try{closeAvatarMenu();}catch(e4){}}});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'){try{closeChatPopup();}catch(e2){}try{closeAdmin();}catch(e3){}try{closeAvatarMenu();}catch(e4){}try{closeChatDrawer();}catch(e5){}try{closePinDetail();}catch(e6){}try{closeGroupModal();}catch(e7){}try{closeDropHook();}catch(e8){}}});
   document.addEventListener('click',function(e){try{var m=document.getElementById('avatarMenu');if(m&&e.target&&!m.contains(e.target))closeAvatarMenu();}catch(err){}});
   // re-sync header whenever the tab regains focus (session may have landed elsewhere)
   try{

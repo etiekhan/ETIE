@@ -10,22 +10,17 @@
 </head>
 <body>
 <div class="app">
-<header>
-  <div class="logo">etie</div>
-  <button class="nav-toggle" onclick="toggleNav()" aria-label="Menu">☰</button>
-  <nav id="mainNav">
-    <button class="nav-btn" onclick="showScreen('home')">Home</button>
-    <span class="nav-divider" aria-hidden="true"></span>
-    <button class="nav-btn" style="display:none;" onclick="showScreen('discover')">Hooks</button>
-    <button class="nav-btn" onclick="showScreen('map')">Map</button>
-    <button class="nav-btn" onclick="showScreen('trips')">My trips</button>
-    <button class="nav-btn" onclick="showScreen('messages')">Messages</button>
-    <button class="secondary" id="adminBtn" style="display:none;" onclick="toggleAdmin()">Admin</button>
-    <span class="status" id="cloudStatus" style="display:none;">Cloud: offline demo</span>
-    <input id="authEmail" placeholder="email for login" style="max-width:170px;padding:9px;border:1px solid #d6d0c8;border-radius:10px;background:#faf9f7;">
-    <button class="secondary" id="signInBtn" onclick="if(window.EtieCloud&&EtieCloud.signIn)EtieCloud.signIn();else alert('App scripts still loading — hard-refresh the page and try again.')">Sign in</button>
-    <button class="secondary" id="googleBtn" onclick="if(window.EtieCloud&&EtieCloud.signInWithGoogle)EtieCloud.signInWithGoogle();else alert('App scripts still loading — hard-refresh the page and try again.')">Sign in with Google</button>
-  </nav>
+<div class="logo-float">etie</div>
+<nav id="spatialNav" class="glass-nav" aria-label="Primary">
+  <button class="snav-btn" onclick="showScreen('map')">🗺️ Map</button>
+  <button class="snav-btn" onclick="showScreen('messages')">✉️ Messages</button>
+  <button class="snav-btn" onclick="showScreen('profile')">👤 Profile</button>
+</nav>
+<div class="auth-float">
+  <span class="status" id="cloudStatus" style="display:none;">Cloud: offline demo</span>
+  <input id="authEmail" placeholder="email for login" style="display:none;">
+  <button class="secondary" id="signInBtn" style="display:none;" onclick="if(window.EtieCloud&&EtieCloud.signIn)EtieCloud.signIn();else alert('App scripts still loading — hard-refresh the page and try again.')">Sign in</button>
+  <button class="secondary" id="googleBtn" onclick="if(window.EtieCloud&&EtieCloud.signInWithGoogle)EtieCloud.signInWithGoogle();else alert('App scripts still loading — hard-refresh the page and try again.')">Sign in with Google</button>
   <div class="avatar-menu" id="avatarMenu" style="display:none;">
     <button class="header-profile" id="headerProfile" onclick="toggleAvatarMenu(event)" aria-haspopup="true" title="Your account"><span class="header-avatar" id="headerAvatar">+</span><span id="headerName">Guest</span><span aria-hidden="true">▾</span></button>
     <div class="avatar-dropdown hidden" id="avatarDropdown" role="menu">
@@ -33,10 +28,10 @@
       <button class="menu-item" id="signOutBtn" onclick="EtieCloud.signOut()">Sign out</button>
     </div>
   </div>
-</header>
+</div>
 
 <main class="container">
-<section class="hero" id="home">
+<section class="hero overlay-panel" id="home">
   <div class="eyebrow">ETIE · Hong Kong 🇭🇰</div>
   <h1>A friend in every city.</h1>
   <p>Have you ever felt lonely in a foreign country? Wanting more from your travels—a real local touch? What if someone local was seeking you out too? ETIE is your solution.</p>
@@ -53,10 +48,17 @@
       <button class="fab" onclick="openDropHook()">+ Drop a Hook</button>
     </div>
     <div class="map-foot"><span class="muted small" id="mapPinCount"></span><span class="muted small">Tap anywhere on the map to place your pin.</span></div>
+    <div class="map-credit">© OpenStreetMap © CARTO</div>
   </div>
 </section>
 
-<section class="section" data-section="home">
+<div id="welcomeCard" role="dialog" aria-label="Welcome">
+  <div class="eyebrow" style="color:#fb7185;font-weight:700;letter-spacing:1px;">ETIE · HONG KONG 🇭🇰</div>
+  <h1>A friend in every city.</h1>
+  <p>Have you ever felt lonely in a foreign country? Wanting more from your travels — a real local touch? What if someone local was seeking you out too? ETIE is your solution. Drop a hook on the map, or answer one.</p>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;"><button class="primary" onclick="dismissWelcome();setRole('traveller')">Find a Hook ✈️</button><button class="secondary" onclick="dismissWelcome();setRole('local')">Host a Meetup 🇭🇰</button><button class="secondary" onclick="dismissWelcome()" style="background:transparent!important;border-color:transparent!important;">Just explore →</button></div>
+</div>
+<section class="section overlay-panel" data-section="home" id="homeFlows">
   <div class="card panel" id="roleGate" style="display:none;"><div class="eyebrow">Start</div><h2>Which side are you on?</h2><p class="muted">Choose one to begin — each side has its own steps and verification. Use the cards above to switch sides.</p><div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;"><button class="primary" onclick="setRole('traveller')">I'm a Traveller</button><button class="secondary" onclick="setRole('local')">I'm a Local guide</button></div></div>
   <div class="role-switch" id="roleSwitch">
     <button class="role active" id="travRole" onclick="setRole('traveller')">Traveller flow</button>
@@ -177,9 +179,9 @@
 
 <!-- Supporting product views -->
 <section class="section" id="discover" data-section="discover" style="display:none;"><div class="card panel"><div class="eyebrow">Hook Feed · Hong Kong</div><h2>Hooks</h2><p class="muted">Verified HK locals ranked for your vibe, district and dates.</p><p id="discoverTierNote" class="small muted"></p><div id="sqFilterBar" style="display:flex;flex-wrap:wrap;gap:10px;margin:12px 0 14px;"></div><div id="sqFilterNotice" class="muted small" style="display:none;margin-bottom:10px;"></div><div class="grid3" id="discoverGrid"></div></div></section>
-<section class="section" id="trips" data-section="trips"><div class="card panel"><div class="eyebrow">My trips</div><h2>My trips</h2><div class="list" id="tripsList"></div></div></section>
-<section class="section" id="messages" data-section="messages"><div class="card panel"><div class="eyebrow">Messages</div><h2>Messages</h2><div class="list" id="messagesList"></div></div></section>
-<section class="section" id="profile" data-section="profile"><div class="card panel"><div class="eyebrow">Profile</div><h2>Your profile</h2><div id="profileLocked"><p class="muted">No profile yet — complete Traveller Steps 1–7 and your profile will appear here.</p><div class="actions"><button class="primary" onclick="setRole('traveller');showScreen('home')">Start Step 1</button></div></div><div class="grid2" id="profileContent"><div><p><strong id="profTrip">No trip yet — complete Step 1</strong></p><div style="display:flex;align-items:center;gap:12px;margin:12px 0;"><div id="profTravPhoto" style="width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,.15);border:2px dashed rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;overflow:hidden;"><span style="color:rgba(255,255,255,.5);font-size:30px;">+</span></div></div><div class="chips" id="profInterests"></div><h3>Personality</h3><p class="muted" id="profPersonality">Not set yet — set in Step 4.</p><h3>What I'm looking for</h3><p class="muted" id="profLookingFor">Not set yet — pick in Step 5.</p><h3>My hook</h3><p class="muted" id="profHook">Not set yet — write in Step 6.</p><div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;"><button class="secondary" onclick="travNext(1);showScreen('home')">Edit trip</button><button class="secondary" onclick="travNext(3);showScreen('home')">Edit interests</button><button class="secondary" onclick="travNext(6);showScreen('home')">Edit hook</button></div></div><div class="sidebar-note"><strong>Reputation</strong><p class="muted" id="profStats">No trips yet — complete a meetup to build reputation.</p><strong>Verification</strong><p class="muted" id="profVerify">Not verified yet — real checks in Phase 9</p><div class="trust" id="profVerifyTrust"><span>Unverified</span></div><div style="margin-top:14px;padding-top:12px;border-top:1px solid #ece7e0;"><button class="secondary" style="background:#fff0f0!important;border-color:#e8b4b4!important;color:#b00020!important;" onclick="wipeEverything()">Reset my data</button><p class="muted small" style="margin:6px 0 0;">Deletes your profile, trips and chats on this device + cloud for this login.</p></div></div></div><div class="grid2" id="localProfileContent" style="margin-top:18px;"><div><h3>Local guide profile</h3><p><strong id="localProfCity">No local base yet — complete Local Steps 1–3</strong></p><div style="display:flex;align-items:center;gap:12px;margin:12px 0;"><div id="localProfPhoto" style="width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,.15);border:2px dashed rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;overflow:hidden;"><span style="color:rgba(255,255,255,.5);font-size:30px;">+</span></div></div><div class="chips" id="localProfInterests"></div><h3>Personality</h3><p class="muted" id="localProfPersonality">Not set yet — set in Local Step 4.</p><h3>What I offer</h3><p class="muted" id="localProfOffer">Not set yet — Local Step 5.</p><p class="muted small" id="localProfAvail"></p><div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;"><button class="secondary" onclick="setRole('local');showScreen('home')">Edit local profile</button><button class="secondary" onclick="setRole('local');localNext(8);showScreen('home')">Edit availability</button></div></div><div class="sidebar-note"><strong>Hosting</strong><p class="muted" id="localProfStats">No guests yet — complete a meetup to build reputation.</p><strong>Verification</strong><p class="muted" id="localProfVerify">Not verified yet — Local Step 2.</p><div class="trust" id="localProfVerifyTrust"><span>Unverified</span></div></div></div></div></section>
+<section class="section overlay-panel" id="trips" data-section="trips"><div class="card panel"><div class="eyebrow">My trips</div><h2>My trips</h2><div class="list" id="tripsList"></div></div></section>
+<section class="section overlay-panel" id="messages" data-section="messages"><div class="card panel"><div class="eyebrow">Messages</div><h2>Messages</h2><div class="list" id="messagesList"></div></div></section>
+<section class="section overlay-panel" id="profile" data-section="profile"><div class="card panel"><div class="eyebrow">Profile</div><h2>Your profile</h2><div id="profileLocked"><p class="muted">No profile yet — complete Traveller Steps 1–7 and your profile will appear here.</p><div class="actions"><button class="primary" onclick="setRole('traveller');showScreen('home')">Start Step 1</button></div></div><div class="grid2" id="profileContent"><div><p><strong id="profTrip">No trip yet — complete Step 1</strong></p><div style="display:flex;align-items:center;gap:12px;margin:12px 0;"><div id="profTravPhoto" style="width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,.15);border:2px dashed rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;overflow:hidden;"><span style="color:rgba(255,255,255,.5);font-size:30px;">+</span></div></div><div class="chips" id="profInterests"></div><h3>Personality</h3><p class="muted" id="profPersonality">Not set yet — set in Step 4.</p><h3>What I'm looking for</h3><p class="muted" id="profLookingFor">Not set yet — pick in Step 5.</p><h3>My hook</h3><p class="muted" id="profHook">Not set yet — write in Step 6.</p><div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;"><button class="secondary" onclick="travNext(1);showScreen('home')">Edit trip</button><button class="secondary" onclick="travNext(3);showScreen('home')">Edit interests</button><button class="secondary" onclick="travNext(6);showScreen('home')">Edit hook</button></div></div><div class="sidebar-note"><strong>Reputation</strong><p class="muted" id="profStats">No trips yet — complete a meetup to build reputation.</p><strong>Verification</strong><p class="muted" id="profVerify">Not verified yet — real checks in Phase 9</p><div class="trust" id="profVerifyTrust"><span>Unverified</span></div><div style="margin-top:14px;padding-top:12px;border-top:1px solid #ece7e0;"><button class="secondary" style="background:#fff0f0!important;border-color:#e8b4b4!important;color:#b00020!important;" onclick="wipeEverything()">Reset my data</button><p class="muted small" style="margin:6px 0 0;">Deletes your profile, trips and chats on this device + cloud for this login.</p></div></div></div><div class="grid2" id="localProfileContent" style="margin-top:18px;"><div><h3>Local guide profile</h3><p><strong id="localProfCity">No local base yet — complete Local Steps 1–3</strong></p><div style="display:flex;align-items:center;gap:12px;margin:12px 0;"><div id="localProfPhoto" style="width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,.15);border:2px dashed rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;overflow:hidden;"><span style="color:rgba(255,255,255,.5);font-size:30px;">+</span></div></div><div class="chips" id="localProfInterests"></div><h3>Personality</h3><p class="muted" id="localProfPersonality">Not set yet — set in Local Step 4.</p><h3>What I offer</h3><p class="muted" id="localProfOffer">Not set yet — Local Step 5.</p><p class="muted small" id="localProfAvail"></p><div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;"><button class="secondary" onclick="setRole('local');showScreen('home')">Edit local profile</button><button class="secondary" onclick="setRole('local');localNext(8);showScreen('home')">Edit availability</button></div></div><div class="sidebar-note"><strong>Hosting</strong><p class="muted" id="localProfStats">No guests yet — complete a meetup to build reputation.</p><strong>Verification</strong><p class="muted" id="localProfVerify">Not verified yet — Local Step 2.</p><div class="trust" id="localProfVerifyTrust"><span>Unverified</span></div></div></div></div></section>
 
 
 
@@ -221,7 +223,7 @@
   </div>
 </div>
 <div class="chat-overlay hidden" id="dropHookModal" onclick="if(event.target===this)closeDropHook()">
-  <div class="chat-popup" role="dialog" aria-modal="true" aria-label="Drop a Hook" style="width:min(560px,calc(100vw - 24px));">
+  <div class="chat-popup glass-modal" role="dialog" aria-modal="true" aria-label="Drop a Hook" style="width:min(560px,calc(100vw - 24px));">
     <div class="chat-popup-head"><div><strong>📍 Drop a Hook</strong><div class="muted small">Pin a hangout on the HK map</div></div><button class="secondary" onclick="closeDropHook()" aria-label="Close" style="padding:8px 12px;">✕</button></div>
     <div class="chat-popup-body" style="background:#fff;">
       <div class="field"><label>Pin Location Name</label><input id="hookLocation" placeholder='e.g. "Sham Shui Po Street Market" or "Soho Escalators"'><p class="muted small" style="margin:4px 0 0;">Auto-filled from your map tap — edit freely.</p></div>
@@ -234,16 +236,16 @@
 </div>
 <div id="pinDrawer" class="pin-drawer hidden" role="dialog" aria-label="Hook preview">
   <div class="drawer-grab"></div>
-  <div class="drawer-top"><div><strong id="pinNick">—</strong> <span id="pinVerified" class="small"></span><div><span id="pinRoleBadge" class="role-badge">—</span></div></div><button class="secondary" onclick="closePinDetail()" aria-label="Close" style="padding:8px 12px;">✕</button></div>
+  <div class="drawer-top"><div class="pin-idrow"><div class="pin-avatar" id="pinAvatar">?</div><div><strong id="pinNick">—</strong> <span id="pinVerified" class="small"></span><div><span id="pinRoleBadge" class="role-badge">—</span></div></div></div><button class="secondary" onclick="closePinDetail()" aria-label="Close" style="padding:8px 12px;">✕</button></div>
   <div class="muted small" id="pinLoc">—</div>
   <p class="pin-hook" id="pinHook">—</p>
   <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;"><span class="group-badge" id="pinGroupBadge">—</span><div class="chips" id="pinMembers" style="margin:0;"></div></div>
   <p class="muted small" id="pinPendingNote" style="display:none;">Request sent — waiting for the group to approve.</p>
   <div id="pinHostBox"></div>
-  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;"><button class="primary" id="pinRequestBtn" onclick="requestPinConnect()">Connect</button><button class="secondary" id="pinDeleteBtn" onclick="deletePinSidequest()" style="display:none;">Delete Pin</button></div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;"><button class="primary" id="pinRequestBtn" onclick="requestPinConnect()">Request to Connect</button><button class="secondary" id="pinChatBtn" onclick="openChatDrawer(_openPinId)" style="display:none;">Open group chat</button><button class="secondary" id="pinDeleteBtn" onclick="deletePinSidequest()" style="display:none;">Delete Pin</button></div>
 </div>
 <div class="chat-overlay hidden" id="groupModal">
-  <div class="chat-popup" role="dialog" aria-modal="true" aria-label="Expand group" style="width:min(480px,calc(100vw - 24px));">
+  <div class="chat-popup glass-modal" role="dialog" aria-modal="true" aria-label="Expand group" style="width:min(480px,calc(100vw - 24px));">
     <div class="chat-popup-head"><div><strong>Expand the group?</strong><div class="muted small" id="groupJoiner">—</div></div><button class="secondary" onclick="closeGroupModal()" aria-label="Close" style="padding:8px 12px;">✕</button></div>
     <div class="chat-popup-body" style="background:#fff;">
       <p class="muted small">The group expands to 3 only if <strong>all</strong> existing members accept.</p>
@@ -252,15 +254,20 @@
     </div>
   </div>
 </div>
+<div id="chatDrawer" class="chat-drawer hidden" role="dialog" aria-label="Hook group chat">
+  <div class="chat-drawer-head"><div><strong id="chatHookTitle">—</strong><div class="muted small" id="chatHookSub">—</div></div><button class="secondary" onclick="closeChatDrawer()" aria-label="Close chat" style="padding:8px 12px;">✕</button></div>
+  <div class="chat-drawer-list" id="chatMsgList"></div>
+  <div class="chat-drawer-foot"><input id="chatMsgInput" placeholder="Message the group..." onkeydown="if(event.key==='Enter')sendHookMessage()"><button class="primary" onclick="sendHookMessage()">Send</button></div>
+</div>
 <div class="toast" id="toast"></div>
 
-  <script src="data/locations.js?v=17"></script>
-  <script src="data/mock.js?v=17"></script>
-  <script src="match.js?v=17"></script>
+  <script src="data/locations.js?v=18"></script>
+  <script src="data/mock.js?v=18"></script>
+  <script src="match.js?v=18"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="supabase-config.js?v=17"></script>
-  <script src="app.js?v=17"></script>
-  <script src="supabase-sync.js?v=17"></script>
+  <script src="supabase-config.js?v=18"></script>
+  <script src="app.js?v=18"></script>
+  <script src="supabase-sync.js?v=18"></script>
 </body>
 </html>

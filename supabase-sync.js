@@ -39,7 +39,8 @@
       var k=keys();
       if(!k.url||!k.key){paint('off','Cloud: offline demo');return;}
       if(!window.supabase||!window.supabase.createClient){paint('offline','Cloud: offline (CDN blocked)');return;}
-      client=window.supabase.createClient(k.url,k.key);
+      client=window.supabase.createClient(k.url,k.key,{auth:{detectSessionInUrl:false}});
+      try{handleAuthCallback();}catch(e){}
       try{pullPins();subscribePins();}catch(e){}
       client.auth.getSession().then(function(r){
         session=r&&r.data&&r.data.session?r.data.session:null;
@@ -60,6 +61,35 @@
         try{ if(typeof updateAuthHeader==='function')updateAuthHeader(); if(typeof renderHeaderProfile==='function')renderHeaderProfile(); }catch(e){}
       });
     }catch(e){paint('offline','Cloud: offline');}
+  }
+  function handleAuthCallback(){
+    // Magic-link landing (?code=… or ?error=…): exchange explicitly so failures are visible, not silent.
+    var q;
+    try{q=new URLSearchParams(window.location.search);}catch(e){return;}
+    var err=q.get('error'), errDesc=q.get('error_description'), code=q.get('code');
+    function cleanUrl(){
+      try{
+        ['code','error','error_code','error_description'].forEach(function(k){q.delete(k);});
+        var rest=q.toString();
+        var clean=window.location.pathname+(rest?('?'+rest):'')+window.location.hash;
+        window.history.replaceState(null,'',clean);
+      }catch(e){}
+    }
+    if(err){
+      cleanUrl();
+      toast('Link failed: '+((errDesc||err).replace(/\+/g,' '))+'. Request a fresh link below.');
+      return;
+    }
+    if(!code)return;
+    toast('Finishing sign-in…');
+    client.auth.exchangeCodeForSession(code).then(function(r){
+      cleanUrl();
+      if(r&&r.error){toast('Link rejected: '+r.error.message+'. Open the newest link in the same browser.');return;}
+      toast('Signed in — welcome back.');
+    }).catch(function(e2){
+      cleanUrl();
+      toast('Link rejected: '+((e2&&e2.message)||'browser mismatch — open the link where you requested it'));
+    });
   }
   function signIn(){
     try{

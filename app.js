@@ -1186,8 +1186,11 @@ function isSignedIn(){ try{ var s=window.EtieCloud&&window.EtieCloud.getSession&
 function updateAuthHeader(){
   try{
     var in_=isSignedIn();
-    var em=document.getElementById('authEmail'); if(em) em.style.display=in_?'none':'';
-    var si=document.getElementById('signInBtn'); if(si) si.style.display=in_?'none':'';
+    // legacy email magic-link login retired from the header — Google is the only door
+    var em=document.getElementById('authEmail'); if(em) em.style.display='none';
+    var si=document.getElementById('signInBtn'); if(si) si.style.display='none';
+    var gb=document.getElementById('googleBtn'); if(gb) gb.style.display=in_?'none':'';
+    var cs=document.getElementById('cloudStatus'); if(cs) cs.style.display=in_?'none':'';
     var am=document.getElementById('avatarMenu'); if(am) am.style.display=in_?'':'none';
     if(!in_) closeAvatarMenu();
     try{ if(typeof updateAdminVisibility==='function') updateAdminVisibility(); }catch(e){}

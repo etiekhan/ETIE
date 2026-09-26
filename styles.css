@@ -406,4 +406,8 @@ header .secondary{background:rgba(255,255,255,.96)!important;color:#171717!impor
 #hookRolePills .chip.active{background:rgba(37,99,235,.12);border-color:#2563eb;color:#1e40af;font-weight:700}
 #hookText{width:100%;min-height:64px;padding:12px;border:1px solid #d9d3ca;border-radius:10px;resize:vertical}
 .sq-pin-cafe{border-color:rgba(245,158,11,.6);box-shadow:0 0 14px rgba(245,158,11,.35)}
+/* balanced wrapping for all text bubbles — no awkward blanks or orphans */
+.chip,.bubble,.pin-hook,.map-empty,.toast,.role-badge,.group-badge,.status,.list-item strong,.metric strong{text-wrap:pretty;overflow-wrap:break-word;}
+.chip{white-space:normal;}
+.interest-picker .chip{justify-content:flex-start;gap:10px;}
 @media(max-width:900px){#hkMap{height:72vh}.pin-drawer{bottom:8px}}

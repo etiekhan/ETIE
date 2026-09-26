@@ -356,17 +356,17 @@ var SQ_HOOK_MAP={
   'Scuba Diving / Snorkeling':'🤿 Sai Kung Dive Quest',
   'Hiking / Trekking':"🥾 Dragon's Back Hike",
   'Museums & Art':'🖼️ Art Basement Crawl',
-  'Solo Travel':'🧳 Solo Sidequest',
+  'Solo Travel':'🧳 Solo Hook',
   'Architecture':'🏙️ Harbour Photo Walk',
   'Local Markets':'🛍️ Temple Street Haggle',
   'Camping / Van Life':'⛺ Lamma Island Escape',
   'Café Hopping':'☕ Gough Street Café Crawl',
   'Live Music / Festivals':'🎤 LKF Neon Crawl',
-  'Extreme Sports':'🪂 Sky Sidequest',
+  'Extreme Sports':'🪂 Sky Hook',
   'Ecotourism / Nature':'🌿 Tai Po Green Escape',
   'Foodie Tours':'🍜 Dai Pai Dong Food Blitz',
   'Sunset Spots':'🌅 Harbour Sunset Quest',
-  'Sidequestmaxxing':'⚡ Ultimate Sidequest'
+  'Hookmaxxing':'⚡ Ultimate Hook'
 };
 var SIDEQUEST_CHALLENGES={
   'Football':["⚡ Attempt 3 unpracticed skill moves in a pickup game","🏆 Challenge local HK players to a 2v2 street match","⚽ Score or assist using only your non-dominant foot"],
@@ -388,7 +388,7 @@ var SQ_MODIFIERS={
   '🥾 Dragon\'s Back & Island Hikes':["Hike without phone GPS","Find a hidden beach","Cook lunch on a camp stove"],
   '🛍️ Mong Kok Vintage & Local Markets':["👕 Let your match style a full outfit for you under HKD $150","🕶️ Wear an outlandish vintage item for 10 mins","🏷️ Find a hidden local vintage shop not on Google Maps"],
   '☕ Sheung Wan Cafe Hopping':["🥟 Order from a Dai Pai Dong completely in Cantonese without pointing","🌶️ Let your local host pick 3 mystery dishes for you","🍜 Eat at a stall with zero English text on the menu"],
-  '🀄 Mahjong & Cultural Sidequests':["Learn 3 Mahjong moves in a live game","Play a round with HK locals","Teach the guide a game from your culture"],
+  '🀄 Mahjong & Culture':["Learn 3 Mahjong moves in a live game","Play a round with HK locals","Teach the guide a game from your culture"],
   '🎧 Underground LKF Nightlife':["⚡ Attempt 3 unpracticed skill moves in a pickup game","🏆 Challenge local HK players to a 2v2 street match","⚽ Score or assist using only your non-dominant foot"],
   'Salsa':["⚡ Attempt 3 unpracticed skill moves in a pickup game","🏆 Challenge local HK players to a 2v2 street match","⚽ Score or assist using only your non-dominant foot"],
   'Cooking':["🥟 Order from a Dai Pai Dong completely in Cantonese without pointing","🌶️ Let your local host pick 3 mystery dishes for you","🍜 Eat at a stall with zero English text on the menu"]
@@ -400,7 +400,7 @@ function sqModifiersFor(tag){
   if(/Food|Dining|Dai Pai/i.test(tag)) return SQ_MODIFIERS['Food/Dining'];
   if(/Photo|Wong Kar/i.test(tag)) return SQ_MODIFIERS['Photography'];
   if(/Football|Soccer/i.test(tag)) return SQ_MODIFIERS['Football'];
-  return ["Complete the vibe challenge","Try the local way","Document your sidequest"];
+  return ["Complete the vibe challenge","Try the local way","Document your hook"];
 }
 var SQ_FILTERS={date:'Tonight / Today', district:'All HK', vibe:'All', customDate:''};
 function sqHook(tag){ return SQ_HOOK_MAP[tag]||('✨ '+tag); }
@@ -451,7 +451,7 @@ function getActivePactText(){
       if(m) parts.push(tag.replace(/^[^A-Za-z0-9]+/, '').trim() + ': ' + m);
     });
     if(!parts.length && its.length) parts.push(sqModifiersFor(its[0])[0]);
-    return parts.length? parts.join(' + ') : 'No pact yet — pick a vibe + challenge.';
+    return parts.length? parts.join(' + ') : 'No pact yet — pick a vibe + twist.';
   }catch(e){ return 'No pact yet.'; }
 }
 function renderSidequestChallenges(){
@@ -484,7 +484,7 @@ function renderSidequestChallenges(){
       b.onclick=function(){ selectSidequestChallenge(ch); };
       box.appendChild(b);
     });
-    if(hint) hint.textContent='Tap a challenge — this becomes your Active Sidequest Pact.';
+    if(hint) hint.textContent='Tap a challenge — this becomes your Active Hook Pact.';
     // Also update pact displays
     updatePactDisplays();
   }catch(e){}
@@ -502,7 +502,7 @@ function selectSidequestChallenge(ch){
     // Pre-fill outreach message if in Step 11
     try{
       var ta=document.getElementById('reqMessage');
-      if(ta && ch) ta.value='Hey — '+ch+' — are you down to do this sidequest together in '+ (ETIE.trip.district||'Hong Kong') +' tonight?';
+      if(ta && ch) ta.value='Hey — '+ch+' — are you down for this hook in '+ (ETIE.trip.district||'Hong Kong') +' tonight?';
     }catch(e){}
   }catch(e){}
 }
@@ -574,7 +574,7 @@ function renderSQFilterBar(){
     inp.onchange=function(){ SQ_FILTERS.customDate=this.value; renderMatches(); };
     bar.appendChild(inp);
   }
-  bar.appendChild(pillGroup('District', SQ_DISTRICTS, SQ_FILTERS.district, function(v){ SQ_FILTERS.district=v; renderSQFilterBar(); renderMatches(); }));
+
   bar.appendChild(pillGroup('Vibe', SQ_VIBES, SQ_FILTERS.vibe, function(v){ SQ_FILTERS.vibe=v; renderSQFilterBar(); renderMatches(); }));
 }
 function sqShowNotice(msg){
@@ -957,7 +957,7 @@ function travNext(n){
   }
   hideGroup('trav');var e=document.getElementById('trav'+n);if(e)e.classList.remove('hidden');try{ETIE._lastTrav=n;saveState();}catch(_){}updateCounts();renderProfiles();
   if(n===5) try{ renderSidequestChallenges(); }catch(e){}
-  if(n===8||n===11) try{ updatePactDisplays(); var ta=document.getElementById('reqMessage'); if(ta && ETIE.traveller.sidequestChallenge) ta.value='Hey — '+ETIE.traveller.sidequestChallenge+' — are you down to sidequest in '+(ETIE.trip.district||'Hong Kong')+'?'; }catch(e){}
+  if(n===8||n===11) try{ updatePactDisplays(); var ta=document.getElementById('reqMessage'); if(ta && ETIE.traveller.sidequestChallenge) ta.value='Hey — '+ETIE.traveller.sidequestChallenge+' — are you down for a hook in '+(ETIE.trip.district||'Hong Kong')+'?'; }catch(e){}
   if(n===8||n===9||n===10||n===11)renderMatches();if(n===10||n===11||n===12||n===13){renderRequests();renderChat();renderMessagesList();}if(n>=13&&n<=17){renderMeetup();renderTrips();renderThanks();paintStars('travStars',ETIE._travStars||0);}showScreen('trav'+n);
 }
 function localNext(n){
@@ -2099,7 +2099,7 @@ function initHKMap(){
     if(_map||!window.L)return;
     var el=document.getElementById('hkMap');if(!el)return;
     _map=L.map('hkMap',{zoomControl:true}).setView(HK_CENTER,HK_ZOOM);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{attribution:'© OpenStreetMap · © CARTO',maxZoom:19}).addTo(_map);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:19}).addTo(_map);
     _map.on('click',onMapTap);
     renderMapFilter();renderMapPins();
   }catch(e){}
@@ -2253,7 +2253,7 @@ function openPinDetail(id){
     var req=document.getElementById('pinRequestBtn');
     if(req){
       req.style.display=(!isMember&&!isPending&&(p.members||[]).length<3)?'':'none';
-      req.textContent=p.status==='pair'?'Request to Join Group':'Request to Connect';
+      req.textContent='Connect';
     }
     var wait=document.getElementById('pinPendingNote');
     if(wait)wait.style.display=isPending?'':'none';

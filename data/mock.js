@@ -7,7 +7,7 @@ window.ETIE_MOCKS = {
     age: 27,
     home: "Hong Kong",
     role: "traveller",
-    interests: ["Football", "Salsa", "Cooking", "Thrift shopping", "Sidequestmaxxing"],
+    interests: ["Football", "Salsa", "Cooking", "Thrift shopping", "Hookmaxxing"],
     personality: { social: 8, spontaneous: 8, curious: 10 },
     lookingFor: ["💎 Hidden Gems"],
     hook: "Play football, find a good salsa night, eat local food and see the city through someone's eyes."
@@ -42,7 +42,7 @@ window.ETIE_MOCKS = {
       city: "Hong Kong",
       district: "Tsim Sha Tsui",
       nationality: "HK",
-      interests: ["🥟 Dai Pai Dong & Late Night Eats", "🛍️ Mong Kok Vintage & Local Markets", "🥟 Dai Pai Dong Food Blitz", "Sidequestmaxxing"],
+      interests: ["🥟 Dai Pai Dong & Late Night Eats", "🛍️ Mong Kok Vintage & Local Markets", "🥟 Dai Pai Dong Food Blitz", "Hookmaxxing"],
       personality: { social: 8, spontaneous: 8, curious: 8 },
       offer: "Dai Pai Dong Food Blitz — 5 stalls, 1 hour, no tourist menu",
       offerTags: ["Street Food", "Foodie Tours"],

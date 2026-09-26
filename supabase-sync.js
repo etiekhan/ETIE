@@ -104,6 +104,25 @@
       toast('Link failed: '+((errDesc||err).replace(/\+/g,' '))+'. Request a fresh link below.');
       return;
     }
+    // OAuth implicit callback (#access_token=…&refresh_token=…): set session explicitly
+    try{
+      var h=window.location.hash||'';
+      if(h.indexOf('access_token=')!==-1){
+        var hp=new URLSearchParams(h.replace(/^#/,''));
+        var at=hp.get('access_token'), rt=hp.get('refresh_token');
+        var herr=hp.get('error')||hp.get('error_code'), herrDesc=hp.get('error_description');
+        try{window.history.replaceState(null,'',window.location.pathname+window.location.search);}catch(e){}
+        if(herr){toast('Google sign-in failed: '+((herrDesc||herr).replace(/\+/g,' ')));return;}
+        if(at){
+          toast('Finishing sign-in…');
+          client.auth.setSession({access_token:at,refresh_token:rt||''}).then(function(r2){
+            if(r2&&r2.error){toast('Google sign-in failed: '+r2.error.message);return;}
+            toast('Signed in with Google — welcome back.');
+          }).catch(function(e3){toast('Google sign-in failed: '+((e3&&e3.message)||'try again'));});
+          return;
+        }
+      }
+    }catch(e){}
     if(!code)return;
     toast('Finishing sign-in…');
     client.auth.exchangeCodeForSession(code).then(function(r){

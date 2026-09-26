@@ -45,10 +45,15 @@
       try{pullPins();subscribePins();}catch(e){}
       client.auth.getSession().then(function(r){
         session=r&&r.data&&r.data.session?r.data.session:null;
-        if(session){paint('on','Cloud: on');pull();pullShared();subscribeShared();subscribeLiveProfiles();syncProfile();try{pullPins();}catch(e){}}
-        else paint('offline','Cloud: offline — sign in');
+        // header FIRST — sync calls below must never block it
         try{ if(typeof updateAdminVisibility==='function')updateAdminVisibility(); }catch(e){}
         try{ if(typeof updateAuthHeader==='function')updateAuthHeader(); if(typeof renderHeaderProfile==='function')renderHeaderProfile(); }catch(e){}
+        if(session){
+          paint('on','Cloud: on');
+          try{pull();}catch(e){} try{pullShared();}catch(e){} try{subscribeShared();}catch(e){}
+          try{subscribeLiveProfiles();}catch(e){} try{syncProfile();}catch(e){} try{pullPins();}catch(e){}
+        }
+        else paint('offline','Cloud: offline — sign in');
         // safety net: session can land a beat after first paint — re-sync header once settled
         setTimeout(function(){try{ if(typeof updateAuthHeader==='function')updateAuthHeader(); if(typeof renderHeaderProfile==='function')renderHeaderProfile(); }catch(e){}},800);
       }).catch(function(){paint('offline','Cloud: offline');});
@@ -58,10 +63,15 @@
         try{ if(reviewChannel){ client.removeChannel(reviewChannel); reviewChannel=null; } }catch(e){}
         try{ if(reportChannel){ client.removeChannel(reportChannel); reportChannel=null; } }catch(e){}
         try{ if(profileLiveChannel){ client.removeChannel(profileLiveChannel); profileLiveChannel=null; } }catch(e){}
-        if(s){paint('on','Cloud: on');pull();pullShared();subscribeShared();subscribeLiveProfiles();syncProfile();try{pullPins();subscribePins();}catch(e){}}
-        else paint('offline','Cloud: offline — sign in');
+        // header FIRST — sync calls below must never block it
         try{ if(typeof updateAdminVisibility==='function')updateAdminVisibility(); }catch(e){}
         try{ if(typeof updateAuthHeader==='function')updateAuthHeader(); if(typeof renderHeaderProfile==='function')renderHeaderProfile(); }catch(e){}
+        if(s){
+          paint('on','Cloud: on');
+          try{pull();}catch(e){} try{pullShared();}catch(e){} try{subscribeShared();}catch(e){}
+          try{subscribeLiveProfiles();}catch(e){} try{syncProfile();}catch(e){} try{pullPins();subscribePins();}catch(e){}
+        }
+        else paint('offline','Cloud: offline — sign in');
         setTimeout(function(){try{ if(typeof updateAuthHeader==='function')updateAuthHeader(); if(typeof renderHeaderProfile==='function')renderHeaderProfile(); }catch(e){}},800);
       });
     }catch(e){paint('offline','Cloud: offline');}

@@ -371,12 +371,12 @@ header .secondary{background:rgba(255,255,255,.96)!important;color:#171717!impor
 #hkMap{height:420px;border-radius:18px;border:1px solid rgba(244,63,94,.35);box-shadow:0 0 24px rgba(244,63,94,.10),0 12px 30px rgba(0,0,0,.35);z-index:1;background:#14101c}
 #hkMap.leaflet-container{font:inherit}
 #mapFilterBar .chip.active{background:rgba(244,63,94,.18);border-color:rgba(244,63,94,.45);color:#ffe4e6;box-shadow:0 0 12px rgba(244,63,94,.18)}
-.sq-pin{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;background:rgba(20,16,28,.92);border:2px solid rgba(244,63,94,.55);box-shadow:0 0 14px rgba(244,63,94,.35);cursor:pointer}
-.sq-pin-food{border-color:rgba(245,158,11,.6);box-shadow:0 0 14px rgba(245,158,11,.35)}
-.sq-pin-photo{border-color:rgba(139,92,246,.6);box-shadow:0 0 14px rgba(139,92,246,.35)}
-.sq-pin-nightlife{border-color:rgba(232,93,117,.6);box-shadow:0 0 14px rgba(232,93,117,.35)}
-.sq-pin-vintage{border-color:rgba(78,205,196,.6);box-shadow:0 0 14px rgba(78,205,196,.35)}
-.sq-pin-sports{border-color:rgba(110,231,183,.6);box-shadow:0 0 14px rgba(110,231,183,.35)}
+.sq-pin{position:relative;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;background:#0c0d10;border:2px solid #ff2f6d;box-shadow:0 0 8px 1px rgba(255,47,109,.9),0 0 22px 4px rgba(255,47,109,.45),inset 0 0 6px rgba(255,47,109,.35);cursor:pointer}
+.sq-pin-food{border-color:#ff9f1c;box-shadow:0 0 8px 1px rgba(255,159,28,.9),0 0 22px 4px rgba(255,159,28,.45),inset 0 0 6px rgba(255,159,28,.35)}
+.sq-pin-photo{border-color:#b45cff;box-shadow:0 0 8px 1px rgba(180,92,255,.9),0 0 22px 4px rgba(180,92,255,.45),inset 0 0 6px rgba(180,92,255,.35)}
+.sq-pin-nightlife{border-color:#ff2fb3;box-shadow:0 0 8px 1px rgba(255,47,179,.9),0 0 22px 4px rgba(255,47,179,.45),inset 0 0 6px rgba(255,47,179,.35)}
+.sq-pin-vintage{border-color:#4de1ff;box-shadow:0 0 8px 1px rgba(77,225,255,.9),0 0 22px 4px rgba(77,225,255,.45),inset 0 0 6px rgba(77,225,255,.35)}
+.sq-pin-sports{border-color:#b6ff2e;box-shadow:0 0 8px 1px rgba(182,255,46,.9),0 0 22px 4px rgba(182,255,46,.45),inset 0 0 6px rgba(182,255,46,.35)}
 @media(max-width:900px){#hkMap{height:320px}}
 
 /* Friend in Every City — map-first platform */
@@ -405,7 +405,17 @@ header .secondary{background:rgba(255,255,255,.96)!important;color:#171717!impor
 #pinHostBox .small{color:rgba(255,255,255,.8)}
 #hookRolePills .chip.active{background:rgba(37,99,235,.12);border-color:#2563eb;color:#1e40af;font-weight:700}
 #hookText{width:100%;min-height:64px;padding:12px;border:1px solid #d9d3ca;border-radius:10px;resize:vertical}
-.sq-pin-cafe{border-color:rgba(245,158,11,.6);box-shadow:0 0 14px rgba(245,158,11,.35)}
+.sq-pin-cafe{border-color:#22d3ee;box-shadow:0 0 8px 1px rgba(34,211,238,.9),0 0 22px 4px rgba(34,211,238,.45),inset 0 0 6px rgba(34,211,238,.35)}
+/* fresh-pin pulse halo (pins dropped in the last hour) */
+.sq-pin-fresh::after{content:'';position:absolute;inset:-7px;border-radius:50%;border:2px solid currentColor;opacity:0;animation:pinPulse 1.8s ease-out infinite;pointer-events:none;}
+@keyframes pinPulse{0%{transform:scale(.6);opacity:.9;}100%{transform:scale(1.25);opacity:0;}}
+/* neon system: glowing CTA, hot filter actives, electric accents */
+.fab{background:linear-gradient(135deg,#ff2fb3,#ff5e3a)!important;box-shadow:0 0 26px rgba(255,47,179,.75),0 0 60px rgba(255,94,58,.35),0 8px 24px rgba(0,0,0,.5)!important;}
+#mapFilterBar.map-filter .chip.active,#mapRoleBar.map-filter .chip.active{background:rgba(255,47,109,.25);border-color:#ff2f6d;color:#fff;box-shadow:0 0 14px rgba(255,47,109,.55),inset 0 0 8px rgba(255,47,109,.25);}
+.role-badge{border-color:#ff2f6d;background:rgba(255,47,109,.2);box-shadow:0 0 10px rgba(255,47,109,.35);}
+.group-badge{border-color:#b6ff2e;color:#d9ffb0;background:rgba(182,255,46,.1);box-shadow:0 0 10px rgba(182,255,46,.3);}
+.map-empty{border-color:#4de1ff;box-shadow:0 0 18px rgba(77,225,255,.35);}
+.pin-avatar{background:linear-gradient(135deg,#ff2fb3,#7c3aed);box-shadow:0 0 14px rgba(255,47,179,.5);}
 /* balanced wrapping for all text bubbles — no awkward blanks or orphans */
 .chip,.bubble,.pin-hook,.map-empty,.toast,.role-badge,.group-badge,.status,.list-item strong,.metric strong{text-wrap:pretty;overflow-wrap:break-word;}
 .chip{white-space:normal;}
@@ -451,8 +461,6 @@ html,body{height:100%;width:100%;margin:0;padding:0;overflow:hidden;background:#
 .map-foot{position:fixed;left:16px;bottom:84px;z-index:500;background:rgba(18,18,20,.7);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.1);border-radius:99px;padding:7px 14px;}
 .map-foot .muted{color:rgba(255,255,255,.7);}
 .map-empty{background:rgba(18,18,20,.85);border:1px solid rgba(244,63,94,.5);border-radius:99px;padding:12px 22px;font-size:14px;}
-/* glowing pins */
-.sq-pin{border:2px solid rgba(255,255,255,.9);}
 /* overlay panels (flows, trips, messages, profile) */
 .overlay-panel{display:none;position:fixed;top:70px;left:50%;transform:translateX(-50%);width:min(880px,94vw);max-height:calc(100vh - 168px);overflow-y:auto;z-index:700;background:rgba(18,18,20,.9);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:22px;color:#f5f3ef;}
 .overlay-panel.panel-open{display:block;}

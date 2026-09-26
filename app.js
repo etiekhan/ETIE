@@ -2158,7 +2158,8 @@ function renderMapPins(){
     pins.forEach(function(p){
       try{
         var ll=pinLatLng(p);
-        var icon=L.divIcon({className:'',html:'<div class="sq-pin sq-pin-'+p.category.toLowerCase()+'">'+mapCatEmoji(p.category)+'</div>',iconSize:[36,36],iconAnchor:[18,18]});
+        var fresh=(Date.now()-(p.ts||0))<3600*1000?' sq-pin-fresh':'';
+        var icon=L.divIcon({className:'',html:'<div class="sq-pin sq-pin-'+p.category.toLowerCase()+fresh+'">'+mapCatEmoji(p.category)+'</div>',iconSize:[36,36],iconAnchor:[18,18]});
         var mk=L.marker(ll,{icon:icon,title:(p.name||'Hook')+' · '+p.category});
         mk.on('click',(function(id){return function(){openPinDetail(id);};})(p.id));
         _mapLayer.addLayer(mk);

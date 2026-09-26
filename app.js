@@ -629,6 +629,7 @@ function updateCounts(){
     }
   }catch(e){}
   try{ renderSidequestModifiers('trav'); renderSidequestModifiers('local'); updatePactDisplays(); }catch(e){}
+}
 
 function toggleChip(el){
   var parent=el.parentElement;var pid=parent&&parent.id;
@@ -2412,10 +2413,3 @@ document.addEventListener('DOMContentLoaded',function(){
     if(window.EtieCloud && window.EtieCloud.subscribeReports) window.EtieCloud.subscribeReports();
   }, 2000);
 });
-
-  // Inject into Step 11 Request Confirmation Card
-  const reqSummary = document.getElementById('reqMessage');
-  if (reqSummary && reqSummary.tagName === 'TEXTAREA') {
-    reqSummary.value = `Hey! I'm down for this sidequest: "${challenge}". Let's meet up!`;
-  }
-}

@@ -1975,7 +1975,7 @@ function initHKMap(){
     var el=document.getElementById('hkMap');if(!el)return;
     _map=L.map('hkMap',{zoomControl:false}).setView(HK_CENTER,HK_ZOOM);
     try{L.control.zoom({position:'bottomright'}).addTo(_map);}catch(e){}
-    L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png?api_key=cc9c3230-65b0-44c0-8361-2c86413b0744',{maxZoom:20,attribution:'&copy; <a href="https://stadiamaps.com/">Stadia Maps</a> &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}).addTo(_map);
+    L.tileLayer('https://tiles.stadiamaps.com/tiles/stamen_toner_background/{z}/{x}/{y}{r}.png?api_key=cc9c3230-65b0-44c0-8361-2c86413b0744',{maxZoom:20,attribution:'&copy; <a href="https://stadiamaps.com/">Stadia Maps</a> &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}).addTo(_map);
     _map.on('click',onMapTap);
     renderMapFilter();renderMapPins();
   }catch(e){}

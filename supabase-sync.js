@@ -670,23 +670,25 @@
       }).catch(reject);
     });
   }
-  // ---- Map-first hooks: Supabase etie_pins (run supabase-schema-pins.sql once) ----
+  // ---- Map-first hooks: Supabase hooks table (run supabase-schema-hooks.sql once) ----
   var pinChannel=null, pinPullTimer=null;
-  function pinTable(){return 'etie_pins';}
+  function pinTable(){return 'hooks';}
   function pinRowToPin(r){
     try{
       return {id:String(r.id),kind:'hook',category:r.category||'Food',role:(r.role==='local'?'local':'traveller'),
+        derivedRole:r.derived_role||r.role||'traveller',
         name:r.nickname||'Someone',verified:!!r.verified,location:r.location||'Hong Kong',
-        lat:r.lat,lng:r.lng,hook:String(r.hook||'').slice(0,140),
+        lat:r.lat,lng:r.lng,hook:String(r.content||r.hook||'').slice(0,140),
         members:r.members||[{nick:r.nickname||'Someone',role:(r.role==='local'?'local':'traveller'),verified:!!r.verified}],
         pending:r.pending||[],status:r.status||'open',ts:(r.updated_at?new Date(r.updated_at).getTime():Date.now()),
         origin:'cloud',cloudId:String(r.id)};
     }catch(e){return null;}
   }
   function pinToRow(p){
+    var dr='traveller';try{dr=(typeof ETIE!=='undefined'&&ETIE.derivedRole)||p.role||'traveller';}catch(e){}
     return {id:String(p.cloudId||p.id),user_id:(session&&session.user&&session.user.id)||null,
-      nickname:p.name||'Someone',verified:!!p.verified,role:p.role||'traveller',category:p.category||'Food',
-      location:p.location||'Hong Kong',lat:p.lat,lng:p.lng,hook:String(p.hook||'').slice(0,140),
+      nickname:p.name||'Someone',verified:!!p.verified,role:p.role||'traveller',derived_role:dr,category:p.category||'Food',
+      location:p.location||'Hong Kong',lat:p.lat,lng:p.lng,content:String(p.hook||'').slice(0,140),
       members:p.members||[],pending:p.pending||[],status:p.status||'open',updated_at:new Date().toISOString()};
   }
   function pullPins(){
@@ -732,14 +734,14 @@
   function subscribePins(){
     try{
       if(!client||pinChannel)return;
-      pinChannel=client.channel('etie-pins-live')
+      pinChannel=client.channel('hooks-live')
         .on('postgres_changes',{event:'*',schema:'public',table:pinTable()},function(){
           try{clearTimeout(pinPullTimer);}catch(e){}
           pinPullTimer=setTimeout(function(){try{pullPins();}catch(e){}},1200);
         }).subscribe();
     }catch(e){}
   }
-  // ---- Hook group chat: etie_hook_messages (run supabase-schema-hook-chat.sql once) ----
+  // ---- Hook group chat: messages table filtered by hook_id (run supabase-schema-hook-chat.sql once) ----
   var hookChatChannels={};
   function hookMsgTable(){return 'messages';}
   function pushHookMessage(pin,msg){

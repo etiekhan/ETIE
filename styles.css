@@ -515,3 +515,15 @@ html,body{height:100%;width:100%;margin:0;padding:0;overflow:hidden;background:#
 /* overlays above panels, toasts above everything */
 .chat-overlay{z-index:1200!important;}
 .toast{z-index:2000!important;}
+/* merged header: inline logo + derived role badge */
+.logo-inline{font-size:20px;font-weight:850;letter-spacing:-.05em;color:#fff;padding:0 10px 0 6px;white-space:nowrap;}
+.derived-badge{font-size:12px;font-weight:800;padding:6px 12px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:#fff;white-space:nowrap;}
+.derived-badge.derived-local{border-color:#ff7b3a;color:#ffd9c7;background:rgba(255,123,58,.15);box-shadow:0 0 12px rgba(255,90,60,.55),0 0 30px rgba(255,47,109,.3);}
+.derived-badge.derived-traveller{border-color:#22d3ee;color:#cffafe;background:rgba(34,211,238,.12);box-shadow:0 0 12px rgba(34,211,238,.55);}
+/* single-row filter carousel */
+#mapFilterBar.map-filter{flex-wrap:nowrap;overflow-x:auto;white-space:nowrap;}
+#mapRoleBar.map-filter{display:none;}
+.filter-sep{color:rgba(255,255,255,.3);align-self:center;flex-shrink:0;padding:0 2px;}
+/* hook modal as slide-up bottom sheet */
+#dropHookModal{justify-content:center;}
+#dropHookModal .chat-popup{width:100%;max-width:640px;margin:0 auto;border-radius:20px 20px 0 0;}

@@ -453,7 +453,7 @@ html,body{height:100%;width:100%;margin:0;padding:0;overflow:hidden;background:#
 #mapFilterBar.map-filter::-webkit-scrollbar,#mapRoleBar.map-filter::-webkit-scrollbar{display:none;}
 #mapFilterBar.map-filter .chip,#mapRoleBar.map-filter .chip{flex-shrink:0;font-size:12px;padding:7px 11px;}
 /* glowing FAB */
-.fab{position:fixed;bottom:32px;left:50%;transform:translateX(-50%);z-index:1000;background:linear-gradient(135deg,#fb4d6d,#e11d48);box-shadow:0 0 28px rgba(244,63,94,.65),0 8px 24px rgba(0,0,0,.5);}
+.fab{position:fixed;bottom:96px;left:50%;transform:translateX(-50%);z-index:10000;background:linear-gradient(135deg,#fb4d6d,#e11d48);box-shadow:0 0 28px rgba(244,63,94,.65),0 8px 24px rgba(0,0,0,.5);}
 .fab:active{transform:translateX(-50%) scale(.97);}
 /* floating foot pill + empty pill */
 .map-foot{position:fixed;left:16px;bottom:84px;z-index:500;background:rgba(18,18,20,.7);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.1);border-radius:99px;padding:7px 14px;}

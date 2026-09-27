@@ -293,41 +293,7 @@ function liveLocals(){
   }catch(e){}
   return live;
 }
-function getDiscoverLocals(){
-  var live=liveLocals();
-  var useLive = isCleanLive() || (live && live.length);
-  var all= useLive ? (live||[]) : ((window.ETIE_MOCKS&&window.ETIE_MOCKS.locals)||[]);
-  var ranked=window.EtieMatch?window.EtieMatch.rank(ETIE.traveller, ETIE.trip, all, ETIE.local.availability, ETIE.reviews):all;
-  // Beginner filter: hide locals with no shared interests for beginners (<=3 completed trips)
-  // Veteran exemption: Host/Verified guides always stay visible so Ethan matches every traveller in tests
-  var travCompleted = ETIE.traveller ? (ETIE.traveller.completedTrips || 0) : 0;
-  var isBeginner = travCompleted <= 3;
-  if(isBeginner){
-    ranked = ranked.filter(function(x){ return (x.shared && x.shared.length > 0) || (x.local && (x.local.veteran || x.local.tier==='Host' || x.local.tier==='Verified')); });
-  }
-  // Veterans first for test predictability
-  ranked.sort(function(a,b){
-    var av=(a.local&&(a.local.veteran||a.local.tier==='Host'||a.local.tier==='Verified'))?1:0;
-    var bv=(b.local&&(b.local.veteran||b.local.tier==='Host'||b.local.tier==='Verified'))?1:0;
-    if(av!==bv)return bv-av;
-    return b.score-a.score;
-  });
-  // HK Sidequest high-liquidity filter: Date/District/Vibe
-  try{
-    var filtered=getSQFilteredLocals(ranked);
-    var isFiltered=SQ_FILTERS.district!=='All HK' || SQ_FILTERS.vibe!=='All' || SQ_FILTERS.date!=='Tonight / Today' || SQ_FILTERS.customDate;
-    if(!filtered.length && isFiltered){
-      var dateOnly=ranked.filter(function(x){ return sqDateMatch(x.local||x, SQ_FILTERS.date); });
-      if(dateOnly.length) filtered=dateOnly; else filtered=ranked;
-      sqShowNotice('No exact matches in '+SQ_FILTERS.district+' tonight, but these HK guides are active nearby!');
-    } else { sqShowNotice(''); }
-    ranked=filtered;
-  }catch(e){ try{sqShowNotice('');}catch(_){} }
-  if(canSeeFullDiscover())return ranked;
-  return ranked.slice(0,3);
-}
-
-// --- HK Sidequest: filter bar + sidequest hooks + district/pitch ---
+// --- HK hook helpers (district/vibe maps + modifiers) ---
 var SQ_DISTRICTS=['All HK','Central / Soho','Lan Kwai Fong','Tsim Sha Tsui','Mong Kok'];
 var SQ_VIBES=['All','Nightlife','Street Food','Photo Walk','Hiking'];
 var SQ_DATE_OPTS=['Tonight / Today','Pick Dates'];
@@ -432,13 +398,6 @@ function sqDateMatch(guide, dateOpt){
   if(!dateOpt || dateOpt==='Pick Dates') return true;
   var today=todayISO();
   return (guide.availDates||[]).indexOf(today)!==-1 || (guide.availDates||[]).length===0;
-}
-function getSQFilteredLocals(locals){
-  var out=(locals||[]).slice();
-  out=out.filter(function(x){ return sqDistrictMatch(x.local||x, SQ_FILTERS.district); });
-  out=out.filter(function(x){ return sqVibeMatch(x.local||x, SQ_FILTERS.vibe); });
-  out=out.filter(function(x){ return sqDateMatch(x.local||x, SQ_FILTERS.date); });
-  return out;
 }
 function getActivePactText(){
   try{
@@ -551,38 +510,6 @@ function updatePactDisplays(){
     var b=document.getElementById('trav11PactText'); if(b) b.textContent=txt;
   }catch(e){}
 }
-function renderSQFilterBar(){
-  var bar=document.getElementById('sqFilterBar'); if(!bar) return;
-  bar.innerHTML='';
-  function pillGroup(label, opts, cur, cb){
-    var wrap=document.createElement('div'); wrap.style.display='flex'; wrap.style.alignItems='center'; wrap.style.gap='6px'; wrap.style.flexWrap='wrap';
-    var lab=document.createElement('span'); lab.textContent=label; lab.className='muted small'; lab.style.fontWeight='800'; lab.style.marginRight='4px'; wrap.appendChild(lab);
-    opts.forEach(function(o){
-      var b=document.createElement('button'); b.className='chip'+(o===cur?' active':''); b.textContent=o; b.style.padding='6px 10px'; b.style.fontSize='12px';
-      b.onclick=function(){ cb(o); };
-      wrap.appendChild(b);
-    });
-    return wrap;
-  }
-  bar.appendChild(pillGroup('Date', SQ_DATE_OPTS, SQ_FILTERS.date, function(v){
-    SQ_FILTERS.date=v;
-    if(v!=='Pick Dates') SQ_FILTERS.customDate='';
-    renderSQFilterBar(); renderMatches();
-  }));
-  if(SQ_FILTERS.date==='Pick Dates'){
-    var inp=document.createElement('input'); inp.type='date'; inp.value=SQ_FILTERS.customDate||todayISO(); inp.style.padding='6px 10px'; inp.style.border='1px solid rgba(255,255,255,.18)'; inp.style.borderRadius='999px'; inp.style.background='rgba(255,255,255,.06)'; inp.style.color='#fff';
-    inp.onchange=function(){ SQ_FILTERS.customDate=this.value; renderMatches(); };
-    bar.appendChild(inp);
-  }
-
-  bar.appendChild(pillGroup('Vibe', SQ_VIBES, SQ_FILTERS.vibe, function(v){ SQ_FILTERS.vibe=v; renderSQFilterBar(); renderMatches(); }));
-}
-function sqShowNotice(msg){
-  var n=document.getElementById('sqFilterNotice'); if(!n) return;
-  if(!msg){ n.style.display='none'; n.textContent=''; return; }
-  n.style.display=''; n.textContent=msg;
-}
-
 // Flag helpers
 function flagEmoji(code){if(!code)return '';return String.fromCodePoint(...code.toUpperCase().split('').map(c=>127397+c.charCodeAt(0)));}
 function flagForCountry(countryCode){var map={'PT':'🇵🇹','ES':'🇪🇸','FR':'🇫🇷','IT':'🇮🇹','JP':'🇯🇵','TH':'🇹🇭','US':'🇺🇸','AU':'🇦🇺','HK':'🇭🇰','SG':'🇸🇬'};return map[countryCode]||flagEmoji(countryCode)||'🌍';}
@@ -590,7 +517,7 @@ function flagForCountry(countryCode){var map={'PT':'🇵🇹','ES':'🇪🇸','F
 function toast(msg){var t=document.getElementById('toast');if(!t){alert(msg);return;}t.textContent=msg;t.style.display='block';clearTimeout(t._h);t._h=setTimeout(function(){t.style.display='none';},2200);}
 function showScreen(id){
   try{
-    var panels=['home','homeFlows','trips','messages','profile','discover'];
+    var panels=['home','homeFlows','trips','messages','profile'];
     var want=(id==='home')?['home','homeFlows']:[id];
     panels.forEach(function(p){var el=document.getElementById(p);if(el)el.classList.toggle('panel-open',want.indexOf(p)!==-1);});
     if(id!=='map')dismissWelcome();
@@ -959,7 +886,7 @@ function travNext(n){
     saveState();
     if(n>cur&&!validTrav(cur))return;
   }catch(e){}
-  // Steps 9-17 are match-gated: only reachable when a real local guide exists (no Marta demo when offline)
+  // Steps 9-17 are match-gated: only reachable when a real local guide exists
   if(n>=9 && n<=17 && !hasRealMatch()){
     // still allow Step 8 waiting state, but block deeper
     if(n===8){ /* allow */ } else {
@@ -990,8 +917,7 @@ function updateAdminVisibility(){try{var b=document.getElementById('adminBtn');i
 function openAdmin(){if(!isEtieAdmin()){toast('Admin restricted.');return;}try{var o=document.getElementById('adminOverlay');if(o)o.classList.remove('hidden');}catch(e){} try{ refreshAdminLive(); }catch(e){}}
 function closeAdmin(){try{var o=document.getElementById('adminOverlay');if(o)o.classList.add('hidden');}catch(e){}}
 function toggleAdmin(){if(!isEtieAdmin()){toast('Admin restricted.');return;}try{var o=document.getElementById('adminOverlay');if(!o)return;if(o.classList.contains('hidden'))openAdmin();else closeAdmin();}catch(e){}}
-function enableCleanLive(){ try{ localStorage.setItem('etie-clean','1'); window.ETIE_CLEAN=true; var l=document.getElementById('cleanModeLine'); if(l) l.textContent='Clean mode ON — mocks hidden. Refresh both phones. Run SQL wipe below if needed, then re-onboard Fleming (local) + Ethan (traveller).'; renderMatches(); toast('Clean live mode enabled.'); }catch(e){} }
-function disableCleanLive(){ try{ localStorage.setItem('etie-clean','0'); window.ETIE_CLEAN=false; var l=document.getElementById('cleanModeLine'); if(l) l.textContent='Demos visible again (clean off).'; renderMatches(); toast('Demos restored.'); }catch(e){} }
+
 function wipeLocalEtie(){ try{ if(!confirm('Wipe local ETIE (requests/messages/meetups/reviews, keep profile)?')) return; ETIE.requests={}; ETIE.messages={}; ETIE.meetups={}; ETIE.reviews={}; ETIE._travStars=0; ETIE._localStars=0; ETIE_MATCH_INDEX=0; saveState(); renderMatches(); renderRequests(); renderChat(); renderMessagesList(); renderMeetup(); renderTrips(); renderLocalDashboard(); toast('Local wiped — also run SQL wipe for cloud.'); }catch(e){} }
 function wipeEverything(){
   if(!confirm('Are you sure you want to delete your data?')) return;
@@ -1020,7 +946,6 @@ function refreshAdminLive(){
     var hint=document.getElementById('adminLiveHint');
     var uc=document.getElementById('adminUserCount'), vc=document.getElementById('adminVerifiedCount'), rc=document.getElementById('adminReportsCount'), mc=document.getElementById('adminMeetupsCount');
     var lp=document.getElementById('adminLiveProfiles'), lr=document.getElementById('adminLiveRequests');
-    if(window.ETIE_DEMO){ if(hint) hint.textContent='Demo active — cloud paused. Exit demo to see live.'; return; }
     if(!window.EtieCloud || !window.EtieCloud.isSharedOn() || !window.EtieCloud.getClient || !window.EtieCloud.getClient()){
       if(hint) hint.textContent='Offline — sign in on both phones for live data.';
       if(uc) uc.textContent='—'; if(vc) vc.textContent='—'; if(rc) rc.textContent='—'; if(mc) mc.textContent='—';
@@ -1134,40 +1059,6 @@ function renderRoleGate(){
 
 // Demo personas — permanent test individuals for solo testing (same browser, no second phone).
 // Cloud sync pauses while a persona is active so demo play never pollutes real tables.
-function assumePersona(id){
-  try{
-    try{localStorage.setItem('etie-v1-user-backup',localStorage.getItem('etie-v1')||'');}catch(e){}
-    window.ETIE_DEMO=id;
-    var M=(window.ETIE_MOCKS||{});
-    if(id==='trav-etie'){
-      var t=M.traveller||{};
-      ETIE.trip={destination:(M.trip&&M.trip.destination)||'Lisbon',dates:(M.trip&&M.trip.dates)||'12–18 September',country:(M.trip&&M.trip.country)||'PT'};
-      ETIE.traveller={nickname:t.nickname||'',nationality:t.nationality||'HK',interests:((t.interests)||['Football','Salsa','Cooking','Thrift shopping']).slice(),personality:Object.assign({social:8,spontaneous:8,curious:10},t.personality||{}),socialVibe:1,travelPace:1,styleInterests:[],lookingFor:((t.lookingFor)||['💎 Hidden Gems']).slice(),hook:t.hook||'',photo:null,travelPhotos:[]};
-      try{document.getElementById('cloudStatus').textContent='Demo: Etie (offline)';}catch(e){}
-      try{document.getElementById('demoPersonaLine').textContent='Acting as Etie · traveller — Exit demo to return to your account.';}catch(e){}
-      saveState();setRole('traveller');
-    } else {
-      var L=null;((M.locals)||[]).forEach(function(x){if(x.id===id)L=x;});
-      if(!L){toast('Unknown persona');return;}
-      ETIE.local={city:L.city||'Lisbon',age:String(L.age||28),verificationMethods:['Social media'],interests:(L.interests||[]).slice(0,4),personality:Object.assign({social:10,spontaneous:10,curious:10},L.personality||{}),offer:L.offer||'',offerTags:((L.offerTags||L.interests)||[]).slice(0,4),availability:(L.availability||[]).map(function(a){return (typeof a==='string')?{label:a,status:'Available'}:a;})};
-      try{document.getElementById('cloudStatus').textContent='Demo: '+L.name+' (offline)';}catch(e){}
-      try{document.getElementById('demoPersonaLine').textContent='Acting as '+L.name+' · local guide — Exit demo to return to your account.';}catch(e){}
-      saveState();setRole('local');localNext(9);
-    }
-    toast('Demo persona active — cloud sync paused.');
-  }catch(e){toast('Demo switch failed.');}
-}
-function exitDemo(){
-  try{
-    window.ETIE_DEMO=null;
-    try{var raw=localStorage.getItem('etie-v1-user-backup');if(raw){localStorage.setItem(ETIE_KEY,raw);ETIE=loadState();}}catch(e){}
-    try{document.getElementById('cloudStatus').textContent='Cloud: offline demo';}catch(e){}
-    try{document.getElementById('demoPersonaLine').textContent='';}catch(e){}
-    if(typeof restoreAll==='function')restoreAll();
-    toast('Back to your account.');
-  }catch(e){}
-}
-
 function persBadges(el,o){
   try{
     if(!el) return;
@@ -1198,9 +1089,6 @@ function isSignedIn(){ try{ var s=window.EtieCloud&&window.EtieCloud.getSession&
 function updateAuthHeader(){
   try{
     var in_=isSignedIn();
-    // legacy email magic-link login retired from the header — Google is the only door
-    var em=document.getElementById('authEmail'); if(em) em.style.display='none';
-    var si=document.getElementById('signInBtn'); if(si) si.style.display='none';
     var gb=document.getElementById('googleBtn'); if(gb) gb.style.display=in_?'none':'';
     var cs=document.getElementById('cloudStatus'); if(cs) cs.style.display=in_?'none':'';
     var am=document.getElementById('avatarMenu'); if(am) am.style.display=in_?'':'none';
@@ -1355,8 +1243,7 @@ var ETIE_MATCH_INDEX=0;
 function getRanked(){
   try{
     var live=liveLocals();
-    var useLive = isCleanLive() || (live && live.length);
-    var src= useLive ? (live||[]) : (window.ETIE_MOCKS&&window.ETIE_MOCKS.locals||[]);
+    var src=(live||[]);
     return window.EtieMatch.rank(ETIE.traveller, ETIE.trip, src, ETIE.local.availability, ETIE.reviews);
   } catch(e){return [];}
 }
@@ -1368,15 +1255,15 @@ function renderMatches(){
   if(!r.length){
     try{
       var t7t=document.getElementById('trav7Title'); if(t7t) t7t.textContent='Your next friend is waiting for you!';
-      var t7s=document.getElementById('trav7Sub'); if(t7s) t7s.textContent=isCleanLive()?'No local guides found matching your current filters. Check back after guides complete onboarding.':'The product recommends people rather than making you browse a directory.';
+      var t7s=document.getElementById('trav7Sub'); if(t7s) t7s.textContent='No local guides found matching your current filters. Check back after guides complete onboarding.';
       var mc=document.getElementById('matchAvatar'); if(mc) mc.textContent='—';
-      var mn=document.getElementById('matchName'); if(mn) mn.textContent=isCleanLive()?'No local guides found': 'No matches';
-      var mm=document.getElementById('matchMeta'); if(mm) mm.textContent=isCleanLive()?'Matching your current filters — check back soon.': '—';
+      var mn=document.getElementById('matchName'); if(mn) mn.textContent='No local guides found';
+      var mm=document.getElementById('matchMeta'); if(mm) mm.textContent='Matching your current filters — check back soon.';
       var ms=document.getElementById('matchScore'); if(ms) ms.textContent='No match yet';
       var rn=document.getElementById('matchRankNote'); if(rn) rn.textContent='';
       // hide Steps 8-16 when no real match (they only live after a match)
       ['trav8','trav9','trav10','trav11','trav12','trav13','trav14','trav15','trav16'].forEach(function(id){var el=document.getElementById(id); if(el) el.classList.add('hidden');});
-      var dg=document.getElementById('discoverGrid'); if(dg){ if(isCleanLive()) dg.innerHTML='<div class="card match-card" style="padding:16px;"><strong>No local guides found</strong><p class="muted small">No local guides found matching your current filters.</p></div>'; else dg.innerHTML=''; }
+
     }catch(e){}
     return;
   }
@@ -1439,61 +1326,7 @@ function renderMatches(){
     (L.interests||[]).forEach(function(x){var s=document.createElement('span');s.className='chip'+(m.shared.indexOf(x)!==-1?' active':'');s.textContent=x;p8i.appendChild(s);});
     document.getElementById('prof8Offer').textContent='“'+(L.offer||'—')+'”';
     document.getElementById('prof8Stats').textContent=(L.stats.travellersMet||'—')+' travellers met · '+(L.stats.reviews||'—')+' reviews · '+(L.stats.references||'—')+' references (demo)'+(m.repCount?(' · live: '+m.rep+'★ ('+m.repCount+')'):'');
-    var g=document.getElementById('discoverGrid');if(g){
-      g.innerHTML='';
-      var discoverLocals=getDiscoverLocals();
-      g.innerHTML='';
-      discoverLocals.forEach(function(x){
-        var d=document.createElement('div');d.className='match-card card';
-        // subtle neon glow by compatibility
-        var sc=Math.min(99,Math.max(5,x.score||0));
-        d.style.boxShadow='0 0 22px rgba(244,63,94,'+(0.06+sc/100*0.12).toFixed(2)+'), 0 8px 28px rgba(0,0,0,.35)';
-        d.style.border='1px solid rgba(244,63,94,.35)';
-        var district=sqDistrictFor(x.local);
-        var badge=sqBadgeFor(x.local);
-        var pitch=x.local.offer||'Unscripted HK sidequest — ask me for the plan.';
-        var lflag=flagForCountry(x.local.nationality);
-        d.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;"><strong></strong><span class="pers-badge" style="font-size:11px;padding:4px 8px;background:rgba(244,63,94,.12);border-color:rgba(244,63,94,.35);"></span></div><div class="muted small" style="margin-top:4px;"></div><p class="muted small" style="margin:8px 0 6px;font-style:italic;"></p><div class="chips" style="margin-top:6px;"></div>';
-        d.querySelector('strong').textContent=lflag+' '+x.local.name+' · '+district+' · '+x.score+(x.repCount?(' · '+x.rep+'★'):'');
-        d.querySelector('span.pers-badge').textContent=badge;
-        d.querySelector('div.muted.small').textContent=x.label+(x.tagBonus?(' · loved by people like you'): '');
-        d.querySelector('p.muted.small').textContent='"'+pitch+'"';
-        var chipBox=d.querySelector('div.chips');
-        var hooks=(x.local.interests||[]).slice(0,3).map(sqHook);
-        if(!hooks.length) hooks=[sqHook('Sidequestmaxxing')];
-        hooks.forEach(function(h){
-          var s=document.createElement('span');s.className='chip sq-badge';s.textContent=h;chipBox.appendChild(s);
-        });
-        var vb=document.createElement('button');vb.className='secondary';vb.textContent='Initiate Sidequest';vb.style.marginTop='10px';
-        vb.onclick=(function(id){return function(){
-          document.getElementById('travRole').classList.add('active');document.getElementById('localRole').classList.remove('active');
-          document.getElementById('travellerFlow').classList.remove('hidden');document.getElementById('localFlow').classList.add('hidden');
-          focusMatch(id);travNext(9);
-        };})(x.local.id);
-        d.appendChild(vb);
-        g.appendChild(d);
-      });
-      // Host activities section for Verified/Host
-      if(canSeeFullDiscover() && getLocalTier()==='Host'){
-        var hostActivities=ETIE.local.activities||[];
-        if(hostActivities.length){
-          var ha=document.createElement('div');ha.style.marginTop='24px';
-          ha.innerHTML='<h3>Host Activities <span class="small muted">(create your own)</span></h3>';
-          hostActivities.forEach(function(act){
-            var ac=document.createElement('div');ac.className='match-card card';ac.style.marginTop='10px';
-            ac.innerHTML='<strong></strong><p class="muted small"></p>';
-            ac.querySelector('strong').textContent=act.title;
-            ac.querySelector('.muted').textContent=act.description+' · '+act.when+' · '+act.where+' · '+act.capacity+' spots';
-            ha.appendChild(ac);
-          });
-          g.appendChild(ha);
-        }else{
-          var ha=document.createElement('div');ha.style.marginTop='24px';
-          ha.innerHTML='<h3>Host Activities</h3><p class="muted">No activities created yet. <button class="secondary" onclick="alert(\'Activity creation coming in Phase 10\')">Create activity</button></p>';
-          g.appendChild(ha);
-        }
-      }
-    }
+
   }catch(e){}
 }
 
@@ -1681,11 +1514,6 @@ function renderMessagesList(){
   try{
     var box=document.getElementById('messagesList');if(!box)return;box.innerHTML='';
     var ids=Object.keys(ETIE.requests||{});
-    if(isCleanLive()){
-      // hide demo pools in clean mode — only show threads whose id is a real user_id or whose localName is not Marta/Javier/Sofia unless it came from live
-      var demoIds=['local-marta','local-javier','local-sofia'];
-      ids=ids.filter(function(k){ if(demoIds.indexOf(k)!==-1 && !ETIE.requests[k].traveller_id) return false; return true; });
-    }
     if(!ids.length){box.innerHTML='<div class="list-item"><div><strong>No messages yet</strong><br><span class="muted">Your conversations will appear here after you connect.</span></div><span class="status">Empty</span></div>';return;}
     ids.forEach(function(k){
       var r=ETIE.requests[k];var msgs=ETIE.messages[k]||[];var last=msgs.length?msgs[msgs.length-1].text:'—';
@@ -1829,7 +1657,7 @@ function renderTrips(){
   }catch(e){}
 }
 
-function localNameFor(k){var r=ETIE.requests[k];if(r&&r.localName)return r.localName;var live=liveLocals(); var all= live && live.length ? live : ((window.ETIE_MOCKS&&window.ETIE_MOCKS.locals)||[]);for(var i=0;i<all.length;i++)if(all[i].id===k)return all[i].name;return k;}
+function localNameFor(k){var r=ETIE.requests[k];if(r&&r.localName)return r.localName;var live=liveLocals()||[];for(var i=0;i<live.length;i++)if(live[i].id===k)return live[i].name;return k;}
 function focusMatch(k){var r=getRanked();for(var i=0;i<r.length;i++)if(r[i].local.id===k){ETIE_MATCH_INDEX=i;break;}renderMatches();renderRequests();renderChat();renderMeetup();}
 function acceptKey(k){if(!ETIE.requests[k]){toast('No request for '+k);return;}focusMatch(k);ETIE.requests[k].status='accepted';ETIE.requests[k].updatedAt=Date.now();ensureChat(k);ETIE.messages[k].push({from:'local',text:'Accepted! Looking forward to meeting.',ts:Date.now()});saveState();renderRequests();renderChat();renderMessagesList();renderLocalDashboard();
   try{ if(window.EtieCloud&&window.EtieCloud.pushSharedRequest) window.EtieCloud.pushSharedRequest(k); }catch(e){}
@@ -1846,7 +1674,6 @@ function renderLocalDashboard(){
     if(dt){ dt.innerHTML=''; var _vm=ETIE.local.verificationMethods||[]; if(!_vm.length){var _s=document.createElement('span');_s.textContent='Unverified';dt.appendChild(_s);} else _vm.forEach(function(x){var _s=document.createElement('span');_s.textContent='✓ '+x;dt.appendChild(_s);}); }
     var q=document.getElementById('localQueue');
     if(q){q.innerHTML='';var ids=Object.keys(ETIE.requests||{});
-      if(isCleanLive()){var demoIds=['local-marta','local-javier','local-sofia'];ids=ids.filter(function(k){return demoIds.indexOf(k)===-1;});}
       if(!ids.length)q.innerHTML='<div class="list-item"><div><strong>No requests yet</strong><br><span class="muted">Send one as Traveller — try different matches.</span></div><span class="status">Empty</span></div>';
       ids.forEach(function(k){
         var r=ETIE.requests[k];var row=document.createElement('div');row.className='list-item';
@@ -1957,7 +1784,7 @@ function restoreAll(){
       }
     }catch(e){}
   }catch(e){}
-  restorePhotoPreviews();updateCounts();refreshSliderLabels();refreshAnchoredLabels();syncAvailUI();renderProfiles();renderRoleGate();renderMatches();renderRequests();renderChat();renderMessagesList();renderMeetup();renderThanks();renderTrips();renderLocalDashboard();try{ renderSQFilterBar(); }catch(e){}
+  restorePhotoPreviews();updateCounts();refreshSliderLabels();refreshAnchoredLabels();syncAvailUI();renderProfiles();renderRoleGate();renderMatches();renderRequests();renderChat();renderMessagesList();renderMeetup();renderThanks();renderTrips();renderLocalDashboard();
 }
 function refreshSliderLabels(){
   var m=[['localSocial','localSocialVal'],['localSpont','localSpontVal'],['localCurious','localCuriousVal']];
@@ -2457,7 +2284,6 @@ document.addEventListener('DOMContentLoaded',function(){
   buildCountrySelects();
   restoreAll();
   restoreDevBar();
-  try{ renderSQFilterBar(); }catch(e){}
   try{ initHKMap(); renderMapFilter(); renderMapPins(); }catch(e){}
   try{
     var r=new URLSearchParams(window.location.search).get('role');
@@ -2481,7 +2307,6 @@ document.addEventListener('DOMContentLoaded',function(){
   var li=document.getElementById('localChatInput');if(li)li.addEventListener('keydown',function(e){if(e.key==='Enter')sendChat('local','localChatInput');});
   var li9=document.getElementById('localChatInput9');if(li9)li9.addEventListener('keydown',function(e){if(e.key==='Enter')sendChat('local','localChatInput9');});
   var pi=document.getElementById('chatPopupInput');if(pi)pi.addEventListener('keydown',function(e){if(e.key==='Enter')sendChatPopup();});
-  var ae=document.getElementById('authEmail');if(ae)ae.addEventListener('keydown',function(e){if(e.key==='Enter'){try{window.EtieCloud.signIn();}catch(_){}}});
   document.addEventListener('keydown',function(e){if(e.key==='Escape'){try{closeChatPopup();}catch(e2){}try{closeAdmin();}catch(e3){}try{closeAvatarMenu();}catch(e4){}try{closeChatDrawer();}catch(e5){}try{closePinDetail();}catch(e6){}try{closeGroupModal();}catch(e7){}try{closeDropHook();}catch(e8){}}});
   document.addEventListener('click',function(e){try{var m=document.getElementById('avatarMenu');if(m&&e.target&&!m.contains(e.target))closeAvatarMenu();}catch(err){}});
   // re-sync header whenever the tab regains focus (session may have landed elsewhere)

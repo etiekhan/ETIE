@@ -30,7 +30,6 @@
     return session?'on':'offline-no-login';
   }
   function isSharedOn(){
-    if(window.ETIE_DEMO)return false;
     if(!client||!session)return false;
     return true;
   }
@@ -87,7 +86,7 @@
     }catch(e){toast('Google sign-in unavailable.');}
   }
   function handleAuthCallback(){
-    // Magic-link landing (?code=… or ?error=…): exchange explicitly so failures are visible, not silent.
+    // Auth callback (?code=… or #access_token=…): exchange explicitly so failures are visible, not silent.
     var q;
     try{q=new URLSearchParams(window.location.search);}catch(e){return;}
     var err=q.get('error'), errDesc=q.get('error_description'), code=q.get('code');
@@ -134,25 +133,6 @@
       toast('Link rejected: '+((e2&&e2.message)||'browser mismatch — open the link where you requested it'));
     });
   }
-  function signIn(){
-    try{
-      var em=document.getElementById('authEmail');
-      var email=(em&&em.value||'').trim();
-      if(!email||email.indexOf('@')===-1){toast('Enter a valid email for magic link.');return;}
-      if(!client){toast('Add Supabase keys first (supabase-config.js).');return;}
-      var redirect=window.location.origin + window.location.pathname;
-      var btn=document.getElementById('signInBtn');
-      if(btn){btn.disabled=true;btn.textContent='Sending…';}
-      client.auth.signInWithOtp({email:email, options:{emailRedirectTo: redirect}}).then(function(r){
-        if(btn){btn.disabled=false;btn.textContent='Sign in';}
-        if(r&&r.error){toast('Sign-in error: '+r.error.message);return;}
-        toast('Check your email for the sign-in link.');
-      }).catch(function(err){
-        if(btn){btn.disabled=false;btn.textContent='Sign in';}
-        toast('Sign-in failed: '+((err&&err.message)||'network error — try again'));
-      });
-    }catch(e){toast('Sign-in unavailable offline.');}
-  }
   function signOut(){
     try{ if(!confirm('Are you sure you want to sign out?')) return; }catch(e){ return; }
     try{if(client)try{ client.removeChannel(realtimeChannel); client.removeChannel(reviewChannel); client.removeChannel(reportChannel); client.removeChannel(profileLiveChannel); if(pinChannel)client.removeChannel(pinChannel); }catch(e){};realtimeChannel=reviewChannel=reportChannel=profileLiveChannel=pinChannel=null; try{for(var hk in hookChatChannels){try{client.removeChannel(hookChatChannels[hk]);}catch(e){}} hookChatChannels={};}catch(e){} if(client)client.auth.signOut();}catch(e){}
@@ -166,7 +146,6 @@
   // ---- Phase 2: single-user backup (etie_states) ----
   function push(){
     try{
-      if(window.ETIE_DEMO)return;
       if(!client||!session)return;
       clearTimeout(pushTimer);
       pushTimer=setTimeout(function(){
@@ -183,7 +162,6 @@
   }
   function pull(){
     try{
-      if(window.ETIE_DEMO)return;
       if(!client||!session)return;
       client.from(table()).select('data,updated_at').eq('user_id',session.user.id).maybeSingle().then(function(r){
         if(r&&(r.error||!r.data))return;
@@ -814,7 +792,7 @@
   }
   // ---- Expose ----
   window.EtieCloud={
-    init:init, signIn:signIn, signInWithGoogle:signInWithGoogle, signOut:signOut,
+    init:init, signInWithGoogle:signInWithGoogle, signOut:signOut,
     push:push, pull:pull, status:status,
     pullPins:pullPins, pushPin:pushPin, deletePin:deletePin,
     pushHookMessage:pushHookMessage, subscribeHookChat:subscribeHookChat,

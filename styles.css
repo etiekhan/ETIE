@@ -468,6 +468,8 @@ html,body{height:100%;width:100%;margin:0;padding:0;overflow:hidden;background:#
 .overlay-panel .panel{padding:18px;}
 .overlay-panel input,.overlay-panel textarea,.overlay-panel select{background:rgba(255,255,255,.08)!important;border-color:rgba(255,255,255,.16)!important;color:#fff!important;}
 .overlay-panel .secondary{background:rgba(255,255,255,.1)!important;border-color:rgba(255,255,255,.2)!important;color:#fff!important;}
+.overlay-panel .status{background:rgba(255,255,255,.14)!important;color:#fff!important;}
+.glass-modal .chat-popup-head{background:transparent!important;border-color:rgba(255,255,255,.12)!important;}
 .overlay-panel .primary{background:#f43f5e!important;border-color:#f43f5e!important;}
 .overlay-panel .list-item{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.12);color:#f5f3ef;}
 .overlay-panel .role{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.16);color:#fff;}

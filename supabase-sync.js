@@ -4,7 +4,7 @@
 // Realtime: all shared tables
 // Auto-tier promotion on review/meetup completion
 (function(){
-  var client=null, session=null, pushTimer=null, profileTimer=null, sharedSyncTimer=null, realtimeChannel=null;
+  var client=null, session=null, pushTimer=null, profileTimer=null, sharedSyncTimer=null, realtimeChannel=null, lastProfileSig=null;
   var reviewChannel=null, reportChannel=null, profileLiveChannel=null;
 
   function keys(){return {url:(window.ETIE_SUPABASE_URL||'').trim(), key:(window.ETIE_SUPABASE_ANON_KEY||'').trim()};}
@@ -190,7 +190,7 @@
   function scheduleProfileSync(){
     if(!isSharedOn())return;
     clearTimeout(profileTimer);
-    profileTimer=setTimeout(syncProfile, 900);
+    profileTimer=setTimeout(syncProfile, 5000); // quiet mode: 5s debounce
   }
   function syncProfile(){
     try{
@@ -246,14 +246,20 @@
           } else console.info('Etie profile sync OK');
         });
       }
-      tryUpsert(Object.assign({}, base, extra));
+      var payload=Object.assign({}, base, extra);
+      try{ // quiet mode: skip upsert when nothing changed (updated_at excluded)
+        var sig=JSON.stringify(payload,function(k,v){return k==='updated_at'?undefined:v;});
+        if(sig===lastProfileSig)return;
+        lastProfileSig=sig;
+      }catch(e){}
+      tryUpsert(payload);
     }catch(e){console.warn('Etie profile sync skipped',e);}
   }
   // ---- Shared requests/messages/meetups ----
   function scheduleSharedPush(){
     if(!isSharedOn())return;
     clearTimeout(sharedSyncTimer);
-    sharedSyncTimer=setTimeout(pushSharedRequests, 700);
+      sharedSyncTimer=setTimeout(pushSharedRequests, 3000); // quiet mode
   }
   function pushSharedRequest(localMockId){
     try{
@@ -461,11 +467,11 @@
       if(realtimeChannel) try{ client.removeChannel(realtimeChannel); }catch(e){}
       realtimeChannel=client.channel('etie-8b-live');
       realtimeChannel.on('postgres_changes',{event:'*', schema:'public', table:reqTable()}, function(payload){
-        clearTimeout(sharedSyncTimer); sharedSyncTimer=setTimeout(pullShared, 600);
+        clearTimeout(sharedSyncTimer); sharedSyncTimer=setTimeout(pullShared, 2500); // quiet mode
       }).on('postgres_changes',{event:'*', schema:'public', table:msgTable()}, function(payload){
-        clearTimeout(sharedSyncTimer); sharedSyncTimer=setTimeout(function(){ pullShared(); }, 500);
+        clearTimeout(sharedSyncTimer); sharedSyncTimer=setTimeout(function(){ pullShared(); }, 2500);
       }).on('postgres_changes',{event:'*', schema:'public', table:meetTable()}, function(payload){
-        clearTimeout(sharedSyncTimer); sharedSyncTimer=setTimeout(function(){ pullShared(); }, 600);
+        clearTimeout(sharedSyncTimer); sharedSyncTimer=setTimeout(function(){ pullShared(); }, 2500);
       }).subscribe(function(status){
         if(status==='SUBSCRIBED') console.info('Etie realtime subscribed');
       });
@@ -510,7 +516,7 @@
       if(reviewChannel) try{ client.removeChannel(reviewChannel); }catch(e){}
       reviewChannel=client.channel('etie-reviews-live');
       reviewChannel.on('postgres_changes',{event:'*', schema:'public', table:revTable()}, function(payload){
-        clearTimeout(sharedSyncTimer); sharedSyncTimer=setTimeout(pullSharedReviews, 500);
+        clearTimeout(sharedSyncTimer); sharedSyncTimer=setTimeout(pullSharedReviews, 2500); // quiet mode
       }).subscribe(function(status){
         if(status==='SUBSCRIBED') console.info('Etie reviews realtime subscribed');
       });
@@ -619,7 +625,7 @@
       if(!isSharedOn()) return;
       if(profileLiveChannel) try{ client.removeChannel(profileLiveChannel); }catch(e){}
       profileLiveChannel=client.channel('etie-profiles-live');
-      profileLiveChannel.on('postgres_changes',{event:'*', schema:'public', table:profTable()}, function(){ setTimeout(pullLiveProfiles, 400); }).subscribe(function(s){ if(s==='SUBSCRIBED') console.info('Etie live profiles subscribed'); });
+      profileLiveChannel.on('postgres_changes',{event:'*', schema:'public', table:profTable()}, function(){ setTimeout(pullLiveProfiles, 2000); }).subscribe(function(s){ if(s==='SUBSCRIBED') console.info('Etie live profiles subscribed'); }); // quiet mode
       pullLiveProfiles();
     }catch(e){ console.warn('subscribeLiveProfiles skipped', e); }
   }

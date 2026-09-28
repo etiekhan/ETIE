@@ -1175,18 +1175,36 @@ function renderLiteProfile(){
     var st2=document.getElementById('liteStats');
     if(st2){var tc=tr.completedTrips||0;st2.textContent=tc?('Meetups: '+tc):'No meetups yet \u2014 complete one to build reputation.';}
     var done=isProfileComplete();
-    var step=done?0:(ETIE.profileStep||1);
+    var fisrt=firstIncompleteStep();
+    var maxStep=(fisrt===0)?3:fisrt;
+    var step=Math.min(ETIE.profileStep||1,maxStep);
+    ETIE.profileStep=step;
     [1,2,3].forEach(function(n){
-      var s=document.getElementById('liteStep'+n); if(s)s.style.display=(!done&&n===step)?'':(done?'':'none');
-      var d=document.getElementById('liteDot'+n); if(d)d.classList.toggle('active',!done&&n===step);
+      var s=document.getElementById('liteStep'+n); if(s)s.style.display=(n===step)?'':'none';
+      var d=document.getElementById('liteDot'+n);
+      if(d){d.classList.toggle('active',n===step);d.classList.toggle('done',stepValid(n));d.classList.toggle('locked',n>maxStep);}
     });
-    var nav=document.getElementById('liteNav'); if(nav)nav.style.display=done?'none':'';
-    var bk=document.getElementById('liteBack'); if(bk)bk.style.display=(!done&&step>1)?'':'none';
+    var nav=document.getElementById('liteNav'); if(nav)nav.style.display='';
+    var bk=document.getElementById('liteBack'); if(bk)bk.style.display=(step>1)?'':'none';
     var nx=document.getElementById('liteNext');
-    if(nx&&!done)nx.textContent=(step>=3)?'Complete Profile & Unlock Map':'Continue';
+    if(nx)nx.textContent=(step>=3)?(done?'Done — back to Map':'Complete Profile & Unlock Map'):'Continue';
     var rep=document.getElementById('liteRepBlock'); if(rep)rep.style.display=done?'':'none';
     try{renderHeaderProfile();}catch(e){}
   }catch(e){}
+}
+function stepValid(n){
+  try{
+    var tr=ETIE.traveller||{};
+    if(n===1)return !!((tr.nickname||ETIE.local.displayName)&&(tr.photo||ETIE.local.photo||googleAvatar()));
+    if(n===2)return ((tr.verificationMethods||[]).length>0);
+    if(n===3)return !!((tr.bio||'').trim());
+  }catch(e){}
+  return false;
+}
+function stepMissingMsg(n){
+  if(n===1)return 'Add a nickname and a photo first.';
+  if(n===2)return 'Pick at least one verification method.';
+  return 'Write your personal hook first.';
 }
 function firstIncompleteStep(){
   try{
@@ -1205,18 +1223,25 @@ function isProfileComplete(){
   }catch(e){return false;}
 }
 function gotoProfileStep(n){
-  try{ETIE.profileStep=Math.min(3,Math.max(1,n));saveState();renderLiteProfile();}catch(e){}
+  try{
+    n=Math.min(3,Math.max(1,n));
+    var fisrt=firstIncompleteStep();
+    var maxStep=(fisrt===0)?3:fisrt;
+    if(n>maxStep){toast('Finish step '+maxStep+' first — steps unlock one by one.');n=maxStep;}
+    ETIE.profileStep=n;saveState();renderLiteProfile();
+  }catch(e){}
 }
 function stepProfile(d){
   try{
     var step=ETIE.profileStep||1;
-    if(d>0&&step>=3){
-      var missing=firstIncompleteStep();
-      if(missing){ETIE.profileStep=missing;saveState();renderLiteProfile();toast('Almost there — finish step '+missing+'.');return;}
-      ETIE.profileComplete=true;saveState();renderLiteProfile();
-      toast('Profile complete — map unlocked.');
-      try{showScreen('map');}catch(e){}
-      return;
+    if(d>0){
+      if(!stepValid(step)){toast(stepMissingMsg(step));gotoProfileStep(step);return;}
+      if(step>=3){
+        ETIE.profileComplete=true;saveState();renderLiteProfile();
+        toast('Profile complete — map unlocked.');
+        try{showScreen('map');}catch(e){}
+        return;
+      }
     }
     gotoProfileStep(step+d);
   }catch(e){}

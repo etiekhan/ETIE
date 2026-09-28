@@ -544,6 +544,9 @@ html,body{height:100%;width:100%;margin:0;padding:0;overflow:hidden;background:#
 .lite-dot span{width:20px;height:20px;border-radius:50%;background:rgba(255,255,255,.12);display:inline-flex;align-items:center;justify-content:center;font-size:11px;}
 .lite-dot.active{border-color:#f43f5e;color:#fff;background:rgba(244,63,94,.12);box-shadow:0 0 12px rgba(244,63,94,.3);}
 .lite-dot.active span{background:#f43f5e;color:#fff;}
+.lite-dot.done{border-color:rgba(182,255,46,.5);color:#d9ffb0;}
+.lite-dot.done span{background:#b6ff2e;color:#0c0d10;}
+.lite-dot.locked{opacity:.45;}
 /* merged header: inline logo + derived role badge */
 .logo-inline{font-size:20px;font-weight:850;letter-spacing:-.05em;color:#fff;padding:0 10px 0 6px;white-space:nowrap;}
 .derived-badge{font-size:12px;font-weight:800;padding:6px 12px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:#fff;white-space:nowrap;}

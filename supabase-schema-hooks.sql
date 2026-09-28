@@ -12,6 +12,7 @@ create table if not exists public.hooks (
   lat double precision not null,
   lng double precision not null,
   content text not null default '',
+  activity_hook text not null default '',
   members jsonb not null default '[]'::jsonb,
   pending jsonb not null default '[]'::jsonb,
   status text not null default 'open',
@@ -27,6 +28,7 @@ drop policy if exists "hooks update own" on public.hooks;
 create policy "hooks update own" on public.hooks for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
 drop policy if exists "hooks delete own" on public.hooks;
 create policy "hooks delete own" on public.hooks for delete using (auth.uid() = user_id);
+alter table public.hooks add column if not exists activity_hook text not null default '';
 create index if not exists hooks_updated_idx on public.hooks(updated_at desc);
 create index if not exists hooks_role_idx on public.hooks(role);
 create index if not exists hooks_category_idx on public.hooks(category);

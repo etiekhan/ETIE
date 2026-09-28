@@ -227,7 +227,9 @@
         travel_photos: (p.travelPhotos||[]),
         social_vibe: (p.socialVibe!=null?p.socialVibe:1),
         travel_pace: (p.travelPace!=null?p.travelPace:1),
-        style_interests: (p.styleInterests||[])
+        style_interests: (p.styleInterests||[]),
+        personal_hook: ((typeof ETIE!=='undefined'&&ETIE.traveller&&ETIE.traveller.bio)||'').slice(0,140),
+        photo_url: (function(){try{var ph=(typeof ETIE!=='undefined'&&ETIE.traveller&&ETIE.traveller.photo)||'';return (ph.indexOf('http')===0)?ph.slice(0,500):'';}catch(e){return '';}})()
       };
       function tryUpsert(payload){
         return client.from(profTable()).upsert(payload).then(function(r){
@@ -684,7 +686,7 @@
       return {id:String(r.id),kind:'hook',category:r.category||'Food',role:(r.role==='local'?'local':'traveller'),
         derivedRole:r.derived_role||r.role||'traveller',
         name:r.nickname||'Someone',verified:!!r.verified,location:r.location||'Hong Kong',
-        lat:r.lat,lng:r.lng,hook:String(r.content||r.hook||'').slice(0,140),
+        lat:r.lat,lng:r.lng,hook:String(r.activity_hook||r.content||r.hook||'').slice(0,140),
         members:r.members||[{nick:r.nickname||'Someone',role:(r.role==='local'?'local':'traveller'),verified:!!r.verified}],
         pending:r.pending||[],status:r.status||'open',ts:(r.updated_at?new Date(r.updated_at).getTime():Date.now()),
         origin:'cloud',cloudId:String(r.id)};
@@ -694,7 +696,7 @@
     var dr='traveller';try{dr=(typeof ETIE!=='undefined'&&ETIE.derivedRole)||p.role||'traveller';}catch(e){}
     return {id:String(p.cloudId||p.id),user_id:(session&&session.user&&session.user.id)||null,
       nickname:p.name||'Someone',verified:!!p.verified,role:p.role||'traveller',derived_role:dr,category:p.category||'Food',
-      location:p.location||'Hong Kong',lat:p.lat,lng:p.lng,content:String(p.hook||'').slice(0,140),
+      location:p.location||'Hong Kong',lat:p.lat,lng:p.lng,content:String(p.hook||'').slice(0,140),activity_hook:String(p.hook||'').slice(0,140),
       members:p.members||[],pending:p.pending||[],status:p.status||'open',updated_at:new Date().toISOString()};
   }
   function pullPins(){

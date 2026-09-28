@@ -179,21 +179,37 @@
     <div class="actions"><button class="primary" onclick="EtieCloud.signInWithGoogle()">Sign in with Google</button></div>
   </div>
   <div id="liteForm" style="display:none;">
-    <div class="lite-idrow">
-      <div class="lite-avatar" id="liteAvatar" onclick="document.getElementById('litePhotoInput').click()" title="Upload photo"><span>+</span></div>
-      <div style="flex:1;min-width:0;">
-        <input id="liteNick" maxlength="24" placeholder="Pick a nickname" autocomplete="nickname" oninput="saveLiteProfile()">
-        <div class="muted small" id="liteRoleLine">—</div>
-      </div>
+    <div id="liteStepsBar" class="lite-stepsbar">
+      <button class="lite-dot" id="liteDot1" onclick="gotoProfileStep(1)"><span>1</span>Identity</button>
+      <button class="lite-dot" id="liteDot2" onclick="gotoProfileStep(2)"><span>2</span>Verify</button>
+      <button class="lite-dot" id="liteDot3" onclick="gotoProfileStep(3)"><span>3</span>Hook</button>
     </div>
-    <input type="file" id="litePhotoInput" accept="image/*" style="display:none;" onchange="handleLitePhoto(this)">
-    <div class="field"><label>Bio — one line, shown on your hooks (optional)</label><textarea id="liteBio" maxlength="140" rows="2" placeholder="e.g. Soho local who eats where the aunties eat." oninput="saveLiteProfile()"></textarea></div>
-    <div class="field"><label>Verification — pick at least one</label><div class="list" id="liteVerify">
-      <div class="list-item" data-method="Passport or ID" onclick="toggleLiteVerify(this)"><div><strong>Passport or ID</strong><br><span class="muted">Passport, national ID or driving licence</span></div><span class="status">Tap to select</span></div>
-      <div class="list-item" data-method="Social media" onclick="toggleLiteVerify(this)"><div><strong>Social media</strong><br><span class="muted">Instagram or any public social profile</span></div><span class="status">Tap to select</span></div>
-      <div class="list-item" data-method="Local proof" onclick="toggleLiteVerify(this)"><div><strong>Local proof</strong><br><span class="muted">Anything showing you live in / know Hong Kong</span></div><span class="status">Tap to select</span></div>
-    </div></div>
-    <div class="sidebar-note"><strong>Reputation</strong><p class="muted" id="liteStats">No meetups yet.</p></div>
+    <div class="lite-step" id="liteStep1">
+      <div class="lite-idrow">
+        <div class="lite-avatar" id="liteAvatar" onclick="document.getElementById('litePhotoInput').click()" title="Upload photo"><span>+</span></div>
+        <div style="flex:1;min-width:0;">
+          <input id="liteNick" maxlength="24" placeholder="Pick a nickname" autocomplete="nickname" oninput="saveLiteProfile()">
+          <div class="muted small" id="liteRoleLine">—</div>
+        </div>
+      </div>
+      <input type="file" id="litePhotoInput" accept="image/*" style="display:none;" onchange="handleLitePhoto(this)">
+      <div class="field"><label>Home city</label><input id="liteCity" maxlength="60" value="Hong Kong" oninput="saveLiteProfile()"></div>
+    </div>
+    <div class="lite-step" id="liteStep2" style="display:none;">
+      <div class="field"><label>Verification — pick at least one</label><div class="list" id="liteVerify">
+        <div class="list-item" data-method="Passport or ID" onclick="toggleLiteVerify(this)"><div><strong>Passport or ID</strong><br><span class="muted">Passport, national ID or driving licence</span></div><span class="status">Tap to select</span></div>
+        <div class="list-item" data-method="Social media" onclick="toggleLiteVerify(this)"><div><strong>Social media</strong><br><span class="muted">Instagram or any public social profile</span></div><span class="status">Tap to select</span></div>
+        <div class="list-item" data-method="Local proof" onclick="toggleLiteVerify(this)"><div><strong>Local proof</strong><br><span class="muted">Anything showing you live in / know Hong Kong</span></div><span class="status">Tap to select</span></div>
+      </div></div>
+    </div>
+    <div class="lite-step" id="liteStep3" style="display:none;">
+      <div class="field"><label>Personal Hook — permanent catchphrase (shown on profile)</label><textarea id="liteBio" maxlength="140" rows="2" placeholder="I look salsa. Premier league is lovely." oninput="saveLiteProfile()"></textarea></div>
+    </div>
+    <div id="liteNav" style="display:flex;gap:8px;margin-top:12px;">
+      <button class="secondary" id="liteBack" onclick="stepProfile(-1)" style="padding:10px 16px;">Back</button>
+      <button class="primary" id="liteNext" onclick="stepProfile(1)" style="flex:1;">Continue</button>
+    </div>
+    <div class="sidebar-note" id="liteRepBlock" style="margin-top:14px;"><strong>Reputation</strong><p class="muted" id="liteStats">No meetups yet.</p></div>
   </div>
   <div style="margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.12);"><button class="secondary" style="background:rgba(176,0,32,.15)!important;border-color:rgba(232,180,180,.4)!important;color:#ff8f8f!important;" onclick="wipeEverything()">Reset my data</button><p class="muted small" style="margin:6px 0 0;">Deletes your profile, trips and chats on this device + cloud for this login.</p></div>
 </div></section>
@@ -243,7 +259,7 @@
       <div class="field"><label>Pin Location Name</label><input id="hookLocation" placeholder='e.g. "Sham Shui Po Street Market" or "Soho Escalators"'><p class="muted small" style="margin:4px 0 0;">Auto-filled from your map tap — edit freely.</p><div style="margin-top:8px;"><button class="secondary" onclick="pickOnMap('hook')" style="padding:8px 14px;">📍 Pick on Map</button></div></div>
       <div class="field"><label>I am a…</label><div class="chips" id="hookRolePills"><button class="chip" id="hookRoleTrav" onclick="setHookRole('traveller')">Traveller ✈️</button><button class="chip" id="hookRoleLocal" onclick="setHookRole('local')">Local Host 🇭🇰</button></div><p class="muted small" style="margin:4px 0 0;">Travellers seek local context · Locals offer insider access.</p></div>
       <div class="field"><label>Category Tag</label><div class="chips" id="hookInterestPills"><button class="chip" onclick="selectHookCategory(this,'Food')">🥟 Food</button><button class="chip" onclick="selectHookCategory(this,'Nightlife')">🍺 Nightlife</button><button class="chip" onclick="selectHookCategory(this,'Photo')">📸 Photo Walk</button><button class="chip" onclick="selectHookCategory(this,'Sports')">⚽ Sports</button><button class="chip" onclick="selectHookCategory(this,'Cafe')">☕ Cafe</button></div></div>
-      <div class="field"><label>Your Hook</label><textarea id="hookText" maxlength="140" rows="2" oninput="hookCountTick()" placeholder="e.g. Grabbing late-night claypot rice in Sham Shui Po—who's down to join?"></textarea><p class="muted small" style="margin:4px 0 0;text-align:right;"><span id="hookCount">0 / 140</span></p></div>
+      <div class="field"><label>Activity Hook (for this pin only)</label><textarea id="hookText" maxlength="140" rows="2" oninput="hookCountTick()" placeholder="e.g. Grabbing late-night claypot rice in Sham Shui Po—who's down to join?"></textarea><p class="muted small" style="margin:4px 0 0;text-align:right;"><span id="hookCount">0 / 140</span></p></div>
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;"><button class="secondary" onclick="closeDropHook()">Cancel</button><button class="primary" onclick="saveDropHook()">Drop Pin</button></div>
     </div>
   </div>
@@ -276,12 +292,12 @@
 </div>
 <div class="toast" id="toast"></div>
 
-  <script src="data/locations.js?v=36"></script>
-    <script src="match.js?v=36"></script>
+  <script src="data/locations.js?v=37"></script>
+    <script src="match.js?v=37"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="supabase-config.js?v=36"></script>
-  <script src="app.js?v=36"></script>
-  <script src="supabase-sync.js?v=36"></script>
+  <script src="supabase-config.js?v=37"></script>
+  <script src="app.js?v=37"></script>
+  <script src="supabase-sync.js?v=37"></script>
 </body>
 </html>

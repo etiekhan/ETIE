@@ -390,7 +390,7 @@ header .secondary{background:rgba(255,255,255,.96)!important;color:#171717!impor
 .fab{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);z-index:500;background:#f43f5e;color:#fff;border:0;border-radius:999px;padding:14px 28px;font-weight:800;font-size:16px;cursor:pointer;box-shadow:0 8px 28px rgba(244,63,94,.5)}
 .fab:active{transform:translateX(-50%) scale(.97)}
 .map-foot{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
-.pin-drawer{position:fixed;left:50%;transform:translateX(-50%);bottom:12px;z-index:90;width:min(560px,calc(100vw - 24px));background:#14101c;color:#f5f3ef;border:1px solid rgba(244,63,94,.4);border-radius:20px;padding:10px 18px 18px;box-shadow:0 18px 60px rgba(0,0,0,.55)}
+.pin-drawer{position:fixed;left:50%;transform:translateX(-50%);bottom:88px;z-index:90;width:min(560px,calc(100vw - 24px));background:#14101c;color:#f5f3ef;border:1px solid rgba(244,63,94,.4);border-radius:20px;padding:10px 18px 18px;box-shadow:0 18px 60px rgba(0,0,0,.55)}
 .pin-drawer.hidden{display:none}
 .drawer-grab{width:44px;height:5px;border-radius:99px;background:rgba(255,255,255,.25);margin:2px auto 10px}
 .drawer-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
@@ -418,7 +418,7 @@ header .secondary{background:rgba(255,255,255,.96)!important;color:#171717!impor
 .chip,.bubble,.pin-hook,.map-empty,.toast,.role-badge,.group-badge,.status,.list-item strong,.metric strong{text-wrap:pretty;overflow-wrap:break-word;}
 .chip{white-space:normal;}
 .interest-picker .chip{justify-content:flex-start;gap:10px;}
-@media(max-width:900px){#hkMap{height:72vh}.pin-drawer{bottom:8px}}
+@media(max-width:900px){#hkMap{height:72vh}.pin-drawer{bottom:88px}}
 
 /* ===== Full-bleed dark spatial canvas ("A friend in every city") ===== */
 html,body{height:100%;width:100%;margin:0;padding:0;overflow:hidden;background:#0b0b0e;}

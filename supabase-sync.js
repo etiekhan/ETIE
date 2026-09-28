@@ -51,6 +51,7 @@
           paint('on','Cloud: on');
           try{pull();}catch(e){} try{pullShared();}catch(e){} try{subscribeShared();}catch(e){}
           try{subscribeLiveProfiles();}catch(e){} try{syncProfile();}catch(e){} try{pullPins();}catch(e){}
+          try{if(typeof locateUser==='function')locateUser();}catch(e){}
         }
         else paint('offline','Cloud: offline — sign in');
         // safety net: session can land a beat after first paint — re-sync header once settled

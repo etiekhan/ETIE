@@ -1091,6 +1091,7 @@ function updateAuthHeader(){
   try{
     var in_=isSignedIn();
     var gb=document.getElementById('googleBtn'); if(gb) gb.style.display=in_?'none':'';
+    try{ if(typeof renderDerivedBadge==='function')renderDerivedBadge(); }catch(e){}
     var cs=document.getElementById('cloudStatus'); if(cs) cs.style.display=in_?'none':'';
     var am=document.getElementById('avatarMenu'); if(am) am.style.display=in_?'':'none';
     if(!in_) closeAvatarMenu();
@@ -1946,8 +1947,10 @@ function haversineKm(lat1,lng1,lat2,lng2){
 function applyDerivedRole(role,why){
   try{
     ETIE.derivedRole=role;
-    if(!ETIE.activeRole)ETIE.activeRole=role; // first fix wins; manual roleSwitch picks stick after
+    var signed=false;try{signed=isSignedIn();}catch(e){}
+    if(signed&&!ETIE.activeRole)ETIE.activeRole=role; // first fix wins; manual roleSwitch picks stick after
     saveState();renderDerivedBadge();
+    if(!signed)return;
     if(why==='denied'||why==='unavailable')toast('Location unavailable — you look like a Traveller. Flip the toggle any time.');
     else toast((role==='local'?'🇭🇰 Local detected — ':'✈️ Traveller detected — ')+'role set from your location.');
   }catch(e){}
@@ -1955,7 +1958,10 @@ function applyDerivedRole(role,why){
 function renderDerivedBadge(){
   try{
     var b=document.getElementById('derivedBadge');if(!b)return;
-    var r=null;try{r=ETIE.derivedRole||ETIE.activeRole;}catch(e){}
+    var signed=false;try{signed=isSignedIn();}catch(e){}
+    if(!signed){b.style.display='none';return;}
+    b.style.display='';
+    var r=null;try{r=ETIE.derivedRole;}catch(e){}
     if(r==='local'){b.textContent='🇭🇰 Local';b.className='derived-badge derived-local';}
     else if(r==='traveller'){b.textContent='✈️ Traveller';b.className='derived-badge derived-traveller';}
     else{b.textContent='📍 …';b.className='derived-badge';}

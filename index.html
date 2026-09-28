@@ -173,7 +173,30 @@
 <!-- Supporting product views -->
 <section class="section overlay-panel" id="trips" data-section="trips"><div class="card panel"><div class="eyebrow">My trips</div><h2>My trips</h2><div class="list" id="tripsList"></div></div></section>
 <section class="section overlay-panel" id="messages" data-section="messages"><div class="card panel"><div class="eyebrow">Messages</div><h2>Messages</h2><div class="eyebrow" style="margin-top:6px;">Hook chats</div><div class="list" id="hookChatList" style="margin-bottom:14px;"></div><div class="eyebrow" style="display:none;">Earlier threads</div><div class="list" id="messagesList" style="display:none;"></div></div></section>
-<section class="section overlay-panel" id="profile" data-section="profile"><div class="card panel"><div class="eyebrow">Profile</div><h2>Your profile</h2><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;"><button class="secondary" onclick="showScreen('home')" style="padding:8px 14px;">Set up Traveller / Local profile</button></div><div id="profileLocked"><p class="muted">No profile yet — complete Traveller Steps 1–7 and your profile will appear here.</p><div class="actions"><button class="primary" onclick="setRole('traveller');showScreen('home')">Start Step 1</button></div></div><div class="grid2" id="profileContent"><div><p><strong id="profTrip">No trip yet — complete Step 1</strong></p><div style="display:flex;align-items:center;gap:12px;margin:12px 0;"><div id="profTravPhoto" style="width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,.15);border:2px dashed rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;overflow:hidden;"><span style="color:rgba(255,255,255,.5);font-size:30px;">+</span></div></div><div class="chips" id="profInterests"></div><h3>Personality</h3><p class="muted" id="profPersonality">Not set yet — set in Step 4.</p><h3>What I'm looking for</h3><p class="muted" id="profLookingFor">Not set yet — pick in Step 5.</p><h3>My hook</h3><p class="muted" id="profHook">Not set yet — write in Step 6.</p><div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;"><button class="secondary" onclick="travNext(1);showScreen('home')">Edit trip</button><button class="secondary" onclick="travNext(3);showScreen('home')">Edit interests</button><button class="secondary" onclick="travNext(6);showScreen('home')">Edit hook</button></div></div><div class="sidebar-note"><strong>Reputation</strong><p class="muted" id="profStats">No trips yet — complete a meetup to build reputation.</p><strong>Verification</strong><p class="muted" id="profVerify">Not verified yet — real checks in Phase 9</p><div class="trust" id="profVerifyTrust"><span>Unverified</span></div><div style="margin-top:14px;padding-top:12px;border-top:1px solid #ece7e0;"><button class="secondary" style="background:#fff0f0!important;border-color:#e8b4b4!important;color:#b00020!important;" onclick="wipeEverything()">Reset my data</button><p class="muted small" style="margin:6px 0 0;">Deletes your profile, trips and chats on this device + cloud for this login.</p></div></div></div><div class="grid2" id="localProfileContent" style="margin-top:18px;"><div><h3>Local guide profile</h3><p><strong id="localProfCity">No local base yet — complete Local Steps 1–3</strong></p><div style="display:flex;align-items:center;gap:12px;margin:12px 0;"><div id="localProfPhoto" style="width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,.15);border:2px dashed rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;overflow:hidden;"><span style="color:rgba(255,255,255,.5);font-size:30px;">+</span></div></div><div class="chips" id="localProfInterests"></div><h3>Personality</h3><p class="muted" id="localProfPersonality">Not set yet — set in Local Step 4.</p><h3>What I offer</h3><p class="muted" id="localProfOffer">Not set yet — Local Step 5.</p><p class="muted small" id="localProfAvail"></p><div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;"><button class="secondary" onclick="setRole('local');showScreen('home')">Edit local profile</button><button class="secondary" onclick="setRole('local');localNext(8);showScreen('home')">Edit availability</button></div></div><div class="sidebar-note"><strong>Hosting</strong><p class="muted" id="localProfStats">No guests yet — complete a meetup to build reputation.</p><strong>Verification</strong><p class="muted" id="localProfVerify">Not verified yet — Local Step 2.</p><div class="trust" id="localProfVerifyTrust"><span>Unverified</span></div></div></div></div></section>
+<section class="section overlay-panel" id="profile" data-section="profile"><div class="card panel"><div class="eyebrow">Profile</div><h2>Your profile</h2><div id="liteProfile">
+  <div id="liteSignedOut">
+    <p class="muted">Sign in to build your profile — nickname, photo and one ID check, under a minute.</p>
+    <div class="actions"><button class="primary" onclick="EtieCloud.signInWithGoogle()">Sign in with Google</button></div>
+  </div>
+  <div id="liteForm" style="display:none;">
+    <div class="lite-idrow">
+      <div class="lite-avatar" id="liteAvatar" onclick="document.getElementById('litePhotoInput').click()" title="Upload photo"><span>+</span></div>
+      <div style="flex:1;min-width:0;">
+        <input id="liteNick" maxlength="24" placeholder="Pick a nickname" autocomplete="nickname" oninput="saveLiteProfile()">
+        <div class="muted small" id="liteRoleLine">—</div>
+      </div>
+    </div>
+    <input type="file" id="litePhotoInput" accept="image/*" style="display:none;" onchange="handleLitePhoto(this)">
+    <div class="field"><label>Bio — one line, shown on your hooks (optional)</label><textarea id="liteBio" maxlength="140" rows="2" placeholder="e.g. Soho local who eats where the aunties eat." oninput="saveLiteProfile()"></textarea></div>
+    <div class="field"><label>Verification — pick at least one</label><div class="list" id="liteVerify">
+      <div class="list-item" data-method="Passport or ID" onclick="toggleLiteVerify(this)"><div><strong>Passport or ID</strong><br><span class="muted">Passport, national ID or driving licence</span></div><span class="status">Tap to select</span></div>
+      <div class="list-item" data-method="Social media" onclick="toggleLiteVerify(this)"><div><strong>Social media</strong><br><span class="muted">Instagram or any public social profile</span></div><span class="status">Tap to select</span></div>
+      <div class="list-item" data-method="Local proof" onclick="toggleLiteVerify(this)"><div><strong>Local proof</strong><br><span class="muted">Anything showing you live in / know Hong Kong</span></div><span class="status">Tap to select</span></div>
+    </div></div>
+    <div class="sidebar-note"><strong>Reputation</strong><p class="muted" id="liteStats">No meetups yet.</p></div>
+  </div>
+  <div style="margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.12);"><button class="secondary" style="background:rgba(176,0,32,.15)!important;border-color:rgba(232,180,180,.4)!important;color:#ff8f8f!important;" onclick="wipeEverything()">Reset my data</button><p class="muted small" style="margin:6px 0 0;">Deletes your profile, trips and chats on this device + cloud for this login.</p></div>
+</div></section>
 
 
 
@@ -230,6 +253,7 @@
   <div class="drawer-top"><div class="pin-idrow"><div class="pin-avatar" id="pinAvatar">?</div><div><strong id="pinNick">—</strong> <span id="pinVerified" class="small"></span><div><span id="pinRoleBadge" class="role-badge">—</span></div></div></div><button class="secondary" onclick="closePinDetail()" aria-label="Close" style="padding:8px 12px;">✕</button></div>
   <div class="muted small" id="pinLoc">—</div>
   <p class="pin-hook" id="pinHook">—</p>
+  <div class="muted small" id="pinBio" style="display:none;margin:2px 0 8px;"></div>
   <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;"><span class="group-badge" id="pinGroupBadge">—</span><div class="chips" id="pinMembers" style="margin:0;"></div></div>
   <p class="muted small" id="pinPendingNote" style="display:none;">Request sent — waiting for the group to approve.</p>
   <div id="pinHostBox"></div>
@@ -252,12 +276,12 @@
 </div>
 <div class="toast" id="toast"></div>
 
-  <script src="data/locations.js?v=30"></script>
-    <script src="match.js?v=30"></script>
+  <script src="data/locations.js?v=31"></script>
+    <script src="match.js?v=31"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="supabase-config.js?v=30"></script>
-  <script src="app.js?v=30"></script>
-  <script src="supabase-sync.js?v=30"></script>
+  <script src="supabase-config.js?v=31"></script>
+  <script src="app.js?v=31"></script>
+  <script src="supabase-sync.js?v=31"></script>
 </body>
 </html>

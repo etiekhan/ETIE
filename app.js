@@ -93,6 +93,7 @@ function loadState() {
     if(!s.requests)s.requests={};
     if(!s.traveller.travelPhotos)s.traveller.travelPhotos=[];
     if(!s.traveller.nickname) s.traveller.nickname='';
+    if(s.traveller.bio==null) s.traveller.bio='';
     if(s.traveller.socialVibe==null){ var sc=s.traveller.personality&&s.traveller.personality.social||5; s.traveller.socialVibe=sc<=3?0:sc>=8?2:1; }
     if(s.traveller.travelPace==null){ var pc=s.traveller.personality&&s.traveller.personality.spontaneous||5; s.traveller.travelPace=pc<=3?0:pc>=8?2:1; }
     if(!s.traveller.styleInterests)s.traveller.styleInterests=[];
@@ -1124,7 +1125,7 @@ function updateProfileVisibility(){
     var localReady=hasAnyLocalData()&&showLocal;
     var ready=travReady||localReady;
     var navBtn=document.getElementById('navProfileBtn');
-    if(navBtn)navBtn.style.display=ready?'':'none';
+    if(navBtn)navBtn.style.display='';
     var content=document.getElementById('profileContent');
     if(content)content.style.display=travReady?'':'none';
     var lpc=document.getElementById('localProfileContent');
@@ -1142,98 +1143,67 @@ function updateProfileVisibility(){
   }catch(e){}
 }
 function renderProfiles(){
+  try{updateProfileVisibility();}catch(e){}
+  try{renderLiteProfile();}catch(e){}
+}
+function renderLiteProfile(){
   try{
-    updateProfileVisibility();
-    var hasTrip=!!(ETIE.trip&&ETIE.trip.destination);
-    var tripEl=document.getElementById('profTrip');
-    var tflag=flagForCountry(ETIE.traveller.nationality||''); var dflag=flagForCountry(ETIE.trip.country);
-    if(tripEl){
-      if(!hasTrip) tripEl.textContent='No trip yet — complete Step 1';
-      else tripEl.textContent=(ETIE.traveller.nationality?flagForCountry(ETIE.traveller.nationality)+' ':'')+dflag+' '+(ETIE.trip.destination||'—')+' · '+(ETIE.trip.dates||'—')+' · Traveller';
-    }
-    var pi=document.getElementById('profInterests');
-    if(pi){pi.innerHTML=''; if(!ETIE.traveller.interests.length){ var e=document.createElement('span'); e.className='muted small'; e.textContent='No interests yet — pick up to 4 in Step 2.'; pi.appendChild(e);} else ETIE.traveller.interests.forEach(function(x){var s=document.createElement('span');s.className='chip active';s.textContent=x;pi.appendChild(s);});}
-    var pp=document.getElementById('profPersonality');
-    if(pp){
-      var vibeTouched = !!(ETIE.traveller._vibeSet && ETIE.traveller.socialVibe!=null);
-      var styleTouched = !!((ETIE.traveller.styleInterests||[]).length);
-      if(!vibeTouched && !styleTouched){
-        pp.className='muted'; pp.textContent='Not set yet — set in Step 4.';
-      } else {
-        var _sv=ETIE.traveller.socialVibe, _tp=ETIE.traveller.travelPace;
-        persBadges(pp,{social:ETIE.traveller.personality.social,spontaneous:ETIE.traveller.personality.spontaneous,curious:ETIE.traveller.personality.curious,
-          vibe:(_sv!=null?SOCIAL_VIBE_LABELS[_sv]:'')||null,pace:(_tp!=null?TRAVEL_PACE_LABELS[_tp]:'')||null,extra:(ETIE.traveller.styleInterests||[])});
-      }
-    }
-    var pl=document.getElementById('profLookingFor');
-    if(pl)pl.textContent=(ETIE.traveller.lookingFor||[]).join(' · ')||'Not set yet — pick in Step 5.';
-    var ph=document.getElementById('profHook');
-    if(ph)ph.textContent=ETIE.traveller.hook?('“'+ETIE.traveller.hook+'”'):'Not set yet — write in Step 6.';
-    var ps=document.getElementById('profStats');
-    if(ps){
-      var tc=ETIE.traveller.completedTrips||0, ar=ETIE.traveller.avgRatingReceived||0;
-      ps.textContent = (tc||ar) ? ('Trips: '+tc+' · Rating: '+(ar?ar.toFixed(1)+' ★':'—')) : 'No trips yet — complete a meetup to build reputation.';
-    }
-    // Traveller photo in profile
-    var tp=document.getElementById('profTravPhoto');
-    if(tp){tp.innerHTML=ETIE.traveller.photo?('<img src="'+ETIE.traveller.photo+'" style="width:100%;height:100%;border-radius:50%;object-fit:cover;aspect-ratio:1/1;">'):'<span style="color:rgba(255,255,255,.5);font-size:30px;">+</span>';tp.style.borderStyle=ETIE.traveller.photo?'solid':'dashed';}
-    var ln=document.getElementById('localDashName');
-    var lflag=flagForCountry(ETIE.local.nationality);
-    var district=ETIE.local.district||'Central / Soho';
-    if(ln)ln.textContent=lflag+' You · '+district+' · '+sqBadgeFor({tier:ETIE.local.tier, hostedCount:ETIE.local.hostedCount, stats:{travellersMet:ETIE.local.hostedCount}});
-    var ls=document.getElementById('localDashSub');
-    if(ls)ls.textContent='HK Local · '+(ETIE.local.age||'—')+' · '+district;
-    var li=document.getElementById('localDashInterests');
-    if(li){li.innerHTML='';ETIE.local.interests.forEach(function(x){var s=document.createElement('span');s.className='chip active';s.textContent=x;li.appendChild(s);});ETIE.local.offerTags.forEach(function(x){if(ETIE.local.interests.indexOf(x)===-1){var s=document.createElement('span');s.className='chip';s.textContent=x;li.appendChild(s);}});}
-    var lo=document.getElementById('localDashOffer');
-    if(lo)lo.textContent='“'+(ETIE.local.offer||'—')+'”';
-    var la=document.getElementById('localDashAvail');
-    if(la){
-      if((ETIE.local.availDates||[]).length){
-        var ds=(ETIE.local.availDates||[]).slice().sort().map(function(d){ try{var dt=new Date(d+'T12:00'); return isNaN(dt.getTime())?d:dt.toLocaleDateString(undefined,{month:'short',day:'numeric'});}catch(e){return d;}}).join(', ');
-        la.textContent='Available dates: '+ds;
-      } else {
-        la.textContent='Available: '+ETIE.local.availability.filter(function(a){return a.status==='Available';}).map(function(a){return a.label;}).join(', ')+' · Other: '+ETIE.local.availability.filter(function(a){return a.status!=='Available';}).map(function(a){return a.label+' ('+a.status+')';}).join(', ');
-      }
-    }
-    // Local photo in dashboard
-    var lp=document.getElementById('localDashPhoto');
-    if(lp){lp.innerHTML='';lp.style.background='rgba(255,255,255,.15)';if(ETIE.local.photo){lp.innerHTML='<img src="'+ETIE.local.photo+'" style="width:100%;height:100%;border-radius:50%;object-fit:cover;aspect-ratio:1/1;">';lp.style.borderStyle='solid';}else{lp.textContent=(ETIE.local.displayName||'Y').charAt(0).toUpperCase();lp.style.borderStyle='dashed';}}
-    // Traveller verification line in Profile
-    var pv=document.getElementById('profVerify');
-    if(pv){ var vm=ETIE.traveller.verificationMethods||[]; pv.textContent=vm.length?('Verified: '+vm.join(' · ')):'Not verified yet — pick at least one in Step 1.'; }
-    var pvt=document.getElementById('profVerifyTrust');
-    if(pvt){ pvt.innerHTML=''; var vms=ETIE.traveller.verificationMethods||[]; if(!vms.length){var s=document.createElement('span');s.textContent='Unverified';pvt.appendChild(s);} else vms.forEach(function(m){var s=document.createElement('span');s.textContent='✓ '+m;pvt.appendChild(s);}); }
-    // Local guide section inside Profile — scoped to active role (visibility handled in updateProfileVisibility)
-    var LPC=document.getElementById('localProfileContent');
-    if(LPC){ var _r=ETIE.activeRole||null; LPC.style.display=(hasAnyLocalData()&&(!_r||_r==='local'))?'':'none'; }
-    var lpc=document.getElementById('localProfCity');
-    if(lpc){ if(!hasAnyLocalData()) lpc.textContent='No local base yet — complete Local Step 1'; else lpc.textContent=(ETIE.local.nationality?flagForCountry(ETIE.local.nationality)+' ':'')+(ETIE.local.city||'—')+(ETIE.local.age?' · '+ETIE.local.age:'')+' · Local guide'; }
-    var lpp=document.getElementById('localProfPhoto');
-    if(lpp){ lpp.innerHTML=ETIE.local.photo?('<img src="'+ETIE.local.photo+'" style="width:100%;height:100%;border-radius:50%;object-fit:cover;aspect-ratio:1/1;">'):'<span style="color:rgba(255,255,255,.5);font-size:30px;">+</span>'; lpp.style.borderStyle=ETIE.local.photo?'solid':'dashed'; }
-    var lpi=document.getElementById('localProfInterests');
-    if(lpi){ lpi.innerHTML=''; if(!(ETIE.local.interests||[]).length){var e=document.createElement('span');e.className='muted small';e.textContent='No interests yet — Local Step 4.';lpi.appendChild(e);} else ETIE.local.interests.forEach(function(x){var s=document.createElement('span');s.className='chip active';s.textContent=x;lpi.appendChild(s);}); }
-    var lpp2=document.getElementById('localProfPersonality');
-    if(lpp2){
-      var lStyle=(ETIE.local.styleInterests||[]).length, lInt=(ETIE.local.interests||[]).length;
-      if(!lStyle && !lInt){ lpp2.className='muted'; lpp2.textContent='Not set yet — set in Local Step 4.'; }
-      else {
-        var _lsv=ETIE.local.socialVibe, _ltp=ETIE.local.travelPace;
-        persBadges(lpp2,{social:ETIE.local.personality.social,spontaneous:ETIE.local.personality.spontaneous,curious:ETIE.local.personality.curious,
-          vibe:(_lsv!=null?SOCIAL_VIBE_LABELS[_lsv]:'')||null,pace:(_ltp!=null?TRAVEL_PACE_LABELS[_ltp]:'')||null,extra:(ETIE.local.styleInterests||[])});
-      }
-    }
-    var lpo=document.getElementById('localProfOffer');
-    if(lpo) lpo.textContent=ETIE.local.offer?('“'+ETIE.local.offer+'”'):'Not set yet — Local Step 5.';
-    var lpa=document.getElementById('localProfAvail');
-    if(lpa){ var ad=ETIE.local.availDates||[]; lpa.textContent=ad.length?('Available: '+ad.slice().sort().join(', ')):'No dates yet — Local Step 7.'; }
-    var lpv=document.getElementById('localProfVerify');
-    if(lpv){ var lm=ETIE.local.verificationMethods||[]; lpv.textContent=lm.length?('Verified: '+lm.join(' · ')):'Not verified yet — Local Step 2.'; }
-    var lpvt=document.getElementById('localProfVerifyTrust');
-    if(lpvt){ lpvt.innerHTML=''; var lms=ETIE.local.verificationMethods||[]; if(!lms.length){var s=document.createElement('span');s.textContent='Unverified';lpvt.appendChild(s);} else lms.forEach(function(m){var s=document.createElement('span');s.textContent='✓ '+m;lpvt.appendChild(s);}); }
-    var lps=document.getElementById('localProfStats');
-    if(lps){ var hc=ETIE.local.hostedCount||0, hr=ETIE.local.avgHostRating||0; lps.textContent=(hc||hr)?('Hosted: '+hc+' · Rating: '+(hr?hr.toFixed(1)+' ★':'—')):'No guests yet — complete a meetup to build reputation.'; }
-    updateHookLabel();
+    var signed=false; try{signed=isSignedIn();}catch(e){}
+    var so=document.getElementById('liteSignedOut'); if(so)so.style.display=signed?'none':'';
+    var fm=document.getElementById('liteForm'); if(fm)fm.style.display=signed?'':'none';
+    if(!signed)return;
+    var tr=ETIE.traveller||{};
+    var nick=tr.nickname||ETIE.local.displayName||'';
+    var ni=document.getElementById('liteNick'); if(ni&&document.activeElement!==ni)ni.value=nick;
+    var bi=document.getElementById('liteBio'); if(bi&&document.activeElement!==bi)bi.value=tr.bio||'';
+    var photo=tr.photo||ETIE.local.photo||null;
+    var av=document.getElementById('liteAvatar');
+    if(av){if(photo)av.innerHTML='<img src="'+photo+'">';else av.innerHTML='<span>+</span>';}
+    var rl=document.getElementById('liteRoleLine');
+    if(rl){var role=(ETIE.derivedRole||ETIE.activeRole||'traveller');rl.textContent=(role==='local'?'\uD83C\uDDED\uD83C\uDDF0 Local host':'\u2708\uFE0F Traveller')+' \u00B7 Hong Kong';}
+    var methods=tr.verificationMethods||[];
+    var lv=document.getElementById('liteVerify');
+    if(lv)Array.prototype.forEach.call(lv.querySelectorAll('.list-item'),function(row){
+      var on=methods.indexOf(row.getAttribute('data-method'))!==-1;
+      row.classList.toggle('selected',on);
+      var st=row.querySelector('.status'); if(st)st.textContent=on?'Selected':'Tap to select';
+    });
+    var st2=document.getElementById('liteStats');
+    if(st2){var tc=tr.completedTrips||0;st2.textContent=tc?('Meetups: '+tc):'No meetups yet \u2014 complete one to build reputation.';}
+    try{renderHeaderProfile();}catch(e){}
+  }catch(e){}
+}
+function saveLiteProfile(){
+  try{
+    var ni=document.getElementById('liteNick'), bi=document.getElementById('liteBio');
+    var nick=ni?ni.value.trim().slice(0,24):'';
+    ETIE.traveller.nickname=nick; ETIE.local.displayName=nick;
+    if(bi)ETIE.traveller.bio=bi.value.slice(0,140);
+    saveState();
+    try{renderHeaderProfile();}catch(e){}
+  }catch(e){}
+}
+function toggleLiteVerify(el){
+  try{
+    el.classList.toggle('selected');
+    var c=document.getElementById('liteVerify');if(!c)return;
+    var methods=Array.prototype.map.call(c.querySelectorAll('.list-item.selected'),function(row){return row.getAttribute('data-method');});
+    ETIE.traveller.verificationMethods=methods.slice();
+    ETIE.local.verificationMethods=methods.slice();
+    saveState();renderLiteProfile();
+  }catch(e){}
+}
+function handleLitePhoto(input){
+  try{
+    var file=input.files&&input.files[0];if(!file)return;
+    var reader=new FileReader();
+    reader.onload=function(e){
+      try{
+        ETIE.traveller.photo=e.target.result; ETIE.local.photo=e.target.result;
+        saveState();renderLiteProfile();
+      }catch(err){}
+    };
+    reader.readAsDataURL(file);
   }catch(e){}
 }
 
@@ -2084,7 +2054,7 @@ function saveDropHook(){
     var nm=hookNick(),vf=hookVerified();
     var pin={id:'pin-'+Date.now(),kind:'hook',category:_hookDraft.category,role:_hookDraft.role,
       name:nm,verified:vf,location:loc,lat:_dropPoint.lat,lng:_dropPoint.lng,hook:hook,
-      members:[{nick:nm,role:_hookDraft.role,verified:vf}],pending:[],status:'open',
+      members:[{nick:nm,role:_hookDraft.role,verified:vf,bio:((ETIE.traveller&&ETIE.traveller.bio)||'').slice(0,140)}],pending:[],status:'open',
       ts:Date.now(),origin:'local',cloudId:null};
     if(!ETIE.mapPins)ETIE.mapPins=[];
     ETIE.mapPins.push(pin);
@@ -2125,6 +2095,7 @@ function openPinDetail(id){
     var rb=document.getElementById('pinRoleBadge');if(rb)rb.textContent=p.role==='local'?'🇭🇰 Local':'✈️ Traveller';
     var lc=document.getElementById('pinLoc');if(lc)lc.textContent=mapCatEmoji(p.category)+' '+(p.location||'Hong Kong');
     var hk=document.getElementById('pinHook');if(hk)hk.textContent='“'+(p.hook||'')+'”';
+    var pb=document.getElementById('pinBio');if(pb){var bb=p.members&&p.members[0]&&p.members[0].bio;pb.textContent=bb||'';pb.style.display=bb?'':'none';}
     var gb=document.getElementById('pinGroupBadge');if(gb)gb.textContent=groupBadgeText(p);
     var mem=document.getElementById('pinMembers');
     if(mem){mem.innerHTML='';(p.members||[]).forEach(function(m){var s=document.createElement('span');s.className='chip';s.textContent=(m.role==='local'?'🇭🇰 ':'✈️ ')+m.nick;mem.appendChild(s);});}

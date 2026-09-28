@@ -519,6 +519,14 @@ html,body{height:100%;width:100%;margin:0;padding:0;overflow:hidden;background:#
 /* overlays above panels, toasts above everything */
 .chat-overlay{z-index:1200!important;}
 .toast{z-index:2000!important;}
+/* lightweight profile: clean empty state, no step references */
+.lite-idrow{display:flex;gap:12px;align-items:center;margin:4px 0 6px;}
+.lite-avatar{width:72px;height:72px;border-radius:50%;background:rgba(255,255,255,.08);border:2px dashed rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer;flex-shrink:0;font-size:28px;color:rgba(255,255,255,.5);}
+.lite-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+#liteNick{font-size:17px;font-weight:700;}
+#liteVerify .list-item{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.12);}
+#liteVerify .list-item.selected{border-color:#f43f5e;background:rgba(244,63,94,.12);}
+#liteVerify .list-item.selected .status{background:#f43f5e;color:#fff;}
 /* merged header: inline logo + derived role badge */
 .logo-inline{font-size:20px;font-weight:850;letter-spacing:-.05em;color:#fff;padding:0 10px 0 6px;white-space:nowrap;}
 .derived-badge{font-size:12px;font-weight:800;padding:6px 12px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:#fff;white-space:nowrap;}

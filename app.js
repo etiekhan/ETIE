@@ -765,11 +765,11 @@ function formatTripDates(f,t){
     return s;
   }catch(e){return f+' – '+(t||'');}
 }
-function setTravDistrict(el, val){ try{ var c=document.getElementById('travDistrictPills'); if(c) Array.prototype.forEach.call(c.querySelectorAll('.chip'),function(x){x.classList.remove('active');}); el.classList.add('active'); ETIE.trip.destination='Hong Kong'; ETIE.trip.country='HK'; ETIE.trip.district=val; saveState(); }catch(e){} }
+
 function setTravDate(el, val){ try{ var c=document.getElementById('travDatePills'); if(c) Array.prototype.forEach.call(c.querySelectorAll('.chip'),function(x){x.classList.remove('active');}); el.classList.add('active'); var today=todayISO(); if(val==='Tonight'){ ETIE.trip.dateFrom=today; ETIE.trip.dateTo=today; ETIE.trip.dates=formatTripDates(today,today); } else { var end=new Date(); end.setDate(new Date().getDate()+7); var eISO=end.toISOString().slice(0,10); ETIE.trip.dateFrom=today; ETIE.trip.dateTo=eISO; ETIE.trip.dates=formatTripDates(today,eISO); } saveState(); }catch(e){} }
 function saveTrav1(){
   ETIE.trip.destination='Hong Kong'; ETIE.trip.country='HK';
-  try{ var sel=document.querySelector('#travDistrictPills .chip.active'); ETIE.trip.district= sel?sel.textContent.trim():'Central / Soho'; }catch(e){ ETIE.trip.district='Central / Soho'; }
+  try{ var sel=document.querySelector('#travDistrictPills .chip.active'); if(sel) ETIE.trip.district=sel.textContent.trim(); if(!ETIE.trip.district) ETIE.trip.district='Central / Soho'; }catch(e){ if(!ETIE.trip.district)ETIE.trip.district='Central / Soho'; }
   try{ var selD=document.querySelector('#travDatePills .chip.active'); var val=selD?selD.textContent.trim():'Tonight'; var today=todayISO(); if(val==='Tonight'){ ETIE.trip.dateFrom=today; ETIE.trip.dateTo=today; ETIE.trip.dates=formatTripDates(today,today); } else { var end=new Date(); end.setDate(new Date().getDate()+7); var eISO=end.toISOString().slice(0,10); ETIE.trip.dateFrom=today; ETIE.trip.dateTo=eISO; ETIE.trip.dates=formatTripDates(today,eISO); } }catch(e){ var today=todayISO(); ETIE.trip.dateFrom=today; ETIE.trip.dateTo=today; ETIE.trip.dates=formatTripDates(today,today); }
   var nn=document.getElementById('travNickname'); if(nn) ETIE.traveller.nickname=nn.value.trim();
   updateHookLabel();
@@ -893,7 +893,7 @@ function travNext(n){
       renderMatches(); hideGroup('trav'); var e7=document.getElementById('trav8'); if(e7) e7.classList.remove('hidden'); showScreen('trav8'); return;
     }
   }
-  hideGroup('trav');var e=document.getElementById('trav'+n);if(e)e.classList.remove('hidden');try{ETIE._lastTrav=n;saveState();}catch(_){}updateCounts();renderProfiles();
+  hideGroup('trav');var e=document.getElementById('trav'+n);if(e)e.classList.remove('hidden');try{ETIE._lastTrav=n;saveState();}catch(_){}if(n===1){try{renderTrav1Location();}catch(_){}}updateCounts();renderProfiles();
   if(n===5) try{ renderSidequestChallenges(); }catch(e){}
   if(n===8||n===11) try{ updatePactDisplays(); var ta=document.getElementById('reqMessage'); if(ta && ETIE.traveller.sidequestChallenge) ta.value='Hey — '+ETIE.traveller.sidequestChallenge+' — are you down for a hook in '+(ETIE.trip.district||'Hong Kong')+'?'; }catch(e){}
   if(n===8||n===9||n===10||n===11)renderMatches();if(n===10||n===11||n===12||n===13){renderRequests();renderChat();renderMessagesList();}if(n>=13&&n<=17){renderMeetup();renderTrips();renderThanks();paintStars('travStars',ETIE._travStars||0);}showScreen('trav'+n);
@@ -1950,15 +1950,51 @@ function initHKMap(){
     renderMapFilter();renderMapPins();
   }catch(e){}
 }
+var _pickMode=null; // null | 'trav1' | 'hook'
+function pickOnMap(mode){
+  try{
+    _pickMode=(mode==='trav1')?'trav1':'hook';
+    closeDropHook();
+    showScreen('map');
+    toast(_pickMode==='trav1'?'Tap the map to set your active location.':'Tap the map to place your hook pin.');
+  }catch(e){}
+}
 function onMapTap(e){
   try{
     _dropPoint={lat:e.latlng.lat,lng:e.latlng.lng};
     if(_dropMarker){try{_map.removeLayer(_dropMarker);}catch(_){}}
     _dropMarker=L.marker([_dropPoint.lat,_dropPoint.lng],{title:'Your pin location'}).addTo(_map);
     var guess='Near '+nearestDistrictLabel(_dropPoint.lat,_dropPoint.lng);
+    if(_pickMode==='trav1'){
+      _pickMode=null;
+      try{
+        ETIE.trip.pickLat=_dropPoint.lat; ETIE.trip.pickLng=_dropPoint.lng;
+        ETIE.trip.district=nearestDistrictLabel(_dropPoint.lat,_dropPoint.lng);
+        saveState(); renderTrav1Location();
+      }catch(err){}
+      showScreen('home'); try{travNext(1);}catch(err){}
+      toast('Active location set — '+guess+'.');
+      return;
+    }
+    _pickMode=null;
     window._pendingDropGuess=guess;
     openDropHook();
   }catch(err){}
+}
+function renderTrav1Location(){
+  try{
+    var city='Hong Kong'; try{city=ETIE.city||'Hong Kong';}catch(e){}
+    var b=document.getElementById('trav1CityBadge'); if(b)b.textContent='🇭🇰 '+city+' (Current Launch City)';
+    var sub=document.getElementById('trav1Sub'); if(sub)sub.textContent='ETIE is live in '+city+'. Select your location to browse active local guides and meetup hooks.';
+    var lat=null,lng=null;
+    try{if(ETIE.trip.pickLat!=null){lat=ETIE.trip.pickLat;lng=ETIE.trip.pickLng;}}catch(e){}
+    if(lat==null){ try{if(_map){var c=_map.getCenter();lat=c.lat;lng=c.lng;}}catch(e){} }
+    if(lat==null){lat=HK_CENTER[0];lng=HK_CENTER[1];}
+    var d=nearestDistrictLabel(lat,lng);
+    if(ETIE.trip.pickLat==null){ try{ETIE.trip.district=d;}catch(e){} }
+    var l=document.getElementById('trav1LocLabel');
+    if(l)l.textContent='Near '+d+' ('+lat.toFixed(4)+', '+lng.toFixed(4)+')';
+  }catch(e){}
 }
 function renderMapFilter(){
   try{

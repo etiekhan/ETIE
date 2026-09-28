@@ -519,6 +519,17 @@ html,body{height:100%;width:100%;margin:0;padding:0;overflow:hidden;background:#
 /* overlays above panels, toasts above everything */
 .chat-overlay{z-index:1200!important;}
 .toast{z-index:2000!important;}
+/* polished glass badge for destination */
+.glass-badge{display:inline-flex;align-items:center;gap:8px;font-size:15px;font-weight:800;color:#fff;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);border-radius:14px;padding:10px 14px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);}
+/* dark-theme action states */
+.primary{transition:background .15s ease,box-shadow .15s ease,transform .05s ease;}
+.primary:hover{background:#f43f5e!important;box-shadow:0 0 16px rgba(244,63,94,.45);}
+.primary:focus-visible{outline:2px solid #fb7185;outline-offset:2px;}
+.primary:active{transform:scale(.98);}
+.primary:disabled{opacity:.55;cursor:not-allowed;box-shadow:none;}
+.secondary{transition:background .15s ease,border-color .15s ease;}
+.secondary:hover{background:rgba(255,255,255,.12)!important;border-color:rgba(255,255,255,.3)!important;}
+.secondary:focus-visible{outline:2px solid #fb7185;outline-offset:2px;}
 /* lightweight profile: clean empty state, no step references */
 .lite-idrow{display:flex;gap:12px;align-items:center;margin:4px 0 6px;}
 .lite-avatar{width:72px;height:72px;border-radius:50%;background:rgba(255,255,255,.08);border:2px dashed rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer;flex-shrink:0;font-size:28px;color:rgba(255,255,255,.5);}

@@ -20,6 +20,7 @@
 <div class="auth-float">
   <span class="status" id="cloudStatus" style="display:none;">Cloud: offline demo</span>
   <button class="secondary" id="googleBtn" onclick="if(window.EtieCloud&&EtieCloud.signInWithGoogle)EtieCloud.signInWithGoogle();else alert('App scripts still loading — hard-refresh the page and try again.')">Sign in with Google</button>
+  <button class="secondary" id="adminBtn" style="display:none;" onclick="toggleAdmin()">Admin</button>
   <div class="avatar-menu" id="avatarMenu" style="display:none;">
     <button class="header-profile" id="headerProfile" onclick="toggleAvatarMenu(event)" aria-haspopup="true" title="Your account"><span class="header-avatar" id="headerAvatar">+</span><span id="headerName">Guest</span><span aria-hidden="true">▾</span></button>
     <div class="avatar-dropdown hidden" id="avatarDropdown" role="menu">
@@ -302,12 +303,12 @@
 </div>
 <div class="toast" id="toast"></div>
 
-  <script src="data/locations.js?v=44"></script>
-    <script src="match.js?v=44"></script>
+  <script src="data/locations.js?v=45"></script>
+    <script src="match.js?v=45"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="supabase-config.js?v=44"></script>
-  <script src="app.js?v=44"></script>
-  <script src="supabase-sync.js?v=44"></script>
+  <script src="supabase-config.js?v=45"></script>
+  <script src="app.js?v=45"></script>
+  <script src="supabase-sync.js?v=45"></script>
 </body>
 </html>

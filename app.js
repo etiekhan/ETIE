@@ -96,6 +96,9 @@ function loadState() {
     if(s.traveller.bio==null) s.traveller.bio='';
     if(!s.profileStep) s.profileStep=1;
     if(s.profileComplete==null) s.profileComplete=false;
+    if(s.inviteOk==null) s.inviteOk=false;
+    if(!s.inviteCode) s.inviteCode='';
+    if(s.cloudOnboarded==null) s.cloudOnboarded=false;
     s._editingProfile=false;
     if(!Array.isArray(s.traveller.memories)) s.traveller.memories=[];
     if(!Array.isArray(s.traveller.spots)) s.traveller.spots=[];
@@ -523,8 +526,83 @@ function flagEmoji(code){if(!code)return '';return String.fromCodePoint(...code.
 function flagForCountry(countryCode){var map={'PT':'🇵🇹','ES':'🇪🇸','FR':'🇫🇷','IT':'🇮🇹','JP':'🇯🇵','TH':'🇹🇭','US':'🇺🇸','AU':'🇦🇺','HK':'🇭🇰','SG':'🇸🇬'};return map[countryCode]||flagEmoji(countryCode)||'🌍';}
 
 function toast(msg){var t=document.getElementById('toast');if(!t){alert(msg);return;}t.textContent=msg;t.style.display='block';clearTimeout(t._h);t._h=setTimeout(function(){t.style.display='none';},2200);}
+function gateState(){
+  try{
+    var signed=false;try{signed=isSignedIn();}catch(e){}
+    if(!signed)return 'signin';
+    var inv=false;try{inv=!!ETIE.inviteOk;}catch(e){}
+    if(!inv)return 'invite';
+    var cloud=false;try{cloud=!!ETIE.cloudOnboarded;}catch(e){}
+    var local=false;try{local=!!ETIE.profileComplete||isProfileComplete();}catch(e){}
+    if(!(cloud||local))return 'profile';
+  }catch(e){return 'signin';}
+  return 'open';
+}
+function refreshGate(){
+  try{
+    var st=gateState();
+    var o=document.getElementById('gateOverlay');if(!o)return st;
+    if(st==='open'){o.classList.add('hidden');return st;}
+    try{var hp=document.getElementById('profile');if(hp&&hp.classList.contains('panel-open'))return st;}catch(e){}
+    o.classList.remove('hidden');
+    renderGateBody(st);
+    return st;
+  }catch(e){return 'signin';}
+}
+function renderGateBody(st){
+  try{
+    var b=document.getElementById('gateBody');if(!b)return;
+    b.innerHTML='';
+    if(st==='signin'){
+      var p=document.createElement('p');p.className='muted';p.textContent='ETIE is a private friend network. Sign in to enter.';
+      var btn=document.createElement('button');btn.className='primary';btn.textContent='Sign in with Google';btn.style.width='100%';
+      btn.onclick=function(){try{window.EtieCloud.signInWithGoogle();}catch(e){}};
+      b.appendChild(p);b.appendChild(btn);return;
+    }
+    if(st==='invite'){
+      var p2=document.createElement('p');p2.className='muted';p2.textContent='This network is invite-only. Enter the code a member shared with you.';
+      var inp=document.createElement('input');inp.id='inviteCodeInput';inp.placeholder='e.g. ETIE-HK-A7Q2';inp.autocomplete='off';
+      inp.style.cssText='width:100%;box-sizing:border-box;margin:10px 0;';
+      inp.onkeydown=function(e){if(e.key==='Enter')verifyInviteCode();};
+      var btn2=document.createElement('button');btn2.className='primary';btn2.textContent='Verify & Enter';btn2.style.width='100%';
+      btn2.onclick=function(){verifyInviteCode();};
+      var sw=document.createElement('button');sw.className='secondary';sw.textContent='Switch account';sw.style.cssText='width:100%;margin-top:8px;';
+      sw.onclick=function(){try{window.EtieCloud.signOut();}catch(e){}};
+      b.appendChild(p2);b.appendChild(inp);b.appendChild(btn2);b.appendChild(sw);return;
+    }
+    var tr=null;try{tr=ETIE.traveller||{};}catch(e){}
+    var haveNick=false,havePhoto=false,haveVerify=false,haveHook=false;
+    try{
+      haveNick=!!(tr.nickname||ETIE.local.displayName);
+      havePhoto=!!(tr.photo||ETIE.local.photo||googleAvatar());
+      haveVerify=((tr.verificationMethods||[]).length>0);
+      haveHook=!!((tr.bio||'').trim());
+    }catch(e){}
+    var ul=document.createElement('div');ul.className='gate-checks';
+    [['Nickname',haveNick],['Photo',havePhoto],['Verification',haveVerify],['Personal hook',haveHook]].forEach(function(x){
+      var r=document.createElement('div');r.className='gate-check'+(x[1]?' ok':'');
+      r.textContent=(x[1]?'✅ ':'○ ')+x[0];ul.appendChild(r);
+    });
+    var btn3=document.createElement('button');btn3.className='primary';btn3.textContent='Complete Profile';btn3.style.width='100%';btn3.style.marginTop='12px;';
+    btn3.onclick=function(){var o=document.getElementById('gateOverlay');if(o)o.classList.add('hidden');try{showScreen('profile');}catch(e){}};
+    b.appendChild(ul);b.appendChild(btn3);
+  }catch(e){}
+}
+function verifyInviteCode(){
+  try{
+    var inp=document.getElementById('inviteCodeInput');
+    var code=(inp&&inp.value||'').trim();
+    if(!code){toast('Enter your invite code.');return;}
+    toast('Verifying invite…');
+    window.EtieCloud.redeemInvite(code).then(function(ok){
+      if(ok){toast('Welcome in.');}
+      else toast('Invalid or claimed code — check it and retry.');
+    });
+  }catch(e){}
+}
 function showScreen(id){
   try{
+    try{if(id==='map'&&gateState()!=='open'){refreshGate();return;}}catch(e){}
     var panels=['home','homeFlows','trips','messages','profile'];
     var want=(id==='home')?['home','homeFlows']:[id];
     panels.forEach(function(p){var el=document.getElementById(p);if(el)el.classList.toggle('panel-open',want.indexOf(p)!==-1);});
@@ -1246,7 +1324,7 @@ function stepProfile(d){
     if(d>0){
       if(!stepValid(step)){toast(stepMissingMsg(step));gotoProfileStep(step);return;}
       if(step>=3){
-        ETIE.profileComplete=true;ETIE._editingProfile=false;saveState();renderLiteProfile();
+        ETIE.profileComplete=true;ETIE._editingProfile=false;saveState();renderLiteProfile();try{refreshGate();}catch(e){}
         toast('Profile complete — map unlocked.');
         try{showScreen('map');}catch(e){}
         return;
@@ -1505,6 +1583,7 @@ function saveLiteProfile(){
     if(ETIE.profileComplete&&!isProfileComplete())ETIE.profileComplete=false;
     saveState();
     try{renderHeaderProfile();}catch(e){}
+    try{refreshGate();}catch(e){}
   }catch(e){}
 }
 function toggleLiteVerify(el){
@@ -2333,7 +2412,7 @@ function initHKMap(){
     try{L.control.zoom({position:'bottomright'}).addTo(_map);}catch(e){}
     L.tileLayer('https://tiles.stadiamaps.com/tiles/stamen_toner_background/{z}/{x}/{y}{r}.png?api_key=cc9c3230-65b0-44c0-8361-2c86413b0744',{maxZoom:20,attribution:'&copy; <a href="https://stadiamaps.com/">Stadia Maps</a> &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}).addTo(_map);
     _map.on('click',onMapTap);
-    renderMapFilter();renderMapPins();
+    renderMapFilter();try{if(gateState()==='open')renderMapPins();}catch(e){}
   }catch(e){}
 }
 var _pickMode=null; // null | 'trav1' | 'hook'
@@ -2997,6 +3076,7 @@ document.addEventListener('DOMContentLoaded',function(){
   restoreAll();
   try{ initHKMap(); renderMapFilter(); renderMapPins(); }catch(e){}
   try{ renderDerivedBadge(); locateUser(); }catch(e){}
+  try{ refreshGate(); }catch(e){}
   try{ processPhotoOutbox(); }catch(e){}
   try{ window.addEventListener('online',function(){try{processPhotoOutbox();}catch(e){}}); }catch(e){}
   try{

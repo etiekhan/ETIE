@@ -51,9 +51,9 @@
           paint('on','Cloud: on');
           try{pull();}catch(e){} try{pullShared();}catch(e){} try{subscribeShared();}catch(e){}
           try{subscribeLiveProfiles();}catch(e){} try{syncProfile();}catch(e){} try{pullPins();}catch(e){}
-          try{if(typeof locateUser==='function')locateUser();}catch(e){}
+          try{fetchOwnProfile();}catch(e){}
         }
-        else paint('offline','Cloud: offline — sign in');
+        else{paint('offline','Cloud: offline — sign in');try{if(typeof refreshGate==='function')refreshGate();}catch(e){}}
         // safety net: session can land a beat after first paint — re-sync header once settled
         setTimeout(function(){try{ if(typeof updateAuthHeader==='function')updateAuthHeader(); if(typeof renderHeaderProfile==='function')renderHeaderProfile(); }catch(e){}},800);
       }).catch(function(){paint('offline','Cloud: offline');});
@@ -70,8 +70,9 @@
           paint('on','Cloud: on');
           try{pull();}catch(e){} try{pullShared();}catch(e){} try{subscribeShared();}catch(e){}
           try{subscribeLiveProfiles();}catch(e){} try{syncProfile();}catch(e){} try{pullPins();subscribePins();}catch(e){}
+          try{fetchOwnProfile();}catch(e){}
         }
-        else paint('offline','Cloud: offline — sign in');
+        else{paint('offline','Cloud: offline — sign in');try{if(typeof refreshGate==='function')refreshGate();}catch(e){}}
         setTimeout(function(){try{ if(typeof updateAuthHeader==='function')updateAuthHeader(); if(typeof renderHeaderProfile==='function')renderHeaderProfile(); }catch(e){}},800);
       });
     }catch(e){paint('offline','Cloud: offline');}
@@ -182,6 +183,7 @@
           ETIE=Object.assign(ETIE||{},cloud);
           saveState();
           if(typeof restoreAll==='function')restoreAll();
+          try{if(typeof refreshGate==='function')refreshGate();}catch(e){}
           toast('Cloud data loaded.');
         }catch(e){console.warn('Etie cloud pull skipped',e);}
       });
@@ -233,6 +235,7 @@
         memories: ((typeof ETIE!=='undefined'&&ETIE.traveller&&ETIE.traveller.memories)||[]).slice(0,3),
         role: (function(){try{return ((ETIE.activeRole||ETIE.derivedRole)==='local')?'local_host':'traveller';}catch(e){return 'traveller';}})(),
         recommended_spots: ((typeof ETIE!=='undefined'&&ETIE.traveller&&ETIE.traveller.spots)||[]).slice(0,3),
+        is_onboarded: !!((typeof ETIE!=='undefined')&&ETIE.profileComplete),
         activity_stats: ((typeof ETIE!=='undefined'&&ETIE.traveller&&ETIE.traveller.activityStats)||{}),
         photo_url: (function(){try{var ph=(typeof ETIE!=='undefined'&&ETIE.traveller&&ETIE.traveller.photo)||'';return (ph.indexOf('http')===0)?ph.slice(0,500):'';}catch(e){return '';}})()
       };
@@ -707,7 +710,7 @@
   }
   function pullPins(){
     try{
-      if(!client)return;
+      if(!client||!session)return; // hard wall: no pin data until login
       client.from(pinTable()).select('*').order('updated_at',{ascending:false}).limit(200).then(function(r){
         try{
           if(r&&(r.error||!r.data))return; // table not migrated yet → stay local-only
@@ -747,7 +750,7 @@
   }
   function subscribePins(){
     try{
-      if(!client||pinChannel)return;
+      if(!client||!session||pinChannel)return; // hard wall: no realtime until login
       pinChannel=client.channel('hooks-live')
         .on('postgres_changes',{event:'*',schema:'public',table:pinTable()},function(){
           try{clearTimeout(pinPullTimer);}catch(e){}
@@ -806,6 +809,49 @@
       return function(){try{client.removeChannel(ch);delete hookChatChannels[key];}catch(e){}};
     }catch(e){return function(){};}
   }
+  function fetchOwnProfile(cb){
+    try{
+      if(!client||!session){if(typeof cb==='function')cb(null);return;}
+      client.from(profTable()).select('*').eq('user_id',session.user.id).maybeSingle().then(function(r){
+        try{
+          var row=r&&!r.error?r.data:null;
+          if(row&&typeof ETIE!=='undefined'){
+            try{ETIE.cloudOnboarded=!!row.is_onboarded;}catch(e){}
+            try{
+              var adopted=false;
+              if(row.display_name&&!ETIE.traveller.nickname&&!ETIE.local.displayName){ETIE.traveller.nickname=row.display_name;ETIE.local.displayName=row.display_name;adopted=true;}
+              if(row.photo_url&&row.photo_url.indexOf('http')===0&&!ETIE.traveller.photo){ETIE.traveller.photo=row.photo_url;ETIE.local.photo=row.photo_url;adopted=true;}
+              if(row.personal_hook&&!ETIE.traveller.bio){ETIE.traveller.bio=row.personal_hook;adopted=true;}
+              if(Array.isArray(row.memories)&&row.memories.length&&!(ETIE.traveller.memories||[]).length){ETIE.traveller.memories=row.memories.slice(0,3);adopted=true;}
+              if(row.verification&&Array.isArray(row.verification.methods)&&row.verification.methods.length&&!(ETIE.traveller.verificationMethods||[]).length){ETIE.traveller.verificationMethods=row.verification.methods.slice();ETIE.local.verificationMethods=row.verification.methods.slice();adopted=true;}
+              if(adopted){saveState();try{if(typeof renderLiteProfile==='function')renderLiteProfile();}catch(e){}}
+            }catch(e){}
+          }
+          try{if(typeof refreshGate==='function')refreshGate();}catch(e){}
+          if(typeof cb==='function')cb(row);
+        }catch(e){if(typeof cb==='function')cb(null);}
+      }).catch(function(){if(typeof cb==='function')cb(null);});
+    }catch(e){try{if(typeof cb==='function')cb(null);}catch(_){}}
+  }
+  function redeemInvite(code){
+    return new Promise(function(resolve){
+      try{
+        code=String(code||'').trim().toUpperCase();
+        if(!client||!session||!code){resolve(false);return;}
+        client.from('invite_codes').select('code,used_by').eq('code',code).maybeSingle().then(function(r){
+          var row=r&&!r.error?r.data:null;
+          if(!row){resolve(false);return;}
+          if(row.used_by&&row.used_by!==session.user.id){resolve(false);return;}
+          client.from('invite_codes').update({used_by:session.user.id,used_at:new Date().toISOString()}).eq('code',code).then(function(u){
+            if(u&&u.error){resolve(false);return;}
+            try{ETIE.inviteOk=true;ETIE.inviteCode=code;saveState();}catch(e){}
+            try{if(typeof refreshGate==='function')refreshGate();}catch(e){}
+            resolve(true);
+          }).catch(function(){resolve(false);});
+        }).catch(function(){resolve(false);});
+      }catch(e){resolve(false);}
+    });
+  }
   function fetchProfile(userId,cb){
     try{
       if(!client||!userId||typeof cb!=='function'){cb(null);return;}
@@ -831,7 +877,7 @@
   }
   function fetchHookLogs(hookId,cb){
     try{
-      if(!client||!hookId||typeof cb!=='function'){cb([]);return;}
+      if(!client||!session||!hookId||typeof cb!=='function'){cb([]);return;}
       client.from(hangoutTable()).select('*').eq('hook_id',String(hookId)).order('taken_at',{ascending:false}).limit(50).then(function(r){
         try{cb(r&&!r.error?(r.data||[]):[]);}catch(e){cb([]);}
       }).catch(function(){cb([]);});
@@ -839,7 +885,7 @@
   }
   function fetchUserLogs(userId,cb){
     try{
-      if(!client||!userId||typeof cb!=='function'){cb([]);return;}
+      if(!client||!session||!userId||typeof cb!=='function'){cb([]);return;}
       client.from(hangoutTable()).select('*').eq('user_id',userId).order('taken_at',{ascending:false}).limit(100).then(function(r){
         try{cb(r&&!r.error?(r.data||[]):[]);}catch(e){cb([]);}
       }).catch(function(){cb([]);});
@@ -851,7 +897,7 @@
     push:push, pull:pull, status:status,
     pullPins:pullPins, pushPin:pushPin, deletePin:deletePin,
     pushHookMessage:pushHookMessage, subscribeHookChat:subscribeHookChat,
-    fetchProfile:fetchProfile,
+    fetchProfile:fetchProfile, fetchOwnProfile:fetchOwnProfile, redeemInvite:redeemInvite,
     pushHangoutLog:pushHangoutLog, fetchHookLogs:fetchHookLogs, fetchUserLogs:fetchUserLogs,
     syncProfile:syncProfile, pushSharedRequest:pushSharedRequest, pushSharedMessage:pushSharedMessage, pushSharedMeetup:pushSharedMeetup,
     pushSharedReview:pushSharedReview, pushSharedReport:pushSharedReport,

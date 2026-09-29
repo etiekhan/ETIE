@@ -260,12 +260,6 @@
 </div>
 <!-- compat: old #admin id still exists for JS that queries it -->
 <div id="admin" style="display:none;"></div>
-<div id="devBar">
-  <button id="devBarToggle" onclick="toggleDevBar()" aria-expanded="true">Prototype ▾</button>
-  <div class="flowbar" aria-label="Core loop">
-    <div class="flow-step active">1 · Discover</div><div class="flow-step">2 · Match</div><div class="flow-step">3 · Trust</div><div class="flow-step">4 · Connect</div><div class="flow-step">5 · Meet</div><div class="flow-step">6 · Review</div><div class="flow-step">7 · Better matches</div>
-  </div>
-</div>
 <div class="chat-overlay hidden" id="dropHookModal" onclick="if(event.target===this)closeDropHook()">
   <div class="chat-popup glass-modal" role="dialog" aria-modal="true" aria-label="Drop a Hook" style="width:min(560px,calc(100vw - 24px));">
     <div class="chat-popup-head"><div><strong>📍 Drop a Hook</strong><div class="muted small">Pin a hangout on the HK map</div></div><button class="secondary" onclick="closeDropHook()" aria-label="Close" style="padding:8px 12px;">✕</button></div>
@@ -308,12 +302,12 @@
 </div>
 <div class="toast" id="toast"></div>
 
-  <script src="data/locations.js?v=43"></script>
-    <script src="match.js?v=43"></script>
+  <script src="data/locations.js?v=44"></script>
+    <script src="match.js?v=44"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="supabase-config.js?v=43"></script>
-  <script src="app.js?v=43"></script>
-  <script src="supabase-sync.js?v=43"></script>
+  <script src="supabase-config.js?v=44"></script>
+  <script src="app.js?v=44"></script>
+  <script src="supabase-sync.js?v=44"></script>
 </body>
 </html>

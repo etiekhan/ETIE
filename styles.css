@@ -543,6 +543,19 @@ html,body{height:100%;width:100%;margin:0;padding:0;overflow:hidden;background:#
 .lite-dot.done{border-color:rgba(182,255,46,.5);color:#d9ffb0;}
 .lite-dot.done span{background:#b6ff2e;color:#0c0d10;}
 .lite-dot.locked{opacity:.45;}
+/* completed profile view + memory cards */
+.mem-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.mem-card{border-radius:14px;overflow:hidden;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);min-height:110px;display:flex;flex-direction:column;}
+.mem-empty{border:1px dashed rgba(255,255,255,.3);background:rgba(255,255,255,.03);border-radius:14px;min-height:110px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:8px;}
+.mem-plus{width:34px;height:34px;border-radius:50%;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.07);color:#fff;font-size:20px;line-height:1;cursor:pointer;}
+.mem-urlrow{display:flex;gap:4px;width:100%;}
+.mem-urlrow input{flex:1;min-width:0;font-size:11px;padding:6px 8px;}
+.mem-urlrow button{font-size:11px;padding:6px 8px;}
+.mem-card img{width:100%;height:84px;object-fit:cover;display:block;}
+.mem-cap{font-size:11px;padding:6px 8px;background:transparent;border:0;border-top:1px solid rgba(255,255,255,.1);color:#fff;width:100%;box-sizing:border-box;}
+.mem-del{align-self:flex-end;font-size:11px;background:transparent;border:0;color:rgba(255,255,255,.55);cursor:pointer;padding:2px 8px 6px;}
+.mem-strip{display:flex;gap:8px;margin:8px 0;overflow-x:auto;}
+.mem-strip img{width:56px;height:56px;border-radius:12px;object-fit:cover;border:1px solid rgba(255,255,255,.2);flex-shrink:0;}
 /* merged header: inline logo + derived role badge */
 .logo-inline{font-size:20px;font-weight:850;letter-spacing:-.05em;color:#fff;padding:0 10px 0 6px;white-space:nowrap;}
 .derived-badge{font-size:12px;font-weight:800;padding:6px 12px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:#fff;white-space:nowrap;}

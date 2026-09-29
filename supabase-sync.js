@@ -230,6 +230,7 @@
         travel_pace: (p.travelPace!=null?p.travelPace:1),
         style_interests: (p.styleInterests||[]),
         personal_hook: ((typeof ETIE!=='undefined'&&ETIE.traveller&&ETIE.traveller.bio)||'').slice(0,140),
+        memories: ((typeof ETIE!=='undefined'&&ETIE.traveller&&ETIE.traveller.memories)||[]).slice(0,3),
         photo_url: (function(){try{var ph=(typeof ETIE!=='undefined'&&ETIE.traveller&&ETIE.traveller.photo)||'';return (ph.indexOf('http')===0)?ph.slice(0,500):'';}catch(e){return '';}})()
       };
       function tryUpsert(payload){
@@ -690,7 +691,7 @@
         lat:r.lat,lng:r.lng,hook:String(r.activity_hook||r.content||r.hook||'').slice(0,140),
         members:r.members||[{nick:r.nickname||'Someone',role:(r.role==='local'?'local':'traveller'),verified:!!r.verified}],
         pending:r.pending||[],status:r.status||'open',ts:(r.updated_at?new Date(r.updated_at).getTime():Date.now()),
-        origin:'cloud',cloudId:String(r.id)};
+        origin:'cloud',cloudId:String(r.id),authorId:r.user_id||null};
     }catch(e){return null;}
   }
   function pinToRow(p){
@@ -801,12 +802,21 @@
       return function(){try{client.removeChannel(ch);delete hookChatChannels[key];}catch(e){}};
     }catch(e){return function(){};}
   }
+  function fetchProfile(userId,cb){
+    try{
+      if(!client||!userId||typeof cb!=='function'){cb(null);return;}
+      client.from(profTable()).select('*').eq('user_id',userId).maybeSingle().then(function(r){
+        try{cb(r&&!r.error?r.data:null);}catch(e){cb(null);}
+      }).catch(function(){cb(null);});
+    }catch(e){try{cb(null);}catch(_){}}
+  }
   // ---- Expose ----
   window.EtieCloud={
     init:init, signInWithGoogle:signInWithGoogle, signOut:signOut,
     push:push, pull:pull, status:status,
     pullPins:pullPins, pushPin:pushPin, deletePin:deletePin,
     pushHookMessage:pushHookMessage, subscribeHookChat:subscribeHookChat,
+    fetchProfile:fetchProfile,
     syncProfile:syncProfile, pushSharedRequest:pushSharedRequest, pushSharedMessage:pushSharedMessage, pushSharedMeetup:pushSharedMeetup,
     pushSharedReview:pushSharedReview, pushSharedReport:pushSharedReport,
     uploadPhoto:uploadPhoto,

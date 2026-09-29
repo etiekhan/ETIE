@@ -209,6 +209,20 @@
       <button class="secondary" id="liteBack" onclick="stepProfile(-1)" style="padding:10px 16px;">Back</button>
       <button class="primary" id="liteNext" onclick="stepProfile(1)" style="flex:1;">Continue</button>
     </div>
+    <div id="liteDoneView" style="display:none;">
+      <div class="lite-idrow">
+        <div class="lite-avatar" id="doneAvatar"><span>+</span></div>
+        <div style="flex:1;min-width:0;">
+          <strong id="doneName" style="font-size:19px;">—</strong> <span id="doneVerified" class="small"></span>
+          <div><span id="doneRole" class="role-badge">—</span></div>
+          <div class="muted small" id="doneCity">—</div>
+        </div>
+      </div>
+      <div class="field"><label>Vibes</label><div class="chips" id="doneVibes"></div></div>
+      <div class="field"><label>Personal Hook</label><p class="pin-hook" id="doneHook" style="font-size:16px;">—</p></div>
+      <div class="field"><label>Favourite memories &amp; hangouts (up to 3)</label><div id="liteMemories" class="mem-grid"></div></div>
+      <div style="display:flex;gap:8px;margin-top:12px;"><button class="secondary" onclick="editProfile()">Edit Profile</button></div>
+    </div>
     <div class="sidebar-note" id="liteRepBlock" style="margin-top:14px;"><strong>Reputation</strong><p class="muted" id="liteStats">No meetups yet.</p></div>
   </div>
   <div style="margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.12);"><button class="secondary" style="background:rgba(176,0,32,.15)!important;border-color:rgba(232,180,180,.4)!important;color:#ff8f8f!important;" onclick="wipeEverything()">Reset my data</button><p class="muted small" style="margin:6px 0 0;">Deletes your profile, trips and chats on this device + cloud for this login.</p></div>
@@ -273,6 +287,7 @@
   <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;"><span class="group-badge" id="pinGroupBadge">—</span><div class="chips" id="pinMembers" style="margin:0;"></div></div>
   <p class="muted small" id="pinPendingNote" style="display:none;">Request sent — waiting for the group to approve.</p>
   <div id="pinHostBox"></div>
+  <div id="pinMemories" class="mem-strip" style="display:none;"></div>
   <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;"><button class="primary" id="pinRequestBtn" onclick="requestPinConnect()">Request to Connect</button><button class="secondary" id="pinChatBtn" onclick="openChatDrawer(_openPinId)" style="display:none;">Open group chat</button><button class="secondary" id="pinDeleteBtn" onclick="deletePinSidequest()" style="display:none;">Delete Pin</button></div>
 </div>
 <div class="chat-overlay hidden" id="groupModal">
@@ -287,17 +302,18 @@
 </div>
 <div id="chatDrawer" class="chat-drawer hidden" role="dialog" aria-label="Hook group chat">
   <div class="chat-drawer-head"><div><strong id="chatHookTitle">—</strong><div class="muted small" id="chatHookSub">—</div></div><button class="secondary" onclick="closeChatDrawer()" aria-label="Close chat" style="padding:8px 12px;">✕</button></div>
+  <div id="chatMemories" class="mem-strip" style="display:none;margin:0 12px;"></div>
   <div class="chat-drawer-list" id="chatMsgList"></div>
   <div class="chat-drawer-foot"><input id="chatMsgInput" placeholder="Message the group..." onkeydown="if(event.key==='Enter')sendHookMessage()"><button class="primary" onclick="sendHookMessage()">Send</button></div>
 </div>
 <div class="toast" id="toast"></div>
 
-  <script src="data/locations.js?v=42"></script>
-    <script src="match.js?v=42"></script>
+  <script src="data/locations.js?v=43"></script>
+    <script src="match.js?v=43"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="supabase-config.js?v=42"></script>
-  <script src="app.js?v=42"></script>
-  <script src="supabase-sync.js?v=42"></script>
+  <script src="supabase-config.js?v=43"></script>
+  <script src="app.js?v=43"></script>
+  <script src="supabase-sync.js?v=43"></script>
 </body>
 </html>

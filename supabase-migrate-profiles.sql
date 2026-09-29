@@ -14,3 +14,4 @@ alter table public.etie_profiles add column if not exists traveller_nationality 
 alter table public.etie_profiles add column if not exists district text default 'Central / Soho';
 alter table public.etie_profiles add column if not exists personal_hook text default '';
 alter table public.etie_profiles add column if not exists photo_url text default '';
+alter table public.etie_profiles add column if not exists memories jsonb default '[]'::jsonb;

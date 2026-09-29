@@ -457,6 +457,17 @@ html,body{height:100%;width:100%;margin:0;padding:0;overflow:hidden;background:#
 .map-foot{position:fixed;left:16px;bottom:16px;z-index:500;background:rgba(18,18,20,.7);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.1);border-radius:99px;padding:7px 14px;}
 .map-foot .muted{color:rgba(255,255,255,.7);}
 .map-empty{background:rgba(18,18,20,.85);border:1px solid rgba(244,63,94,.5);border-radius:99px;padding:12px 22px;font-size:14px;}
+/* areas-with-connections sidebar */
+#areaSidebar{position:fixed;left:12px;top:50%;transform:translateY(-50%);z-index:900;width:216px;max-height:44vh;display:flex;flex-direction:column;background:rgba(18,18,20,.82);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:10px 12px;color:#f5f3ef;}
+.area-head{display:flex;justify-content:space-between;align-items:center;gap:8px;cursor:pointer;font-size:13px;}
+.area-head strong{color:#fff;white-space:nowrap;}
+#areaList{overflow-y:auto;display:flex;flex-direction:column;gap:6px;margin-top:8px;}
+.area-row{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:8px 10px;cursor:pointer;font-size:13px;}
+.area-row:hover{border-color:rgba(255,47,109,.5);}
+.area-row strong{color:#fff;font-size:13px;}
+.area-row .muted{color:rgba(255,255,255,.6);font-size:11px;}
+.area-me{border-color:rgba(34,211,238,.45);}
+@media(max-width:700px){#areaSidebar{width:170px;top:auto;bottom:120px;transform:none;max-height:30vh;}}
 /* overlay panels (flows, trips, messages, profile) */
 .overlay-panel{display:none;position:fixed;top:70px;left:50%;transform:translateX(-50%);width:min(880px,94vw);max-height:calc(100vh - 168px);overflow-y:auto;z-index:700;background:rgba(18,18,20,.9);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:22px;color:#f5f3ef;}
 .overlay-panel.panel-open{display:block;}

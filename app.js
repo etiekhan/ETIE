@@ -2105,6 +2105,25 @@ function applyDerivedRole(role,why){
     if(why==='gps'&&role){
       ETIE.derivedRole=role; ETIE.locDenied=false;
       if(signed&&!ETIE.activeRole)ETIE.activeRole=role; // first fix wins; manual roleSwitch picks stick after
+      try{
+        var fx=ETIE.lastFix;
+        if(fx&&fx.lat!=null){
+          ETIE.anchor={lat:fx.lat,lng:fx.lng,label:areaLabel(fx.lat,fx.lng)};
+          if(!ETIE._anchored&&_map){
+            ETIE._anchored=true;
+            try{_map.setMaxBounds(anchorBounds(ETIE.anchor));}catch(e){}
+            try{_map.flyTo([fx.lat,fx.lng],13,{duration:1.2});}catch(e){}
+          }
+          try{
+            reverseLabel(fx.lat,fx.lng,function(lbl){
+              if(!lbl)return;
+              try{
+                if(ETIE.anchor&&Math.abs(ETIE.anchor.lat-fx.lat)<0.01){ETIE.anchor.label=lbl;saveState();renderAreaSidebar();}
+              }catch(e){}
+            });
+          }catch(e){}
+        }
+      }catch(e){}
     }else{
       ETIE.derivedRole=null; ETIE.locDenied=true; // never claim a role without a real GPS comparison
     }
@@ -2126,12 +2145,43 @@ function renderDerivedBadge(){
     else{var denied=false;try{denied=!!ETIE.locDenied;}catch(e){}b.textContent=denied?'📍 Location off':'📍 …';b.className='derived-badge';}
   }catch(e){}
 }
+function getAnchor(){
+  try{if(ETIE.anchor&&ETIE.anchor.lat!=null)return ETIE.anchor;}catch(e){}
+  return {lat:HK_CENTER[0],lng:HK_CENTER[1],label:'Hong Kong'};
+}
+function anchorBounds(a){
+  try{return [[a.lat-1.1,a.lng-1.8],[a.lat+1.1,a.lng+1.8]];}catch(e){return [[22.10,113.80],[22.60,114.50]];}
+}
+function areaLabel(lat,lng){
+  try{
+    if(haversineKm(lat,lng,HK_CENTER[0],HK_CENTER[1])<=60)return nearestDistrictLabel(lat,lng);
+  }catch(e){}
+  try{return ETIE.local.city||'Around you';}catch(e){return 'Around you';}
+}
+function reverseLabel(lat,lng,cb){
+  try{
+    ETIE.geoCache=ETIE.geoCache||{};
+    var key=lat.toFixed(1)+','+lng.toFixed(1);
+    if(ETIE.geoCache[key]){cb(ETIE.geoCache[key]);return;}
+    fetch('https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat='+lat+'&lon='+lng+'&zoom=10').then(function(r){return r.json();}).then(function(j){
+      try{
+        var a=j&&j.address||{};
+        var city=a.city||a.town||a.village||a.municipality||a.state||null;
+        var cc=(a.country_code||'').toUpperCase();
+        var label=city?city+(cc?' '+flagEmoji(cc):''):(j.display_name||'').split(',').slice(0,2).join(',');
+        if(label){ETIE.geoCache[key]=label;try{saveState();}catch(e){}cb(label);}else cb(null);
+      }catch(e){cb(null);}
+    }).catch(function(){cb(null);});
+  }catch(e){cb(null);}
+}
 function locateUser(){
   try{
     if(!navigator.geolocation){applyDerivedRole(null,'unavailable');return;}
     navigator.geolocation.getCurrentPosition(function(pos){
       try{
-        var d=haversineKm(pos.coords.latitude,pos.coords.longitude,HK_HOME[0],HK_HOME[1]);
+        var lat=pos.coords.latitude,lng=pos.coords.longitude;
+        try{ETIE.lastFix={lat:lat,lng:lng};}catch(e){}
+        var d=haversineKm(lat,lng,HK_HOME[0],HK_HOME[1]);
         applyDerivedRole(d<=50?'local':'traveller','gps');
       }catch(e){}
     },function(err){applyDerivedRole(null,'denied');},{timeout:9000,maximumAge:300000});
@@ -2178,7 +2228,8 @@ function initHKMap(){
   try{
     if(_map||!window.L)return;
     var el=document.getElementById('hkMap');if(!el)return;
-    _map=L.map('hkMap',{zoomControl:false,minZoom:12,maxZoom:20,maxBounds:[[22.10,113.80],[22.60,114.50]],maxBoundsViscosity:1.0,worldCopyJump:true}).setView(HK_CENTER,HK_ZOOM);
+    var _anchor=getAnchor();
+    _map=L.map('hkMap',{zoomControl:false,minZoom:11,maxZoom:20,maxBounds:anchorBounds(_anchor),maxBoundsViscosity:1.0,worldCopyJump:true}).setView([_anchor.lat,_anchor.lng],HK_ZOOM);
     try{L.control.zoom({position:'bottomright'}).addTo(_map);}catch(e){}
     L.tileLayer('https://tiles.stadiamaps.com/tiles/stamen_toner_background/{z}/{x}/{y}{r}.png?api_key=cc9c3230-65b0-44c0-8361-2c86413b0744',{maxZoom:20,attribution:'&copy; <a href="https://stadiamaps.com/">Stadia Maps</a> &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}).addTo(_map);
     _map.on('click',onMapTap);
@@ -2277,6 +2328,7 @@ function renderMapPins(){
     if(c)c.textContent=pins.length?pins.length+' hook'+(pins.length===1?'':'s')+' live in HK':'';
     var eb=document.getElementById('mapEmptyBanner');
     if(eb)eb.classList.toggle('hidden',pins.length>0);
+    try{renderAreaSidebar();}catch(e){}
   }catch(e){}
 }
 function selectHookCategory(el,v){try{var c=document.getElementById('hookInterestPills');if(c)Array.prototype.forEach.call(c.querySelectorAll('.chip'),function(x){x.classList.remove('active');});if(el)el.classList.add('active');_hookDraft.category=v;}catch(e){_hookDraft.category=v;}}
@@ -2550,6 +2602,63 @@ function renderHookChat(){
     });
     if(!(p.chat||[]).length){var e=document.createElement('div');e.className='muted small';e.textContent='No messages yet — say hi to the group.';box.appendChild(e);}
     try{box.scrollTop=box.scrollHeight;}catch(e2){}
+  }catch(e){}
+}
+var _areasCollapsed=false;
+function toggleAreaSidebar(){
+  try{
+    _areasCollapsed=!_areasCollapsed;
+    var b=document.getElementById('areaList');if(b)b.style.display=_areasCollapsed?'none':'';
+    var t=document.getElementById('areaToggle');if(t)t.textContent=_areasCollapsed?'▸ Areas':'▾ Areas';
+  }catch(e){}
+}
+function flyToArea(lat,lng,label){
+  try{
+    if(!window.L||!_map)return;
+    _map.setMaxBounds([[lat-1.1,lng-1.8],[lat+1.1,lng+1.8]]);
+    _map.flyTo([lat,lng],13,{duration:1.0});
+    toast(label||'Flying there.');
+  }catch(e){}
+}
+function renderAreaSidebar(){
+  try{
+    var box=document.getElementById('areaList');if(!box)return;
+    box.innerHTML='';
+    var a=getAnchor();
+    var me=document.createElement('div');me.className='area-row area-me';
+    me.innerHTML='<div><strong></strong><br><span class="muted small">your map home</span></div>';
+    me.querySelector('strong').textContent='📍 '+(a.label||'Around you');
+    me.onclick=function(){flyToArea(a.lat,a.lng,a.label||'Back home.');};
+    box.appendChild(me);
+    var groups={};
+    (allMapPins()||[]).forEach(function(p){
+      try{
+        var k=(Math.round(p.lat*2)/2).toFixed(1)+','+(Math.round(p.lng*2)/2).toFixed(1);
+        var g=groups[k]||(groups[k]={lat:0,lng:0,n:0,people:{},labels:{},pins:[]});
+        g.lat+=p.lat;g.lng+=p.lng;g.n++;
+        (p.members||[]).forEach(function(m){if(m&&m.nick)g.people[m.nick]=1;});
+        var lb=(p.location||p.district||'Hook spot');
+        g.labels[lb]=(g.labels[lb]||0)+1;
+        g.pins.push(p);
+      }catch(e){}
+    });
+    var keys=Object.keys(groups).sort(function(x,y){return groups[y].n-groups[x].n;});
+    if(!keys.length){var e=document.createElement('div');e.className='muted small';e.textContent='No connections anywhere yet.';box.appendChild(e);}
+    keys.slice(0,12).forEach(function(k){
+      try{
+        var g=groups[k];
+        var top=Object.keys(g.labels).sort(function(x,y){return g.labels[y]-g.labels[x];})[0]||'Hook area';
+        var np=Object.keys(g.people).length;
+        var row=document.createElement('div');row.className='area-row';
+        row.innerHTML='<div><strong></strong><br><span class="muted small"></span></div>';
+        row.querySelector('strong').textContent=top.length>30?top.slice(0,29)+'…':top;
+        row.querySelector('span.muted').textContent=g.n+' hook'+(g.n===1?'':'s')+(np?(' · '+np+' '+(np===1?'person':'people')):'');
+        row.onclick=(function(la,ln,lb){return function(){flyToArea(la,ln,lb);};})(g.lat/g.n,g.lng/g.n,top);
+        box.appendChild(row);
+      }catch(e){}
+    });
+    var h=document.getElementById('areaCount');
+    if(h)h.textContent=keys.length?keys.length+' area'+(keys.length===1?'':'s'):'';
   }catch(e){}
 }
 function renderHookChatList(){

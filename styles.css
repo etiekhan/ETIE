@@ -567,6 +567,20 @@ html,body{height:100%;width:100%;margin:0;padding:0;overflow:hidden;background:#
 .mem-del{align-self:flex-end;font-size:11px;background:transparent;border:0;color:rgba(255,255,255,.55);cursor:pointer;padding:2px 8px 6px;}
 .mem-strip{display:flex;gap:8px;margin:8px 0;overflow-x:auto;}
 .mem-strip img{width:56px;height:56px;border-radius:12px;object-fit:cover;border:1px solid rgba(255,255,255,.2);flex-shrink:0;}
+/* city host badge + quick-drop presets + venue cards */
+.city-host{border-color:#FF385C!important;background:rgba(255,56,92,.2)!important;box-shadow:0 0 14px rgba(255,56,92,.55),inset 0 0 8px rgba(255,56,92,.25)!important;color:#fff!important;}
+.preset-row{display:flex;gap:8px;overflow-x:auto;padding:2px 0 6px;scrollbar-width:none;}
+.preset-row::-webkit-scrollbar{display:none;}
+.preset-chip{flex-shrink:0;font-weight:700;}
+.spot-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.spot-card{border-radius:14px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);padding:10px;display:flex;flex-direction:column;gap:6px;min-height:110px;}
+.spot-card.spot-empty{border-style:dashed;}
+.spot-emoji{font-size:24px;}
+.spot-name{font-weight:800;color:#fff;font-size:14px;overflow-wrap:break-word;}
+.spot-card input,.spot-card select{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);border-radius:8px;padding:7px 8px;color:#fff;font-size:12px;width:100%;box-sizing:border-box;}
+.spot-strip{display:flex;gap:8px;margin:8px 0;overflow-x:auto;}
+.spot-chip{flex-shrink:0;background:rgba(255,255,255,.06);border:1px solid rgba(255,56,92,.4);border-radius:12px;padding:8px 10px;cursor:pointer;font-size:13px;font-weight:700;color:#fff;max-width:180px;}
+.spot-chip .muted{font-size:11px;}
 /* merged header: inline logo + derived role badge */
 .logo-inline{font-size:20px;font-weight:850;letter-spacing:-.05em;color:#fff;padding:0 10px 0 6px;white-space:nowrap;}
 .derived-badge{font-size:12px;font-weight:800;padding:6px 12px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:#fff;white-space:nowrap;}

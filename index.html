@@ -223,6 +223,7 @@
       <div class="field"><label>Vibes</label><div class="chips" id="doneVibes"></div></div>
       <div class="field"><label>Personal Hook</label><p class="pin-hook" id="doneHook" style="font-size:16px;">—</p></div>
       <div class="field"><label>Favourite memories &amp; hangouts (up to 3)</label><div id="liteMemories" class="mem-grid"></div></div>
+      <div class="field" id="doneSpotsWrap"><label id="doneSpotsTitle">Local spots</label><div id="doneSpots" class="spot-grid"></div></div>
       <div style="display:flex;gap:8px;margin-top:12px;"><button class="secondary" onclick="editProfile()">Edit Profile</button></div>
     </div>
     <div class="sidebar-note" id="liteRepBlock" style="margin-top:14px;"><strong>Reputation</strong><p class="muted" id="liteStats">No meetups yet.</p></div>
@@ -266,6 +267,12 @@
   <div class="chat-popup glass-modal" role="dialog" aria-modal="true" aria-label="Drop a Hook" style="width:min(560px,calc(100vw - 24px));">
     <div class="chat-popup-head"><div><strong>📍 Drop a Hook</strong><div class="muted small">Pin a hangout on the HK map</div></div><button class="secondary" onclick="closeDropHook()" aria-label="Close" style="padding:8px 12px;">✕</button></div>
     <div class="chat-popup-body" style="background:#fff;">
+      <div class="field"><label>Quick drop — 1 tap</label><div class="preset-row" id="hookPresets">
+        <button class="chip preset-chip" onclick="applyHookPreset(0)">⚽ 5-a-side +1</button>
+        <button class="chip preset-chip" onclick="applyHookPreset(1)">🍺 Drinks / Speakeasy</button>
+        <button class="chip preset-chip" onclick="applyHookPreset(2)">☕ Coffee &amp; Co-Work</button>
+        <button class="chip preset-chip" onclick="applyHookPreset(3)">🥟 Street Food / Dim Sum</button>
+      </div></div>
       <div class="field"><label>Pin Location Name</label><input id="hookLocation" placeholder='e.g. "Sham Shui Po Street Market" or "Soho Escalators"'><p class="muted small" style="margin:4px 0 0;">Auto-filled from your map tap — edit freely.</p><div style="margin-top:8px;"><button class="secondary" onclick="pickOnMap('hook')" style="padding:8px 14px;">📍 Pick on Map</button></div></div>
       <div class="field"><label>I am a…</label><div class="chips" id="hookRolePills"><button class="chip" id="hookRoleTrav" onclick="setHookRole('traveller')">Traveller ✈️</button><button class="chip" id="hookRoleLocal" onclick="setHookRole('local')">Local Host 🇭🇰</button></div><p class="muted small" style="margin:4px 0 0;">Travellers seek local context · Locals offer insider access.</p></div>
       <div class="field"><label>Category Tag</label><div class="chips" id="hookInterestPills"><button class="chip" onclick="selectHookCategory(this,'Food')">🥟 Food</button><button class="chip" onclick="selectHookCategory(this,'Nightlife')">🍺 Nightlife</button><button class="chip" onclick="selectHookCategory(this,'Photo')">📸 Photo Walk</button><button class="chip" onclick="selectHookCategory(this,'Sports')">⚽ Sports</button><button class="chip" onclick="selectHookCategory(this,'Cafe')">☕ Cafe</button></div></div>
@@ -284,6 +291,7 @@
   <p class="muted small" id="pinPendingNote" style="display:none;">Request sent — waiting for the group to approve.</p>
   <div id="pinHostBox"></div>
   <div id="pinMemories" class="mem-strip" style="display:none;"></div>
+  <div id="pinSpots" class="spot-strip" style="display:none;"></div>
   <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;"><button class="primary" id="pinRequestBtn" onclick="requestPinConnect()">Request to Connect</button><button class="secondary" id="pinChatBtn" onclick="openChatDrawer(_openPinId)" style="display:none;">Open group chat</button><button class="secondary" id="pinDeleteBtn" onclick="deletePinSidequest()" style="display:none;">Delete Pin</button></div>
 </div>
 <div class="chat-overlay hidden" id="groupModal">
@@ -304,12 +312,12 @@
 </div>
 <div class="toast" id="toast"></div>
 
-  <script src="data/locations.js?v=46"></script>
-    <script src="match.js?v=46"></script>
+  <script src="data/locations.js?v=47"></script>
+    <script src="match.js?v=47"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="supabase-config.js?v=46"></script>
-  <script src="app.js?v=46"></script>
-  <script src="supabase-sync.js?v=46"></script>
+  <script src="supabase-config.js?v=47"></script>
+  <script src="app.js?v=47"></script>
+  <script src="supabase-sync.js?v=47"></script>
 </body>
 </html>

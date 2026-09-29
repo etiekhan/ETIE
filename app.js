@@ -98,6 +98,7 @@ function loadState() {
     if(s.profileComplete==null) s.profileComplete=false;
     s._editingProfile=false;
     if(!Array.isArray(s.traveller.memories)) s.traveller.memories=[];
+    if(!Array.isArray(s.traveller.spots)) s.traveller.spots=[];
     if(s.traveller.socialVibe==null){ var sc=s.traveller.personality&&s.traveller.personality.social||5; s.traveller.socialVibe=sc<=3?0:sc>=8?2:1; }
     if(s.traveller.travelPace==null){ var pc=s.traveller.personality&&s.traveller.personality.spontaneous||5; s.traveller.travelPace=pc<=3?0:pc>=8?2:1; }
     if(!s.traveller.styleInterests)s.traveller.styleInterests=[];
@@ -1288,7 +1289,7 @@ function renderDoneView(){
     var vb=document.getElementById('doneVerified');
     if(vb){var v=(tr.verificationMethods||[]).length>0;vb.textContent=v?'✅ Verified':'';vb.style.display=v?'':'none';}
     var rl=document.getElementById('doneRole');
-    if(rl){var role=(ETIE.derivedRole||ETIE.activeRole||'traveller');rl.textContent=role==='local'?'🇭🇰 Local Host':'✈️ Traveller';}
+    if(rl){var role=(ETIE.derivedRole||ETIE.activeRole||'traveller');rl.textContent=role==='local'?'🇭🇰 Local Host':'✈️ Traveller';rl.classList.toggle('city-host',role==='local');}
     var ct=document.getElementById('doneCity'); if(ct)ct.textContent='🏠 '+(ETIE.local.city||'Hong Kong');
     var vs=document.getElementById('doneVibes');
     if(vs){vs.innerHTML='';var vibes=myHookVibes();
@@ -1296,7 +1297,7 @@ function renderDoneView(){
       vibes.forEach(function(v){var s=document.createElement('span');s.className='chip active';s.textContent=mapCatEmoji(v)+' '+v;vs.appendChild(s);});
     }
     var hk=document.getElementById('doneHook'); if(hk)hk.textContent='“'+(tr.bio||'No personal hook yet.')+'”';
-    renderMemories();
+    renderMemories();renderSpots();
   }catch(e){}
 }
 function getMemories(){try{var m=ETIE.traveller&&ETIE.traveller.memories;return Array.isArray(m)?m.slice(0,3):[];}catch(e){return [];}}
@@ -1367,6 +1368,82 @@ function handleMemoryFile(input){
         r.readAsDataURL(file);
       }catch(e){toast('Could not read photo.');}
     }
+  }catch(e){}
+}
+function getSpots(){try{var s=ETIE.traveller&&ETIE.traveller.spots;return Array.isArray(s)?s.slice(0,3):[];}catch(e){return [];}}
+function saveSpots(arr){
+  try{
+    ETIE.traveller.spots=(arr||[]).slice(0,3);
+    saveState();renderDoneView();
+  }catch(e){}
+}
+var SPOT_EMOJIS=['🥟','🍺','📸','⚽','☕','🍸','🍜','🎵','🛍️','🌿'];
+function renderSpots(){
+  try{
+    var box=document.getElementById('doneSpots');if(!box)return;
+    box.innerHTML='';
+    var spots=getSpots();
+    var title=document.getElementById('doneSpotsTitle');
+    var nick='';try{nick=ETIE.traveller.nickname||'Your';}catch(e){}
+    if(title)title.textContent=(nick||'Your').toUpperCase()+"'S LOCAL SPOTS (UP TO 3)";
+    for(var i=0;i<3;i++){
+      (function(idx){
+        var s=spots[idx];
+        var card=document.createElement('div');card.className='spot-card';
+        if(s&&s.name){
+          var em=document.createElement('div');em.className='spot-emoji';em.textContent=s.emoji||'📍';card.appendChild(em);
+          var nm=document.createElement('div');nm.className='spot-name';nm.textContent=s.name;card.appendChild(nm);
+          var hd=document.createElement('div');hd.className='muted small';hd.textContent=s.hood||'';card.appendChild(hd);
+          var del=document.createElement('button');del.className='mem-del';del.textContent='✕ Remove';
+          del.onclick=function(){var a=getSpots();a.splice(idx,1);saveSpots(a);toast('Spot removed.');};
+          card.appendChild(del);
+        }else{
+          card.classList.add('spot-empty');
+          var nI=document.createElement('input');nI.placeholder='Venue name';nI.maxLength=40;
+          var hI=document.createElement('input');hI.placeholder='Neighborhood';hI.maxLength=40;
+          var eS=document.createElement('select');
+          SPOT_EMOJIS.forEach(function(e){var o=document.createElement('option');o.value=e;o.textContent=e;eS.appendChild(o);});
+          var add=document.createElement('button');add.className='secondary';add.textContent='Save spot';
+          add.onclick=function(){
+            var nm=(nI.value||'').trim();if(!nm){toast('Name the venue first.');return;}
+            var a=getSpots();a[idx]={name:nm.slice(0,40),hood:(hI.value||'').trim().slice(0,40),emoji:eS.value};
+            saveSpots(a);toast('Spot saved.');
+          };
+          card.appendChild(nI);card.appendChild(hI);card.appendChild(eS);card.appendChild(add);
+        }
+        box.appendChild(card);
+      })(i);
+    }
+  }catch(e){}
+}
+function hostHereSpot(name){
+  try{
+    closePinDetail();
+    openDropHook();
+    var li=document.getElementById('hookLocation');if(li&&name)li.value=name.slice(0,80);
+  }catch(e){}
+}
+function fillSpotsStrip(boxId,userId){
+  try{
+    var box=document.getElementById(boxId);if(!box)return;
+    box.innerHTML='';box.style.display='none';
+    if(!userId||!window.EtieCloud||!window.EtieCloud.fetchProfile)return;
+    window.EtieCloud.fetchProfile(userId,function(row){
+      try{
+        var spots=row&&Array.isArray(row.recommended_spots)?row.recommended_spots.slice(0,3):[];
+        if(!spots.length)return;
+        spots.forEach(function(s){
+          if(!s||!s.name)return;
+          var c=document.createElement('div');c.className='spot-chip';c.title='Host here';
+          c.innerHTML='<div></div><div class="muted small"></div>';
+          c.querySelector('div').textContent=(s.emoji||'📍')+' '+s.name;
+          c.querySelector('div.muted').textContent=s.hood||'';
+          c.onclick=(function(n){return function(){hostHereSpot(n);};})(s.name);
+          box.appendChild(c);
+        });
+        if(box.children.length)box.style.display='';
+      }catch(e){}
+    });
   }catch(e){}
 }
 function fillMemoryStrip(boxId,userId){
@@ -2340,6 +2417,27 @@ function setHookRole(v){
     if(l)l.classList.toggle('active',_hookDraft.role==='local');
   }catch(e){}
 }
+var HOOK_PRESETS=[
+  {cat:'Sports',text:'5-a-side football — need +1 to join?'},
+  {cat:'Nightlife',text:'Drinks run — hidden speakeasy crawl, who is in?'},
+  {cat:'Cafe',text:'Coffee & co-work session — bring a laptop?'},
+  {cat:'Food',text:'Street food crawl — dai pai dong + dim sum?'}
+];
+function applyHookPreset(i){
+  try{
+    var p=HOOK_PRESETS[i];if(!p)return;
+    selectHookCategory(null,p.cat);
+    try{
+      var c=document.getElementById('hookInterestPills');
+      if(c)Array.prototype.forEach.call(c.querySelectorAll('.chip'),function(x){
+        var t=(x.textContent||'').toLowerCase();
+        x.classList.toggle('active',t.indexOf(p.cat.toLowerCase())!==-1||(p.cat==='Photo'&&t.indexOf('photo')!==-1));
+      });
+    }catch(e){}
+    var ht=document.getElementById('hookText');if(ht){ht.value=p.text.slice(0,140);ht.focus();}
+    hookCountTick();
+  }catch(e){}
+}
 function hookCountTick(){
   try{
     var t=document.getElementById('hookText');var c=document.getElementById('hookCount');
@@ -2419,7 +2517,7 @@ function openPinDetail(id){
     var av2=document.getElementById('pinAvatar');if(av2)av2.textContent=((p.name||'?').charAt(0)||'?').toUpperCase();
     var cb=document.getElementById('pinChatBtn');if(cb)cb.style.display=isMember?'':'none';
     var vb=document.getElementById('pinVerified');if(vb){vb.textContent=p.verified?'✅ Verified':'';vb.style.display=p.verified?'':'none';}
-    var rb=document.getElementById('pinRoleBadge');if(rb)rb.textContent=p.role==='local'?'🇭🇰 Local':'✈️ Traveller';
+    var rb=document.getElementById('pinRoleBadge');if(rb){var pr=(p.role==='local')?'local':'traveller';rb.textContent=pr==='local'?'🇭🇰 Local Host':'✈️ Traveller';rb.classList.toggle('city-host',pr==='local');}
     var lc=document.getElementById('pinLoc');if(lc)lc.textContent=mapCatEmoji(p.category)+' '+(p.location||'Hong Kong');
     var hk=document.getElementById('pinHook');if(hk)hk.textContent='“'+(p.hook||'')+'”';
     var pb=document.getElementById('pinBio');if(pb){var bb=p.members&&p.members[0]&&p.members[0].bio;pb.textContent=bb||'';pb.style.display=bb?'':'none';}
@@ -2454,6 +2552,7 @@ function openPinDetail(id){
     var del=document.getElementById('pinDeleteBtn');
     if(del)del.style.display=mine?'':'none';
     try{fillMemoryStrip('pinMemories',p.authorId||null);}catch(e){}
+    try{fillSpotsStrip('pinSpots',p.authorId||null);}catch(e){}
     var d=document.getElementById('pinDrawer');if(d)d.classList.remove('hidden');
   }catch(e){}
 }

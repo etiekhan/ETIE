@@ -231,6 +231,8 @@
         style_interests: (p.styleInterests||[]),
         personal_hook: ((typeof ETIE!=='undefined'&&ETIE.traveller&&ETIE.traveller.bio)||'').slice(0,140),
         memories: ((typeof ETIE!=='undefined'&&ETIE.traveller&&ETIE.traveller.memories)||[]).slice(0,3),
+        role: (function(){try{return ((ETIE.activeRole||ETIE.derivedRole)==='local')?'local_host':'traveller';}catch(e){return 'traveller';}})(),
+        recommended_spots: ((typeof ETIE!=='undefined'&&ETIE.traveller&&ETIE.traveller.spots)||[]).slice(0,3),
         photo_url: (function(){try{var ph=(typeof ETIE!=='undefined'&&ETIE.traveller&&ETIE.traveller.photo)||'';return (ph.indexOf('http')===0)?ph.slice(0,500):'';}catch(e){return '';}})()
       };
       function tryUpsert(payload){

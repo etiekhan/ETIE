@@ -1380,6 +1380,138 @@ function renderDoneView(){
     }
     var hk=document.getElementById('doneHook'); if(hk)hk.textContent='“'+(tr.bio||'No personal hook yet.')+'”';
     renderMemories();renderSpots();renderPassions();
+    renderFeaturedMemories();
+    renderPassport();
+  }catch(e){}
+}
+function showProfileTab(tab){
+  try{
+    var prof=document.getElementById('liteDoneView');
+    var pass=document.getElementById('passportView');
+    var t1=document.getElementById('tabProfile');
+    var t2=document.getElementById('tabPassport');
+    if(tab==='passport'){
+      if(prof)prof.classList.remove('active');
+      if(pass)pass.classList.add('active');
+      if(t1)t1.classList.remove('active');
+      if(t2)t2.classList.add('active');
+      renderPassport();
+    }else{
+      if(prof)prof.classList.add('active');
+      if(pass)pass.classList.remove('active');
+      if(t1)t1.classList.add('active');
+      if(t2)t2.classList.remove('active');
+    }
+  }catch(e){}
+}
+function getFeaturedMemories(){try{var m=ETIE.traveller&&ETIE.traveller.featuredMemories;return Array.isArray(m)?m.slice(0,3):[];}catch(e){return [];}}
+function saveFeaturedMemories(arr){
+  try{
+    ETIE.traveller.featuredMemories=(arr||[]).slice(0,3);
+    saveState();renderLiteProfile();
+  }catch(e){}
+}
+function toggleFeaturedMemory(logEntry){
+  try{
+    var featured=getFeaturedMemories();
+    var exists=featured.findIndex(function(f){return f.logId===logEntry.logId;});
+    if(exists>=0){
+      featured.splice(exists,1);
+      toast('Removed from featured.');
+    }else if(featured.length<3){
+      featured.unshift(logEntry);
+      toast('Pinned to featured!');
+    }else{
+      toast('Max 3 featured memories.');
+      return;
+    }
+    saveFeaturedMemories(featured);
+  }catch(e){}
+}
+function renderFeaturedMemories(){
+  try{
+    var box=document.getElementById('featuredMemories');if(!box)return;
+    box.innerHTML='';
+    var featured=getFeaturedMemories();
+    if(!featured.length){
+      box.innerHTML='<div class="mem-card mem-empty" style="grid-column:1/-1;text-align:center;padding:24px;"><div class="muted small">No featured memories yet.<br>Confirm a handshake to unlock pinning.</div></div>';
+      return;
+    }
+    featured.forEach(function(f){
+      var card=document.createElement('div');card.className='featured-card';
+      if(f.photoUrl){
+        var im=document.createElement('img');im.src=f.photoUrl;im.alt='Featured Memory';card.appendChild(im);
+      }
+      var cap=document.createElement('div');cap.className='featured-caption';cap.textContent='“'+(f.handshakeNote||'')+'”';card.appendChild(cap);
+      var meta=document.createElement('div');meta.className='featured-meta';
+      meta.innerHTML='<span>'+(f.activity||'Hangout')+'</span><span>'+(f.guestNick||'Co-signer')+'</span><span>'+fmtWhen(f.timestamp)+'</span>';
+      card.appendChild(meta);
+      var pin=document.createElement('div');pin.className='featured-pin';
+      var isPinned=true;
+      var btn=document.createElement('button');btn.textContent='★';btn.className=isPinned?'pinned':'';btn.title='Unpin from featured';
+      btn.onclick=function(){toggleFeaturedMemory(f);};
+      pin.appendChild(btn);card.appendChild(pin);
+      box.appendChild(card);
+    });
+    // Empty slots
+    var remaining=3-featured.length;
+    for(var i=0;i<remaining;i++){
+      var empty=document.createElement('div');empty.className='mem-card mem-empty';
+      empty.innerHTML='<button class="mem-plus" style="opacity:.4;" disabled>+</button><span class="muted small">Pin a memory</span>';
+      box.appendChild(empty);
+    }
+  }catch(e){}
+}
+function renderPassport(){
+  try{
+    var visitsBox=document.getElementById('passportVisits');
+    var connBox=document.getElementById('passportConnections');
+    if(!visitsBox || !connBox) return;
+    visitsBox.innerHTML='';
+    connBox.innerHTML='';
+    var tr=ETIE.traveller||{};
+    var diary=tr.activityDiary||[];
+    // Neighborhood Visit Log
+    var visits={};
+    diary.forEach(function(e){
+      if(e.neighborhood){
+        var key=e.neighborhood;
+        if(!visits[key]) visits[key]={count:0,last:0,icon:'🏙️'};
+        visits[key].count++;
+        if(e.timestamp>visits[key].last) visits[key].last=e.timestamp;
+      }
+    });
+    if(Object.keys(visits).length===0){
+      visitsBox.innerHTML='<div class="muted small" style="text-align:center;padding:24px;">No neighborhood visits yet.<br>Complete a verified hangout to log your first visit.</div>';
+    }else{
+      Object.entries(visits).sort(function(a,b){return b[1].last-a[1].last;}).forEach(function(entry){
+        var name=entry[0], data=entry[1];
+        var item=document.createElement('div');item.className='visit-item';
+        item.innerHTML='<div class="visit-icon">🏙️</div>'
+          +'<div class="visit-info"><div class="visit-name">'+name+'</div>'
+          +'<div class="visit-meta">'+data.count+' visit'+(data.count===1?'':'s')+' · Last: '+fmtWhen(data.last)+'</div></div>';
+        visitsBox.appendChild(item);
+      });
+    }
+    // Co-Signed Connections
+    var connections=diary.filter(function(e){return e.handshakeNote;});
+    if(connections.length===0){
+      connBox.innerHTML='<div class="muted small" style="text-align:center;padding:24px;">No co-signed connections yet.<br>Tag a friend in a memory to start a handshake.</div>';
+    }else{
+      connections.forEach(function(c){
+        var item=document.createElement('div');item.className='connection-card';
+        var initials=c.guestNick?c.guestNick.charAt(0).toUpperCase():'?';
+        item.innerHTML='<div class="connection-avatars">'
+          +'<div class="avatar" style="background:linear-gradient(135deg,#f43f5e,#fb7185);">'+initials+'</div>'
+          +'<div class="avatar" style="background:linear-gradient(135deg,#0ea5e9,#22d3ee);">'+(hookNick()||'?').charAt(0).toUpperCase()+'</div>'
+          +'</div>'
+          +'<div class="connection-info">'
+          +'<div class="connection-note">“'+c.handshakeNote+'”</div>'
+          +'<div class="connection-meta">with '+c.guestNick+' · '+fmtWhen(c.timestamp)+'</div>'
+          +'</div>';
+        connBox.appendChild(item);
+      });
+    }
   }catch(e){}
 }
 function getMemories(){try{var m=ETIE.traveller&&ETIE.traveller.memories;return Array.isArray(m)?m.slice(0,3):[];}catch(e){return [];}}
@@ -3232,6 +3364,44 @@ function openLogSheet(pinId){
   }catch(e){}
 }
 function closeLogSheet(){try{_logPinId=null;_logFile=null;var o=document.getElementById('logHangoutModal');if(o)o.classList.add('hidden');}catch(e){}}
+function populateLogTagDropdown(p){
+  try{
+    var sel=document.getElementById('logTaggedMember');
+    if(!sel) return;
+    var me=hookNick();
+    var opts=['<option value="">— No tag —</option>'];
+    (p.members||[]).forEach(function(m){
+      if(m.nick!==me){
+        opts.push('<option value="'+m.nick+'">'+(m.role==='local'?'🇭🇰 ':'✈️ ')+m.nick+'</option>');
+      }
+    });
+    (p.pending||[]).forEach(function(r){
+      if(r.nick!==me){
+        opts.push('<option value="'+r.nick+'">'+(r.role==='local'?'🇭🇰 ':'✈️ ')+r.nick+' (pending)</option>');
+      }
+    });
+    sel.innerHTML=opts.join('');
+  }catch(e){}
+}
+function openLogSheet(pinId){
+  try{
+    var p=findPin(pinId);if(!p){toast('Hook not found.');return;}
+    var me=hookNick();
+    if(!(p.members||[]).some(function(m){return m.nick===me;})){toast('Join this hook first to log photos.');return;}
+    _logPinId=pinId;_logFile=null;_logTakenAt=0;
+    var t=document.getElementById('logHookName');if(t)t.textContent=p.location||'Hook';
+    var w=pinWindow(p);
+    var wt=document.getElementById('logWindow');if(wt)wt.textContent='Hangout window: '+fmtWhen(w.start)+' → '+fmtWhen(w.end)+' (+2h grace for the badge)';
+    var sel=document.getElementById('logActivity');
+    if(sel){for(var i=0;i<sel.options.length;i++){if(sel.options[i].text===p.category){sel.selectedIndex=i;break;}}}
+    populateLogTagDropdown(p);
+    var pv=document.getElementById('logPreview');if(pv)pv.innerHTML='';
+    var pi=document.getElementById('logPhotoInput');if(pi)pi.value='';
+    var btn=document.getElementById('logUploadBtn');if(btn){btn.disabled=false;btn.textContent='Upload Log';}
+    updateOutboxNote();
+    var o=document.getElementById('logHangoutModal');if(o)o.classList.remove('hidden');
+  }catch(e){}
+}
 function handleLogPhoto(input){
   try{
     var f=input.files&&input.files[0];if(!f)return;
@@ -3271,6 +3441,8 @@ function submitHangoutLog(){
     if(!_logFile){toast('Choose a photo first.');return;}
     var sel=document.getElementById('logActivity');
     var act=sel?sel.options[sel.selectedIndex].text:'';
+    var taggedSel=document.getElementById('logTaggedMember');
+    var taggedNick=taggedSel?taggedSel.value:'';
     var taken=_logTakenAt||Date.now();
     var w=pinWindow(p);
     var ok=taken>=w.start-5*60*1000&&taken<=w.end+2*3600*1000;
@@ -3281,9 +3453,22 @@ function submitHangoutLog(){
       try{
         restore();
         if(!url){fileToDataURL(file,function(du){queueLog(pid,act,taken,me,du);toast('Upload failed — queued for retry.');closeLogSheet();updateOutboxNote();});return;}
-        window.EtieCloud.pushHangoutLog({hookId:pid,nick:me,photoUrl:url,activity:act,takenAt:new Date(taken).toISOString(),verified:ok}).then(function(saved){
-          if(ok&&saved)bumpPassion(act);
-          toast(ok?('⚡ Verified Live Log · '+fmtWhen(taken)):'Logged — outside the window, no badge this time.');
+        var logEntry={hookId:pid,nick:me,photoUrl:url,activity:act,takenAt:new Date(taken).toISOString(),verified:ok};
+        if(taggedNick){
+          logEntry.taggedUserId=taggedNick;
+          logEntry.taggedNickname=taggedNick;
+          logEntry.status='pending';
+        } else {
+          logEntry.status='confirmed';
+          logEntry.confirmedAt=new Date().toISOString();
+        }
+        window.EtieCloud.pushHangoutLog(logEntry).then(function(saved){
+          if(taggedNick){
+            toast('Log uploaded — handshake request sent to '+taggedNick+' (24h to confirm).');
+          } else {
+            if(ok&&saved)bumpPassion(act);
+            toast(ok?('⚡ Verified Live Log · '+fmtWhen(taken)):'Logged — outside the window, no badge this time.');
+          }
           closeLogSheet();renderPinLogs(p.id);
         });
       }catch(e){restore();}
@@ -3325,6 +3510,156 @@ function processPhotoOutbox(){
         else toast('Queued logs uploaded.');
       });
     }).catch(function(){setTimeout(processPhotoOutbox,10000);});
+  }catch(e){}
+}
+// ---- Handshake / Co-tagging ----
+var _handshakeLogId=null;
+var _handshakeTimer=null;
+function bumpPassion(act){
+  try{
+    if(!act)return;
+    var key=act.toLowerCase().replace(/[^a-z]/g,'');
+    if(!ETIE.traveller.activityStats)ETIE.traveller.activityStats={};
+    ETIE.traveller.activityStats[key]=(ETIE.traveller.activityStats[key]||0)+1;
+    var count=ETIE.traveller.activityStats[key];
+    var badge=act+ (count===1?' Regular':' ('+count+' Verified Logs)');
+    if(count===1 || count===3 || count===5 || count===10){
+      toast('🏅 '+badge);
+    }
+    saveState();
+    try{if(typeof renderProfile==='function')renderProfile();}catch(e){}
+  }catch(e){}
+}
+function openHandshakeModal(log){
+  try{
+    _handshakeLogId=log.id;
+    var card=document.getElementById('handshakeCard');
+    if(card){
+      card.innerHTML='<img src="'+log.photo_url+'" style="width:100%;max-height:200px;object-fit:cover;border-radius:12px;margin-bottom:12px;">'
+        +'<div style="font-weight:600;color:#fff;">'+(log.activity||'Hangout')+'</div>'
+        +'<div class="muted small">with '+log.nickname+' · '+fmtWhen(new Date(log.taken_at).getTime())+'</div>';
+    }
+    var inp=document.getElementById('handshakeNoteInput');
+    if(inp){inp.value=''; inp.placeholder='One sentence: what made this hangout special?';}
+    var cnt=document.getElementById('handshakeCount');
+    if(cnt)cnt.textContent='0';
+    if(inp){
+      inp.oninput=function(){var c=document.getElementById('handshakeCount');if(c)c.textContent=this.value.length;};
+    }
+    startHandshakeTimer(log);
+    var o=document.getElementById('handshakeModal');if(o)o.classList.remove('hidden');
+  }catch(e){}
+}
+function closeHandshakeModal(){try{_handshakeLogId=null;if(_handshakeTimer){clearInterval(_handshakeTimer);_handshakeTimer=null;}var o=document.getElementById('handshakeModal');if(o)o.classList.add('hidden');}catch(e){}}
+function startHandshakeTimer(log){
+  try{
+    if(_handshakeTimer){clearInterval(_handshakeTimer);}
+    var created=log.created_at?new Date(log.created_at).getTime():Date.now();
+    var expires=created+24*60*60*1000;
+    var el=document.getElementById('handshakeTimer');
+    var tick=function(){
+      var left=expires-Date.now();
+      if(left<=0){
+        if(el)el.textContent='⏰ Expired';
+        if(_handshakeTimer){clearInterval(_handshakeTimer);_handshakeTimer=null;}
+        return;
+      }
+      var h=Math.floor(left/3600000);
+      var m=Math.floor((left%3600000)/60000);
+      var s=Math.floor((left%60000)/1000);
+      if(el)el.textContent='⏳ '+(h<10?'0':'')+h+':'+(m<10?'0':'')+m+':'+(s<10?'0':'')+s+' remaining';
+    };
+    tick();
+    _handshakeTimer=setInterval(tick,1000);
+  }catch(e){}
+}
+function confirmHandshake(){
+  try{
+    if(!_handshakeLogId){toast('No handshake pending.');return;}
+    var note=document.getElementById('handshakeNoteInput');
+    var text=note?note.value.trim():'';
+    if(!text){toast('Handshake note is required.');return;}
+    if(text.length>140){toast('Note too long (max 140 chars).');return;}
+    var me=hookNick();
+    var now=new Date().toISOString();
+    window.EtieCloud.updateHangoutLog(_handshakeLogId,{
+      status:'confirmed',
+      handshake_note:text,
+      confirmed_at:now
+    }).then(function(ok){
+      if(ok){
+        // Publish to both profiles' activity diaries
+        publishToActivityDiary(_handshakeLogId, text, me);
+        toast('🤝 Handshake confirmed — memory published to both diaries!');
+        closeHandshakeModal();
+        // Refresh any relevant views
+        try{if(typeof renderProfile==='function')renderProfile();}catch(e){}
+        try{if(typeof renderPassport==='function')renderPassport();}catch(e){}
+      }else{toast('Failed to confirm.');}
+    });
+  }catch(e){toast('Error confirming handshake.');}
+}
+function declineHandshake(){
+  try{
+    if(!_handshakeLogId){toast('No handshake pending.');return;}
+    window.EtieCloud.updateHangoutLog(_handshakeLogId,{
+      status:'expired',
+      handshake_note:'Declined by tagged user.'
+    }).then(function(ok){
+      if(ok){toast('Handshake declined — photo stays private to host.');closeHandshakeModal();}
+      else{toast('Failed to decline.');}
+    });
+  }catch(e){toast('Error declining handshake.');}
+}
+function publishToActivityDiary(logId, handshakeNote, guestNick){
+  try{
+    // Fetch the log to get full details
+    window.EtieCloud.fetchHookLogs(logId, function(logs){
+      // Actually we need to fetch by log ID - let's use a different approach
+      // For now, store in local state for both users
+      var logEntry={
+        logId:logId,
+        handshakeNote:handshakeNote,
+        guestNick:guestNick,
+        timestamp:Date.now()
+      };
+      // Store in traveller profile
+      if(typeof ETIE!=='undefined' && ETIE.traveller){
+        ETIE.traveller.activityDiary=ETIE.traveller.activityDiary||[];
+        ETIE.traveller.activityDiary.unshift(logEntry);
+        if(ETIE.traveller.activityDiary.length>50) ETIE.traveller.activityDiary=ETIE.traveller.activityDiary.slice(0,50);
+      }
+      if(typeof ETIE!=='undefined' && ETIE.local){
+        ETIE.local.activityDiary=ETIE.local.activityDiary||[];
+        ETIE.local.activityDiary.unshift(logEntry);
+        if(ETIE.local.activityDiary.length>50) ETIE.local.activityDiary=ETIE.local.activityDiary.slice(0,50);
+      }
+      saveState();
+    });
+  }catch(e){}
+}
+function checkPendingHandshakes(){
+  try{
+    var me=hookNick();
+    // Check local state for pending handshakes
+    var pending=(ETIE.traveller?.activityDiary||[]).filter(function(e){return e.status==='pending';});
+    // Also fetch from cloud if needed
+    if(window.EtieCloud && window.EtieCloud.fetchTaggedLogs){
+      var uid=myUid();
+      if(uid){
+        window.EtieCloud.fetchTaggedLogs(uid, function(logs){
+          logs.forEach(function(log){
+            // Show notification or open modal
+            var notif=document.getElementById('handshakeNotif');
+            if(notif){
+              notif.style.display='block';
+              notif.textContent='🤝 New handshake request from '+log.nickname;
+              notif.onclick=function(){openHandshakeModal(log);};
+            }
+          });
+        });
+      }
+    }
   }catch(e){}
 }
 function bumpPassion(act){

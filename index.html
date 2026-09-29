@@ -211,7 +211,7 @@
       <button class="secondary" id="liteBack" onclick="stepProfile(-1)" style="padding:10px 16px;">Back</button>
       <button class="primary" id="liteNext" onclick="stepProfile(1)" style="flex:1;">Continue</button>
     </div>
-    <div id="liteDoneView" style="display:none;">
+<div id="liteDoneView" style="display:none;">
       <div class="lite-idrow">
         <div class="lite-avatar" id="doneAvatar"><span>+</span></div>
         <div style="flex:1;min-width:0;">
@@ -222,10 +222,22 @@
       </div>
       <div class="field"><label>Vibes</label><div class="chips" id="doneVibes"></div></div>
       <div class="field"><label>Personal Hook</label><p class="pin-hook" id="doneHook" style="font-size:16px;">—</p></div>
-      <div class="field"><label>Favourite memories &amp; hangouts (up to 3)</label><div id="liteMemories" class="mem-grid"></div></div>
+      <div class="field"><label>Featured Memories <span class="small muted">(pin up to 3)</span></label><div id="featuredMemories" class="featured-grid"></div></div>
+      <div class="field"><label>Favourite memories & hangouts (up to 3)</label><div id="liteMemories" class="mem-grid"></div></div>
       <div class="field"><label>Passion badges</label><div class="chips" id="donePassions"></div></div>
       <div class="field" id="doneSpotsWrap"><label id="doneSpotsTitle">Local spots</label><div id="doneSpots" class="spot-grid"></div></div>
       <div style="display:flex;gap:8px;margin-top:12px;"><button class="secondary" onclick="editProfile()">Edit Profile</button></div>
+    </div>
+    <!-- Passport Tab -->
+    <div id="passportView" style="display:none;">
+      <div class="eyebrow">Passport</div>
+      <h2>Your Social Passport</h2>
+      <div class="field"><label>Neighborhood Visit Log</label><div id="passportVisits" class="visit-list"></div></div>
+      <div class="field"><label>Co-Signed Connections</label><div id="passportConnections" class="connection-list"></div></div>
+    </div>
+    <div class="profile-tabs" style="display:flex;gap:4px;margin-top:16px;">
+      <button class="tab-btn active" id="tabProfile" onclick="showProfileTab('profile')">Profile</button>
+      <button class="tab-btn" id="tabPassport" onclick="showProfileTab('passport')">Passport</button>
     </div>
     <div class="sidebar-note" id="liteRepBlock" style="margin-top:14px;"><strong>Reputation</strong><p class="muted" id="liteStats">No meetups yet.</p></div>
   </div>
@@ -315,6 +327,12 @@
     <div class="chat-popup-body" style="background:transparent;">
       <p class="muted small" id="logWindow">—</p>
       <div class="field"><label>Activity tag</label><select id="logActivity"><option>Food</option><option>Nightlife</option><option>Photo</option><option>Sports</option><option>Cafe</option><option>Salsa</option><option>Football</option><option>Coffee</option></select></div>
+      <div class="field"><label>Tag a participant (optional)</label>
+        <select id="logTaggedMember">
+          <option value="">— No tag —</option>
+        </select>
+        <p class="muted small" style="margin:4px 0 0;">Tagged guest gets a 24h handshake request to confirm.</p>
+      </div>
       <div class="field"><label>Hangout photo</label>
         <div id="logPreview" style="margin-bottom:8px;"></div>
         <input type="file" id="logPhotoInput" accept="image/*" style="display:none;" onchange="handleLogPhoto(this)">
@@ -323,6 +341,24 @@
       <p class="muted small">⚡ Photos taken during your hangout window earn a Verified Live badge!</p>
       <p class="muted small" id="logOutboxNote" style="display:none;"></p>
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;"><button class="secondary" onclick="closeLogSheet()">Cancel</button><button class="primary" id="logUploadBtn" onclick="submitHangoutLog()">Upload Log</button></div>
+    </div>
+  </div>
+</div>
+<!-- Handshake Confirmation Modal -->
+<div class="chat-overlay hidden" id="handshakeModal" onclick="if(event.target===this)closeHandshakeModal()">
+  <div class="chat-popup glass-modal" role="dialog" aria-modal="true" aria-label="Handshake Confirmation" style="width:min(420px,calc(100vw - 24px));">
+    <div class="chat-popup-head"><div><strong>🤝 Handshake Request</strong><div class="muted small" id="handshakeSub">Confirm your presence</div></div><button class="secondary" onclick="closeHandshakeModal()" aria-label="Close" style="padding:8px 12px;">✕</button></div>
+    <div class="chat-popup-body" style="background:transparent;">
+      <div id="handshakeCard" style="text-align:center;padding:16px;"></div>
+      <div class="field"><label>Handshake Note <span class="muted small">(required, max 140 chars)</span></label>
+        <textarea id="handshakeNoteInput" maxlength="140" rows="3" placeholder="One sentence: what made this hangout special?"></textarea>
+        <div class="muted small" style="text-align:right;margin-top:4px;"><span id="handshakeCount">0</span> / 140</div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
+        <button class="secondary" onclick="declineHandshake()">Decline</button>
+        <button class="primary" id="handshakeConfirmBtn" onclick="confirmHandshake()">Confirm & Publish</button>
+      </div>
+      <p class="muted small" style="margin-top:8px;text-align:center;" id="handshakeTimer">⏳ 23:59:59 remaining</p>
     </div>
   </div>
 </div>
@@ -341,12 +377,12 @@
 </div>
 <div class="toast" id="toast"></div>
 
-  <script src="data/locations.js?v=51"></script>
-    <script src="match.js?v=51"></script>
+  <script src="data/locations.js?v=52"></script>
+    <script src="match.js?v=52"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="supabase-config.js?v=51"></script>
-  <script src="app.js?v=51"></script>
-  <script src="supabase-sync.js?v=51"></script>
+  <script src="supabase-config.js?v=52"></script>
+  <script src="app.js?v=52"></script>
+  <script src="supabase-sync.js?v=52"></script>
 </body>
 </html>

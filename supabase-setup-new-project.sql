@@ -390,6 +390,12 @@ create table if not exists public.hangout_logs (
   activity text not null default '',
   taken_at timestamptz not null default now(),
   is_live_verified boolean not null default false,
+  -- Co-tagging fields
+  tagged_user_id uuid references auth.users(id) on delete set null,
+  tagged_nickname text,
+  status text not null default 'pending' check (status in ('pending','confirmed','expired')),
+  handshake_note text,
+  confirmed_at timestamptz,
   created_at timestamptz not null default now()
 );
 alter table public.hangout_logs enable row level security;
@@ -399,6 +405,11 @@ drop policy if exists "hangout logs insert auth" on public.hangout_logs;
 create policy "hangout logs insert auth" on public.hangout_logs for insert with check (auth.uid() is not null);
 drop policy if exists "hangout logs delete own" on public.hangout_logs;
 create policy "hangout logs delete own" on public.hangout_logs for delete using (auth.uid() = user_id);
+alter table public.hangout_logs add column if not exists tagged_user_id uuid references auth.users(id) on delete set null;
+alter table public.hangout_logs add column if not exists tagged_nickname text;
+alter table public.hangout_logs add column if not exists status text not null default 'pending' check (status in ('pending','confirmed','expired'));
+alter table public.hangout_logs add column if not exists handshake_note text;
+alter table public.hangout_logs add column if not exists confirmed_at timestamptz;
 create index if not exists hangout_logs_hook_idx on public.hangout_logs(hook_id, taken_at desc);
 create index if not exists hangout_logs_user_idx on public.hangout_logs(user_id, taken_at desc);
 do $$ begin
@@ -408,6 +419,7 @@ do $$ begin
 end $$;
 -- Etie hard wall: onboarding flag + invite codes — run once in SQL Editor
 alter table public.etie_profiles add column if not exists is_onboarded boolean not null default false;
+alter table public.etie_profiles add column if not exists featured_memories jsonb not null default '[]'::jsonb;
 create table if not exists public.invite_codes (
   code text primary key,
   used_by uuid references auth.users(id) on delete set null,

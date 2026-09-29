@@ -579,6 +579,34 @@ html,body{height:100%;width:100%;margin:0;padding:0;overflow:hidden;background:#
 .mem-cap{font-size:11px;padding:6px 8px;background:transparent;border:0;border-top:1px solid rgba(255,255,255,.1);color:#fff;width:100%;box-sizing:border-box;}
 .mem-del{align-self:flex-end;font-size:11px;background:transparent;border:0;color:rgba(255,255,255,.55);cursor:pointer;padding:2px 8px 6px;}
 .mem-strip{display:flex;gap:8px;margin:8px 0;overflow-x:auto;}
+.featured-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.featured-card{position:relative;border-radius:16px;overflow:hidden;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);min-height:160px;display:flex;flex-direction:column;}
+.featured-card img{width:100%;height:120px;object-fit:cover;display:block;}
+.featured-caption{padding:10px 12px;background:linear-gradient(180deg,rgba(0,0,0,0) 0%,rgba(0,0,0,.8) 100%);color:#fff;font-size:12px;line-height:1.4;font-style:italic;}
+.featured-meta{padding:8px 12px;background:rgba(0,0,0,.6);font-size:11px;color:rgba(255,255,255,.8);display:flex;gap:8px;flex-wrap:wrap;}
+.featured-pin{position:absolute;top:8px;right:8px;z-index:2;}
+.featured-pin button{width:32px;height:32px;border-radius:50%;background:rgba(0,0,0,.7);border:1px solid rgba(255,255,255,.3);color:#fff;font-size:16px;display:flex;align-items:center;justify-content:center;}
+.featured-pin button.pinned{background:#f43f5e;border-color:#f43f5e;}
+.profile-tabs{display:flex;gap:4px;}
+.tab-btn{flex:1;padding:10px 16px;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.7);font-weight:600;font-size:14px;transition:all .2s;}
+.tab-btn.active{background:linear-gradient(135deg,#f43f5e,#fb7185);border-color:transparent;color:#fff;box-shadow:0 4px 16px rgba(244,63,94,.4);}
+.visit-list{display:flex;flex-direction:column;gap:8px;}
+.visit-item{display:flex;gap:12px;align-items:center;padding:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:12px;}
+.visit-icon{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#f43f5e,#fb7185);display:flex;align-items:center;justify-content:center;font-size:18px;}
+.visit-info{flex:1;}
+.visit-name{font-weight:600;color:#fff;margin-bottom:2px;}
+.visit-meta{font-size:12px;color:rgba(255,255,255,.6);}
+.connection-list{display:flex;flex-direction:column;gap:10px;}
+.connection-card{display:flex;gap:12px;padding:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:12px;}
+.connection-avatars{display:flex;gap:-8px;}
+.connection-avatars .avatar{width:40px;height:40px;border-radius:50%;border:2px solid #1a1a2e;background:linear-gradient(135deg,#f43f5e,#fb7185);}
+.connection-avatars .avatar:not(:first-child){margin-left:-8px;}
+.connection-info{flex:1;}
+.connection-note{font-style:italic;color:#ffe4e6;margin-bottom:4px;font-size:13px;}
+.connection-meta{font-size:11px;color:rgba(255,255,255,.6);}
+#passportView{display:none;}
+#passportView.active{display:block;}
+#liteDoneView.active{display:block;}
 .mem-strip img{width:56px;height:56px;border-radius:12px;object-fit:cover;border:1px solid rgba(255,255,255,.2);flex-shrink:0;}
 /* city host badge + quick-drop presets + venue cards */
 .city-host{border-color:#FF385C!important;background:rgba(255,56,92,.2)!important;box-shadow:0 0 14px rgba(255,56,92,.55),inset 0 0 8px rgba(255,56,92,.25)!important;color:#fff!important;}

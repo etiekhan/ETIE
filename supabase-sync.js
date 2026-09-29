@@ -237,6 +237,7 @@
         recommended_spots: ((typeof ETIE!=='undefined'&&ETIE.traveller&&ETIE.traveller.spots)||[]).slice(0,3),
         is_onboarded: !!((typeof ETIE!=='undefined')&&ETIE.profileComplete),
         activity_stats: ((typeof ETIE!=='undefined'&&ETIE.traveller&&ETIE.traveller.activityStats)||{}),
+        featured_memories: ((typeof ETIE!=='undefined'&&ETIE.traveller&&ETIE.traveller.featuredMemories)||[]).slice(0,3),
         photo_url: (function(){try{var ph=(typeof ETIE!=='undefined'&&ETIE.traveller&&ETIE.traveller.photo)||'';return (ph.indexOf('http')===0)?ph.slice(0,500):'';}catch(e){return '';}})()
       };
       function tryUpsert(payload){
@@ -825,6 +826,7 @@
               if(row.photo_url&&row.photo_url.indexOf('http')===0&&!ETIE.traveller.photo){ETIE.traveller.photo=row.photo_url;ETIE.local.photo=row.photo_url;adopted=true;}
               if(row.personal_hook&&!ETIE.traveller.bio){ETIE.traveller.bio=row.personal_hook;adopted=true;}
               if(Array.isArray(row.memories)&&row.memories.length&&!(ETIE.traveller.memories||[]).length){ETIE.traveller.memories=row.memories.slice(0,3);adopted=true;}
+              if(Array.isArray(row.featured_memories)&&row.featured_memories.length&&!(ETIE.traveller.featuredMemories||[]).length){ETIE.traveller.featuredMemories=row.featured_memories.slice(0,3);adopted=true;}
               if(row.verification&&Array.isArray(row.verification.methods)&&row.verification.methods.length&&!(ETIE.traveller.verificationMethods||[]).length){ETIE.traveller.verificationMethods=row.verification.methods.slice();ETIE.local.verificationMethods=row.verification.methods.slice();adopted=true;}
               if(adopted){saveState();try{if(typeof renderLiteProfile==='function')renderLiteProfile();}catch(e){}}
             }catch(e){}
@@ -872,10 +874,31 @@
           nickname:entry.nick||'Someone', photo_url:String(entry.photoUrl||'').slice(0,500),
           activity:String(entry.activity||'').slice(0,40),
           taken_at:entry.takenAt||new Date().toISOString(),
-          is_live_verified:!!entry.verified
+          is_live_verified:!!entry.verified,
+          tagged_user_id:entry.taggedUserId||null,
+          tagged_nickname:entry.taggedNickname||null,
+          status:entry.status||'confirmed',
+          handshake_note:entry.handshakeNote||null,
+          confirmed_at:entry.confirmedAt||null
         }).then(function(r){resolve(r&&!r.error);}).catch(function(){resolve(null);});
       }catch(e){resolve(null);}
     });
+  }
+  function updateHangoutLog(logId, updates){
+    return new Promise(function(resolve){
+      try{
+        if(!client||!session||!logId){resolve(null);return;}
+        client.from(hangoutTable()).update(updates).eq('id',logId).then(function(r){resolve(r&&!r.error);}).catch(function(){resolve(null);});
+      }catch(e){resolve(null);}
+    });
+  }
+  function fetchTaggedLogs(userId,cb){
+    try{
+      if(!client||!session||!userId||typeof cb!=='function'){cb([]);return;}
+      client.from(hangoutTable()).select('*').eq('tagged_user_id',userId).eq('status','pending').order('taken_at',{ascending:false}).limit(50).then(function(r){
+        try{cb(r&&!r.error?(r.data||[]):[]);}catch(e){cb([]);}
+      }).catch(function(){cb([]);});
+    }catch(e){try{cb([]);}catch(_){}}
   }
   function fetchHookLogs(hookId,cb){
     try{
@@ -900,7 +923,7 @@
     pullPins:pullPins, pushPin:pushPin, deletePin:deletePin,
     pushHookMessage:pushHookMessage, subscribeHookChat:subscribeHookChat,
     fetchProfile:fetchProfile, fetchOwnProfile:fetchOwnProfile, redeemInvite:redeemInvite,
-    pushHangoutLog:pushHangoutLog, fetchHookLogs:fetchHookLogs, fetchUserLogs:fetchUserLogs,
+    pushHangoutLog:pushHangoutLog, fetchHookLogs:fetchHookLogs, fetchUserLogs:fetchUserLogs, updateHangoutLog:updateHangoutLog, fetchTaggedLogs:fetchTaggedLogs,
     syncProfile:syncProfile, pushSharedRequest:pushSharedRequest, pushSharedMessage:pushSharedMessage, pushSharedMeetup:pushSharedMeetup,
     pushSharedReview:pushSharedReview, pushSharedReport:pushSharedReport,
     uploadPhoto:uploadPhoto,

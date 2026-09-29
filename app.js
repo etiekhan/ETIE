@@ -3,6 +3,8 @@
 var ETIE_KEY = 'etie-v1';
 
 function todayISO(){ try{ var d=new Date(); var m=('0'+(d.getMonth()+1)).slice(-2), day=('0'+d.getDate()).slice(-2); return d.getFullYear()+'-'+m+'-'+day; }catch(e){ return ''; } }
+function uuidv4(){try{return '10000000-1000-4000-8000-100000000000'.replace(/[018]/g,(c)=>(c^crypto.getRandomValues(new Uint8Array(1))[0]&15>>c).toString(16));}catch(e){return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,(c)=>((c||crypto.randomUUID?crypto.randomUUID():0).toString(16)));}}
+
 function etieDefaults() {
   return {
     activeRole: null,
@@ -1739,10 +1741,10 @@ function sendRequest(){
   toast('Request sent!');
   travNext(11);
 }
-function acceptCurrent(){var k=inboxKey()||reqKey();if(reqStatus(k)==='none'){toast('No pending request — send one as Traveller first.');return;}ETIE.requests[k].status='accepted';ETIE.requests[k].updatedAt=Date.now();ensureChat(k);ETIE.messages[k].push({from:'local',text:'Accepted! Looking forward to meeting. When suits you?',ts:Date.now()});saveState();renderRequests();renderChat();renderMessagesList();renderLocalDashboard();
+function acceptCurrent(){var k=inboxKey()||reqKey();if(reqStatus(k)==='none'){toast('No pending request — send one as Traveller first.');return;}ETIE.requests[k].status='approved';ETIE.requests[k].updatedAt=Date.now();ensureChat(k);ETIE.messages[k].push({from:'local',text:'Accepted! Looking forward to meeting. When suits you?',ts:Date.now()});saveState();renderRequests();renderChat();renderMessagesList();renderLocalDashboard();
   try{ if(window.EtieCloud&&window.EtieCloud.pushSharedRequest) window.EtieCloud.pushSharedRequest(k); }catch(e){}
   try{ if(window.EtieCloud&&window.EtieCloud.pushSharedMessage) window.EtieCloud.pushSharedMessage(k, 'Accepted! Looking forward to meeting. When suits you?', 'local'); }catch(e){}
-  toast('Accepted — chat unlocked.');try{openChatPopup();}catch(e){}localNext(10);}
+  toast('Approved — chat unlocked. Vibe Check: 3 messages to introduce yourself.');try{openChatPopup();}catch(e){}localNext(10);}
 function declineCurrent(){var k=inboxKey()||reqKey();if(reqStatus(k)==='none'){toast('No pending request.');return;}ETIE.requests[k].status='declined';ETIE.requests[k].updatedAt=Date.now();saveState();renderRequests();renderChat();renderMessagesList();renderLocalDashboard();
   try{ if(window.EtieCloud&&window.EtieCloud.pushSharedRequest) window.EtieCloud.pushSharedRequest(k); }catch(e){}
   toast('Declined — chat stays locked.');}
@@ -1766,12 +1768,25 @@ function submitSafetyReport(role){
 }
 function sendChat(who,inputId){
   var k=(who==='local')?(inboxKey()||reqKey()):reqKey();
+  var r=ETIE.requests[k];
+  var st=r?r.status:'none';
+  if(!r){toast('No active request.');return;}
+  if(st!=='approved'){
+    var input=document.getElementById(inputId);
+    if(input){
+      var count=r.messageCount||0;
+      if(count>=3){
+        toast('Vibe Check limit reached (3 messages). Wait for host approval.');
+        return;
+      }
+      if(count===0) input.placeholder='Introduce yourself & share your ETA...';
+    }
+  }
   var input=null;
   if(inputId)input=document.getElementById(inputId);
   if(!input){
     if(who==='local'){
       input=document.getElementById('localChatInput9')&&document.getElementById('localChatInput9').value?document.getElementById('localChatInput9'):document.getElementById('localChatInput');
-      // if both exist and 9 is visible, prefer it
       var l9=document.getElementById('localChatInput9');
       var l8=document.getElementById('localChatInput');
       if(l9&&l8){
@@ -1783,8 +1798,11 @@ function sendChat(who,inputId){
   }
   if(!input){toast('Chat unavailable.');return;}
   var text=(input.value||'').trim();if(!text){toast('Type a message first.');return;}
-  if(reqStatus(k)!=='accepted'){toast('Chat unlocks only after Accept.');return;}
-  ensureChat(k);ETIE.messages[k].push({from:who,text:text,ts:Date.now()});
+  if(st!=='approved' && st!=='pending'){toast('Chat unlocks after host approval.');return;}
+  ensureChat(k);
+  ETIE.messages[k].push({from:who,text:text,ts:Date.now()});
+  r.messageCount=(r.messageCount||0)+1;
+  r.updatedAt=Date.now();
   input.value='';saveState();renderChat();renderMessagesList();
   try{ if(window.EtieCloud&&window.EtieCloud.pushSharedMessage) window.EtieCloud.pushSharedMessage(k, text, who); }catch(e){}
 }
@@ -1815,10 +1833,11 @@ function renderRequests(){
   try{
     document.getElementById('reqTitle').textContent='Ask '+m.local.name+' to meet';
     var rt=document.getElementById('reqStatusTitle'),rs=document.getElementById('reqStatusSub'),oc=document.getElementById('openChatBtn');
-    if(st==='pending'){rt.textContent='Request pending to '+m.local.name+'.';rs.textContent='Messaging stays locked until they accept on their device.';oc.textContent='Check chat (locked)';}
-    else if(st==='accepted'){rt.textContent=m.local.name+' accepted your request.';rs.textContent='Messaging is now unlocked. Agree on activity, time and place.';oc.textContent='Open chat';}
+    if(st==='pending'){rt.textContent='Request pending to '+m.local.name+'.';rs.textContent='Messaging: Vibe Check active (3 messages max).';oc.textContent='Open Vibe Check';}
+    else if(st==='approved'){rt.textContent=m.local.name+' approved your request.';rs.textContent='Messaging unlocked. Coordinate your meetup.';oc.textContent='Open chat';}
     else if(st==='declined'){rt.textContent=m.local.name+' declined.';rs.textContent='Chat stays locked. Try Next suggestion.';oc.textContent='Back to matches';oc.onclick=function(){travNext(6);};return;}
-    else{rt.textContent='No request yet to '+m.local.name+'.';rs.textContent='Send one from Step 9 to unlock messaging after acceptance.';oc.textContent='Open chat (locked)';}
+    else if(st==='expired'){rt.textContent='Request expired.';rs.textContent='The host did not respond in time. Send a new request.';oc.textContent='Back to matches';oc.onclick=function(){travNext(6);};return;}
+    else{rt.textContent='No request yet to '+m.local.name+'.';rs.textContent='Send one from Step 9 to unlock messaging after approval.';oc.textContent='Open chat (locked)';}
      oc.onclick=function(){openChatPopup();};
     var lr=document.getElementById('localReqTitle');if(lr){var _ik=inboxKey();var _tn=_ik&&ETIE.requests[_ik]&&ETIE.requests[_ik].travellerName;lr.textContent=(_tn||'Traveller')+' · for '+(m?m.local.name:'—');}
     var lw=document.getElementById('localReqWhy');    if(lw)lw.textContent=(m.shared.join(' · ')||'New traveller')+' · '+flagForCountry(ETIE.trip.country)+' '+ETIE.trip.destination+' '+ETIE.trip.dates;
@@ -1831,12 +1850,19 @@ function renderChat(){
   var m=currentMatch();if(!m)return;var k=m.local.id;var st=reqStatus(k);
   try{
     // Traveller view: my messages on right (black), local on left (grey)
-    var ct=document.getElementById('chatTitle');if(ct)ct.textContent='Chat with '+m.local.name;
+    var ct=document.getElementById('chatTitle');
+    var r=ETIE.requests[k];
+    var mc=r?r.messageCount:0;
+    if(ct){
+      if(st==='pending') ct.textContent='Chat with '+m.local.name+' — Vibe Check: '+(3-mc)+'/3 left';
+      else ct.textContent='Chat with '+m.local.name;
+    }
     var lock=document.getElementById('chatLock');
     if(lock){
-      if(st==='accepted')lock.textContent='Unlocked. Keep it simple — aim for a real-world meetup.';
-      else if(st==='pending')lock.textContent='Locked — pending their Accept.';
+      if(st==='approved')lock.textContent='Unlocked. Keep it simple — aim for a real-world meetup.';
+      else if(st==='pending')lock.textContent='Vibe Check: '+mc+'/3 messages sent. Introduce yourself & share your ETA.';
       else if(st==='declined')lock.textContent='Locked — declined.';
+      else if(st==='expired')lock.textContent='Request expired — send a new one.';
       else lock.textContent='Locked — send a request in Step 9 first.';
     }
     var list=document.getElementById('chatList');if(list){list.innerHTML='';
@@ -1845,16 +1871,33 @@ function renderChat(){
     });
     if(!(ETIE.messages[k]||[]).length){var d=document.createElement('div');d.className='muted small';d.textContent='No messages yet.';list.appendChild(d);}
     }
-    var ci=document.getElementById('chatInput');if(ci)ci.disabled=(st!=='accepted');
+    var ci=document.getElementById('chatInput');
+    if(ci){
+      ci.disabled=(st!=='approved' && st!=='pending');
+      if(st==='pending'){
+        var left=3-(r?r.messageCount:0);
+        ci.placeholder=left>0?('Vibe Check: '+left+'/3 left — introduce yourself'):'Vibe Check complete — wait for approval';
+        if(left<=0) ci.disabled=true;
+      } else if(st==='approved'){
+        ci.placeholder='Message...';
+        ci.disabled=false;
+      }
+    }
     // Local view (mirrored): reads the inbox request addressed to me, not the match
     var lk=inboxKey()||k; var lst=reqStatus(lk);
+    var lr=ETIE.requests[lk];
+    var lmc=lr?lr.messageCount:0;
     var lt=document.getElementById('localChatTitle');
-    if(lt)lt.textContent='Chat with Etie (traveller)';
+    if(lt){
+      if(lst==='pending') lt.textContent='Chat with Etie (traveller) — Vibe Check: '+(3-lmc)+'/3 left';
+      else lt.textContent='Chat with Etie (traveller)';
+    }
     var ll=document.getElementById('localChatLock');
     if(ll){
-      if(lst==='accepted')ll.textContent='Unlocked. Coordinate with your traveller, then meet.';
-      else if(lst==='pending')ll.textContent='Pending — press Accept in the dashboard above to unlock chat.';
+      if(lst==='approved')ll.textContent='Unlocked. Coordinate with your traveller, then meet.';
+      else if(lst==='pending')ll.textContent='Vibe Check: '+lmc+'/3 messages received. Press Approve to unlock.';
       else if(lst==='declined')ll.textContent='Declined — chat stays locked.';
+      else if(lst==='expired')ll.textContent='Request expired.';
       else ll.textContent='No request yet — waiting for a traveller request.';
     }
     var llist=document.getElementById('localChatList');
@@ -1864,20 +1907,50 @@ function renderChat(){
       });
       if(!(ETIE.messages[lk]||[]).length){var dd=document.createElement('div');dd.className='muted small';dd.textContent='No messages yet.';llist.appendChild(dd);}
     }
-    var li1=document.getElementById('localChatInput');if(li1)li1.disabled=(lst!=='accepted');
-    var li9=document.getElementById('localChatInput9');if(li9)li9.disabled=(lst!=='accepted');
+    var li1=document.getElementById('localChatInput');
+    var li9=document.getElementById('localChatInput9');
+    if(li1){
+      li1.disabled=(lst!=='approved' && lst!=='pending');
+      if(lst==='pending'){
+        var lleft=3-(lr?lr.messageCount:0);
+        li1.placeholder=lleft>0?('Vibe Check: '+lleft+'/3 left'):'Vibe Check complete — approve to unlock';
+        if(lleft<=0) li1.disabled=true;
+      } else { li1.placeholder='Message...'; }
+    }
+    if(li9){
+      li9.disabled=(lst!=='approved' && lst!=='pending');
+      if(lst==='pending'){
+        var lleft=3-(lr?lr.messageCount:0);
+        li9.placeholder=lleft>0?('Vibe Check: '+lleft+'/3 left'):'Vibe Check complete — approve to unlock';
+        if(lleft<=0) li9.disabled=true;
+      } else { li9.placeholder='Message...'; }
+    }
     // Popup (mini, dismissable — doesn't hijack the flow)
     var whoPopup='traveller';try{var lf=document.getElementById('localFlow'); if(lf&&!lf.classList.contains('hidden')) whoPopup='local';}catch(e){}
     var pk=(whoPopup==='local')?lk:k; var pst=(whoPopup==='local')?lst:st;
+    var pr=ETIE.requests[pk];
+    var pmc=pr?pr.messageCount:0;
     var pT=document.getElementById('chatPopupTitle');if(pT)pT.textContent='Chat with '+((whoPopup==='local'&&inboxKey())?'Etie (traveller)':(m.local.name||'—'));
-    var pS=document.getElementById('chatPopupSub');if(pS)pS.textContent=pst==='accepted'?'Unlocked — aim for a meetup':(pst==='pending'?'Locked — pending Accept':pst);
+    if(pT && pst==='pending') pT.textContent+=' — Vibe Check: '+(3-pmc)+'/3 left';
+    var pS=document.getElementById('chatPopupSub');if(pS)pS.textContent=pst==='approved'?'Unlocked — aim for a meetup':(pst==='pending'?'Vibe Check: '+pmc+'/3 messages':(pst==='declined'?'Locked — declined':(pst==='expired'?'Request expired':'Locked — send a request first')));
     var pL=document.getElementById('chatPopupList');if(pL){pL.innerHTML='';
       (ETIE.messages[pk]||[]).forEach(function(msg){
         var b=document.createElement('div');b.className='bubble'+(msg.from===whoPopup?' me':'');b.textContent=msg.text;pL.appendChild(b);
       });
       if(!(ETIE.messages[pk]||[]).length){var pd=document.createElement('div');pd.className='muted small';pd.textContent='No messages yet.';pL.appendChild(pd);}
     }
-    var pI=document.getElementById('chatPopupInput');if(pI)pI.disabled=(pst!=='accepted');
+    var pI=document.getElementById('chatPopupInput');
+    if(pI){
+      pI.disabled=(pst!=='approved' && pst!=='pending');
+      if(pst==='pending'){
+        var pleft=3-pmc;
+        pI.placeholder=pleft>0?('Vibe Check: '+pleft+'/3 left'):'Vibe Check complete — wait for approval';
+        if(pleft<=0) pI.disabled=true;
+      } else if(pst==='approved'){
+        pI.placeholder='Message...';
+        pI.disabled=false;
+      }
+    }
   }catch(e){}
 }
 function deleteChat(k){ if(!confirm('Delete this chat?')) return; try{ delete ETIE.requests[k]; delete ETIE.messages[k]; delete ETIE.meetups[k]; delete ETIE.reviews[k]; saveState(); renderMessagesList(); renderRequests(); renderChat(); renderTrips(); }catch(e){} try{ var c=window.EtieCloud&&window.EtieCloud.getClient&&window.EtieCloud.getClient(); if(c) c.from('etie_requests').delete().eq('local_mock_id',k).then(function(){}); }catch(e){} toast('Chat deleted.'); }
@@ -2621,9 +2694,9 @@ function saveDropHook(){
     var cap=Math.min(4,Math.max(2,_hookDraft.capacity||3));
     var hook=details||title;
     var pin={id:'pin-'+nowTs,kind:'hook',title:title,category:_hookDraft.category,role:_hookDraft.role,derivedRole:(function(){try{return ETIE.derivedRole||_hookDraft.role;}catch(e){return _hookDraft.role;}})(),authorId:(function(){try{return myUid();}catch(e){return null;}})(),
-      starts_at:new Date(win.s).toISOString(),ends_at:new Date(win.e).toISOString(),expires_at:new Date(win.e).toISOString(),capacity:cap,
+      starts_at:new Date(win.s).toISOString(),ends_at:new Date(win.e).toISOString(),expires_at:new Date(win.e).toISOString(),capacity:cap,spotsAvailable:cap,
       name:nm,verified:vf,location:loc,lat:_dropPoint.lat,lng:_dropPoint.lng,hook:hook,
-      members:[{nick:nm,role:_hookDraft.role,verified:vf,bio:((ETIE.traveller&&ETIE.traveller.bio)||'').slice(0,140)}],pending:[],status:'active',
+      members:[{nick:nm,role:_hookDraft.role,verified:vf,bio:((ETIE.traveller&&ETIE.traveller.bio)||'').slice(0,140)}],pending:[],requests:[],status:'active',
       ts:Date.now(),origin:'local',cloudId:null};
     if(!ETIE.mapPins)ETIE.mapPins=[];
     ETIE.mapPins.push(pin);
@@ -2645,6 +2718,46 @@ function storePin(p){
   }catch(e){}
 }
 function isPinExpired(p){try{return !!(p.expires_at&&new Date(p.expires_at).getTime()<Date.now());}catch(e){return false;}}
+function hasApprovedRequest(p,nick){
+  try{
+    return (p.requests||[]).some(function(r){
+      return r.status==='approved' && r.nick===nick;
+    });
+  }catch(e){return false;}
+}
+function getApprovedRequestLocation(p,nick){
+  try{
+    var req=(p.requests||[]).find(function(r){return r.status==='approved' && r.nick===nick;});
+    if(req && req.locationRevealed){
+      return {lat:p.lat,lng:p.lng,address:p.location};
+    }
+    return null;
+  }catch(e){return null;}
+}
+function checkAndExpireRequests(p){
+  try{
+    var now=Date.now(),changed=false;
+    (p.requests||[]).forEach(function(r){
+      if(r.status!=='pending') return;
+      // Expire after 30 minutes (1800000ms)
+      if(now - r.createdAt > 30*60*1000){
+        r.status='expired';
+        r.updatedAt=now;
+        r.expiredReason='timeout';
+        changed=true;
+      }
+      // Expire if pin is expired
+      else if(isPinExpired(p)){
+        r.status='expired';
+        r.updatedAt=now;
+        r.expiredReason='hook_expired';
+        changed=true;
+      }
+    });
+    if(changed) storePin(p);
+    return changed;
+  }catch(e){return false;}
+}
 function groupBadgeText(p){
   var n=(p.members||[]).length,cap='';
   try{var c=parseInt(p.capacity,10);if(c>=2&&c<=4)cap=' · '+n+'/'+c;}catch(e){}
@@ -2665,6 +2778,8 @@ function sweepExpiredPins(){
           raw.status='pending_memory_log';changed=true;
           if(raw.name===me&&!_expiryToasted[raw.id]){_expiryToasted[raw.id]=1;setTimeout((function(t){return function(){toast('🔥 “'+t+'” ended — log the memory!');};})((raw.title||raw.location||'Your hook')),1500);}
         }
+        // Check and expire pending requests
+        if(checkAndExpireRequests(raw)) changed=true;
       }catch(e){}
     });
     if(changed){saveState();try{(ETIE.mapPins||[]).forEach(function(raw){try{if(raw&&raw.status==='pending_memory_log')persistPinCloud(raw);}catch(e){}});}catch(e){}}
@@ -2673,10 +2788,12 @@ function sweepExpiredPins(){
 function openPinDetail(id){
   try{
     var p=findPin(id);if(!p){toast('Pin not found.');return;}
+    checkAndExpireRequests(p);
     _openPinId=id;
     var me=hookNick();
     var isMember=(p.members||[]).some(function(m){return m.nick===me;});
     var isPending=(p.pending||[]).some(function(r){return r.nick===me;});
+    var hasApproved=hasApprovedRequest(p,me);
     var nn=document.getElementById('pinNick');if(nn)nn.textContent=p.name||'Someone';
     var av2=document.getElementById('pinAvatar');if(av2)av2.textContent=((p.name||'?').charAt(0)||'?').toUpperCase();
     var cb=document.getElementById('pinChatBtn');if(cb)cb.style.display=isMember?'':'none';
@@ -2685,7 +2802,17 @@ function openPinDetail(id){
     var vb=document.getElementById('pinVerified');if(vb){vb.textContent=p.verified?'✅ Verified':'';vb.style.display=p.verified?'':'none';}
     var rb=document.getElementById('pinRoleBadge');if(rb){var pr=(p.role==='local')?'local':'traveller';rb.textContent=pr==='local'?'🇭🇰 Local Host':'✈️ Traveller';rb.classList.toggle('city-host',pr==='local');}
     var ptt=document.getElementById('pinTitle');if(ptt)ptt.textContent=p.title||p.location||'Hook';
-    var lc=document.getElementById('pinLoc');if(lc)lc.textContent=mapCatEmoji(p.category)+' '+(p.location||'Hong Kong');
+    var lc=document.getElementById('pinLoc');
+    if(lc){
+      if(hasApproved || isMember){
+        // Show exact location for approved members
+        var exact=getApprovedRequestLocation(p,me) || {lat:p.lat,lng:p.lng,address:p.location};
+        lc.innerHTML=mapCatEmoji(p.category)+' '+exact.address+' <span class="small muted">('+exact.lat.toFixed(4)+', '+exact.lng.toFixed(4)+')</span>';
+      } else {
+        // Show approximate neighborhood only
+        lc.textContent=mapCatEmoji(p.category)+' '+(p.location||'Hong Kong')+' <span class="muted small">(Exact location revealed after approval)</span>';
+      }
+    }
     var hk=document.getElementById('pinHook');if(hk)hk.textContent='“'+(p.hook||'')+'”';
     var pb=document.getElementById('pinBio');if(pb){var bb=p.members&&p.members[0]&&p.members[0].bio;pb.textContent=bb||'';pb.style.display=bb?'':'none';}
     var gb=document.getElementById('pinGroupBadge');if(gb)gb.textContent=groupBadgeText(p);
@@ -2703,18 +2830,25 @@ function openPinDetail(id){
     var mine=isMember&&(p.members||[])[0]&&(p.members||[])[0].nick===me;
     if(hostBox){
       hostBox.innerHTML='';
-      if(mine&&(p.pending||[]).length){
-        p.pending.forEach(function(r,idx){
-          var row=document.createElement('div');row.style.cssText='display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;';
-          var lab=document.createElement('span');lab.className='small';lab.textContent='✋ '+(r.nick||'Someone')+' wants to join';
-          var ok=document.createElement('button');ok.className='primary';ok.style.padding='8px 12px';ok.textContent='Accept';
-          ok.onclick=(function(i){return function(){acceptHookRequest(i);};})(idx);
+      if(mine&&(p.requests||[]).length){
+        p.requests.forEach(function(r,idx){
+          if(r.status!=='pending') return;
+          var row=document.createElement('div');row.style.cssText='display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;padding:8px;background:rgba(255,255,255,.05);border-radius:8px;';
+          var avatar=document.createElement('div');avatar.className='avatar small';avatar.style.width='32px;height:32px;font-size:14px;';avatar.textContent=(r.nick||'?').charAt(0).toUpperCase();
+          var lab=document.createElement('span');lab.className='small';lab.style.flex='1';lab.textContent=(r.nick||'Someone')+' wants to join';
+          if(r.verified) lab.textContent+=' ✅';
+          var ok=document.createElement('button');ok.className='primary';ok.style.padding='8px 12px';ok.textContent='Approve';
+          ok.onclick=(function(i){return function(){approveHookRequest(p.id,i);};})(idx);
           var no=document.createElement('button');no.className='secondary';no.style.padding='8px 12px';no.textContent='Decline';
-          no.onclick=(function(i){return function(){declineHookRequest(i);};})(idx);
-          row.appendChild(lab);row.appendChild(ok);row.appendChild(no);
+          no.onclick=(function(i){return function(){declineHookRequest(p.id,i);};})(idx);
+          row.appendChild(avatar);row.appendChild(lab);row.appendChild(ok);row.appendChild(no);
           hostBox.appendChild(row);
         });
       }
+    }
+    // Host Request Drawer for pending applicants (full detail view)
+    if(mine){
+      renderHostRequestDrawer(p);
     }
     var del=document.getElementById('pinDeleteBtn');
     if(del)del.style.display=mine?'':'none';
@@ -2736,10 +2870,13 @@ function requestPinConnect(){
     if(isPinExpired(p)){toast('This hook has ended.');return;}
     var cap=Math.min(4,Math.max(2,parseInt(p.capacity,10)||3));
     if((p.members||[]).length>=Math.min(cap,3)){toast('This group is full ('+cap+' spots).');return;}
-    p.pending.push({nick:me.nick,role:me.role,verified:me.verified,ts:me.ts,approvals:[]});
+    var nowTs=Date.now();
+    var reqId=(p.requests||[]).length>0?(p.requests[p.requests.length-1].id||null):null;
+    var newReq={id:reqId||uuidv4(),nick:me.nick,role:me.role,verified:me.verified,ts:me.ts,status:'pending',message:'',messageCount:0,createdAt:nowTs,updatedAt:nowTs};
+    (p.requests||(p.requests=[])).push(newReq);
     storePin(p);
-    if(p.status==='pair')openGroupModal(p.id,(p.pending.length-1));
-    else{openPinDetail(p.id);toast('Request sent — the host approves.');}
+    openPinDetail(p.id);toast('Request sent — waiting for host approval.');
+    renderHostRequestDrawer(p);
   }catch(e){toast('Could not send request.');}
 }
 function acceptHookRequest(idx){
@@ -2758,12 +2895,123 @@ function acceptHookRequest(idx){
     try{openChatDrawer(p.id);}catch(e){}
   }catch(e){}
 }
-function declineHookRequest(idx){
+function declineHookRequest(pinId,idx){
   try{
-    var p=findPin(_openPinId);if(!p||!p.pending||!p.pending[idx])return;
-    p.pending.splice(idx,1);
+    var p=findPin(pinId);if(!p||!p.requests||!p.requests[idx])return;
+    var req=p.requests[idx];
+    if(req.status!=='pending') return;
+    req.status='declined';
+    req.updatedAt=Date.now();
     storePin(p);openPinDetail(p.id);renderMapPins();toast('Request declined.');
   }catch(e){}
+}
+function approveHookRequest(pinId,idx){
+  try{
+    var p=findPin(pinId);if(!p||!p.requests||!p.requests[idx])return;
+    var req=p.requests[idx];
+    if(req.status!=='pending') return;
+    // Check capacity
+    var cap=Math.min(4,Math.max(2,parseInt(p.capacity,10)||3));
+    if((p.members||[]).length>=cap){
+      toast('This hook is full ('+cap+' spots).');return;
+    }
+    // Approve the request
+    req.status='approved';
+    req.updatedAt=Date.now();
+    // Add to members
+    p.members.push({nick:req.nick,role:req.role,verified:req.verified});
+    // Reveal exact location to approved member
+    req.locationRevealed=true;
+    // Decrement available spots
+    p.spotsAvailable=(p.spotsAvailable!==undefined?p.spotsAvailable:cap)-(p.members||[]).length;
+    // If full, expire remaining pending requests
+    if(p.spotsAvailable<=0){
+      p.requests.forEach(function(r){
+        if(r.status==='pending' && r.id!==req.id){
+          r.status='expired';
+          r.updatedAt=Date.now();
+          r.expiredReason='full';
+        }
+      });
+    }
+    storePin(p);
+    openPinDetail(p.id);
+    renderMapPins();
+    toast('Approved! Exact location revealed to '+req.nick);
+    // Notify the approved user (in real app: push notification)
+    try{ if(window.EtieCloud&&window.EtieCloud.pushSharedRequest) window.EtieCloud.pushSharedRequest(p.id); }catch(e){}
+  }catch(e){toast('Could not approve.');}
+}
+function renderHostRequestDrawer(p){
+  try{
+    var drawer=document.getElementById('hostRequestDrawer');
+    if(!drawer){
+      var pd=document.getElementById('pinDrawer');
+      if(pd){
+        drawer=document.createElement('div');
+        drawer.id='hostRequestDrawer';
+        drawer.style.cssText='margin-top:16px;padding-top:16px;border-top:1px solid rgba(255,255,255,.1);';
+        pd.appendChild(drawer);
+      } else return;
+    }
+    var pending=(p.requests||[]).filter(function(r){return r.status==='pending';});
+    var expiredFull=(p.requests||[]).filter(function(r){return r.status==='expired' && r.expiredReason==='full';});
+    var approved=(p.requests||[]).filter(function(r){return r.status==='approved';});
+    var html='';
+    if(pending.length){
+      html+='<h4 style="margin:0 0 12px;color:#fff;">📋 Pending Requests ('+pending.length+')</h4>';
+      pending.forEach(function(r){
+        var idx=p.requests.indexOf(r);
+        html+='<div style="display:flex;gap:12px;align-items:center;padding:12px;background:rgba(255,255,255,.05);border-radius:10px;margin-bottom:8px;">'
+          +'<div class="avatar" style="width:48px;height:48px;font-size:20px;background:linear-gradient(135deg,#f43f5e,#fb7185);">'+(r.nick||'?').charAt(0).toUpperCase()+'</div>'
+          +'<div style="flex:1;">'
+          +'<div style="font-weight:600;color:#fff;">'+(r.nick||'Someone')+'</div>'
+          +'<div class="small muted">'+(r.role==='local'?'🇭🇰 Local Host':'✈️ Traveller')+(r.verified?' · Verified':'')+'</div>'
+          +'<div class="small muted">'+new Date(r.createdAt).toLocaleTimeString()+'</div>'
+          +(r.message?'<div class="small" style="margin-top:4px;color:#ffe4e6;">“'+r.message+'”</div>':'')
+          +'</div>'
+          +'<div style="display:flex;gap:8px;">'
+          +'<button class="primary" style="padding:10px 16px;" onclick="approveHookRequest(\''+p.id+'\','+idx+')">Approve</button>'
+          +'<button class="secondary" style="padding:10px 16px;" onclick="declineHookRequest(\''+p.id+'\','+idx+')">Decline</button>'
+          +'</div>'
+          +'</div>';
+      });
+    }
+    if(approved.length){
+      html+='<h4 style="margin:16px 0 8px;color:#fff;">✅ Approved ('+approved.length+')</h4>';
+      approved.forEach(function(r){
+        html+='<div style="padding:12px;background:rgba(34,197,94,.15);border-radius:10px;margin-bottom:8px;border:1px solid rgba(34,197,94,.3);">'
+          +'<div style="font-weight:600;color:#22c55e;">'+(r.nick||'Someone')+' — Approved</div>'
+          +'<div class="small muted">Location revealed at '+new Date(r.updatedAt).toLocaleTimeString()+'</div>'
+          +'</div>';
+      });
+    }
+    if(expiredFull.length){
+      html+='<h4 style="margin:16px 0 8px;color:#fff;">⚠️ Hook Filled — '+expiredFull.length+' requests expired</h4>';
+      html+='<div style="padding:16px;background:rgba(251,113,133,.15);border-radius:10px;border:1px solid rgba(251,113,133,.3);text-align:center;">'
+        +'<div style="font-weight:600;color:#fb7185;margin-bottom:8px;">This hook just filled up!</div>'
+        +'<div class="small muted" style="margin-bottom:12px;">Want to host the next one?</div>'
+        +'<button class="primary" style="padding:12px 24px;" onclick="hostNextHook(\''+p.id+'\')">Host Next Hook</button>'
+        +'</div>';
+    }
+    drawer.innerHTML=html;
+  }catch(e){}
+}
+function hostNextHook(pinId){
+  try{
+    var p=findPin(pinId);
+    if(!p) return;
+    // Pre-fill the drop hook sheet with current category/neighborhood
+    _hookDraft={category:p.category,role:'local',window:'now',capacity:3};
+    var ht0=document.getElementById('hookTitle');if(ht0)ht0.value='';
+    var hl=document.getElementById('hookLocation');if(hl)hl.value=p.location;
+    selectHookCategory(null,p.category);
+    selectHookWindow(null,'now');
+    hookCap(0);
+    renderHookRoleLine();
+    openDropHook();
+    toast('Create your next hook — same neighborhood, same vibe!');
+  }catch(e){toast('Could not open hook sheet.');}
 }
 function deletePinSidequest(){
   try{

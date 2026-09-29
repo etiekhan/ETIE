@@ -63,7 +63,7 @@ create table if not exists public.etie_requests (
   traveller_id uuid not null references auth.users(id) on delete cascade,
   local_mock_id text not null,
   local_id uuid references auth.users(id) on delete set null,
-  status text not null check (status in ('pending','accepted','declined','cancelled')),
+  status text not null check (status in ('pending','approved','declined','expired')),
   message text,
   destination text,
   dates text,
@@ -292,6 +292,9 @@ create table if not exists public.hooks (
   expires_at timestamptz,
   members jsonb not null default '[]'::jsonb,
   pending jsonb not null default '[]'::jsonb,
+  requests jsonb not null default '[]'::jsonb,
+  spots_available int,
+  pending jsonb not null default '[]'::jsonb,
   status text not null default 'open',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -316,6 +319,9 @@ alter table public.hooks add column if not exists ends_at timestamptz;
 alter table public.hooks add column if not exists title text not null default '';
 alter table public.hooks add column if not exists capacity int not null default 3;
 alter table public.hooks add column if not exists expires_at timestamptz;
+alter table public.hooks add column if not exists pending jsonb not null default '[]'::jsonb;
+alter table public.hooks add column if not exists requests jsonb not null default '[]'::jsonb;
+alter table public.hooks add column if not exists spots_available int;
 alter publication supabase_realtime add table public.hooks;
   end if;
 end $$;

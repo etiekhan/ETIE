@@ -692,7 +692,8 @@
   function pinRowToPin(r){
     try{
       return {id:String(r.id),kind:'hook',category:r.category||'Food',role:(r.role==='local'?'local':'traveller'),
-        derivedRole:r.derived_role||r.role||'traveller',
+        derivedRole:r.derived_role||r.role||'traveller',title:String(r.title||r.location||'Hook').slice(0,60),
+        capacity:Math.min(4,Math.max(2,parseInt(r.capacity,10)||3)),expires_at:r.expires_at||r.ends_at||null,
         name:r.nickname||'Someone',verified:!!r.verified,location:r.location||'Hong Kong',
         lat:r.lat,lng:r.lng,hook:String(r.activity_hook||r.content||r.hook||'').slice(0,140),
         starts_at:r.starts_at||null,ends_at:r.ends_at||null,
@@ -706,6 +707,7 @@
     return {id:String(p.cloudId||p.id),user_id:(session&&session.user&&session.user.id)||null,
       nickname:p.name||'Someone',verified:!!p.verified,role:p.role||'traveller',derived_role:dr,category:p.category||'Food',
       location:p.location||'Hong Kong',lat:p.lat,lng:p.lng,content:String(p.hook||'').slice(0,140),activity_hook:String(p.hook||'').slice(0,140),
+      title:String(p.title||p.location||'Hook').slice(0,60),capacity:Math.min(4,Math.max(2,parseInt(p.capacity,10)||3)),expires_at:p.expires_at||p.ends_at||null,
       members:p.members||[],pending:p.pending||[],status:p.status||'open',starts_at:p.starts_at||null,ends_at:p.ends_at||null,updated_at:new Date().toISOString()};
   }
   function pullPins(){

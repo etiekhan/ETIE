@@ -284,6 +284,12 @@ create table if not exists public.hooks (
   lat double precision not null,
   lng double precision not null,
   content text not null default '',
+  activity_hook text not null default '',
+  starts_at timestamptz,
+  ends_at timestamptz,
+  title text not null default '',
+  capacity int not null default 3,
+  expires_at timestamptz,
   members jsonb not null default '[]'::jsonb,
   pending jsonb not null default '[]'::jsonb,
   status text not null default 'open',
@@ -304,7 +310,13 @@ create index if not exists hooks_role_idx on public.hooks(role);
 create index if not exists hooks_category_idx on public.hooks(category);
 do $$ begin
   if not exists (select 1 from pg_publication_tables where pubname='supabase_realtime' and tablename='hooks') then
-    alter publication supabase_realtime add table public.hooks;
+    alter table public.hooks add column if not exists activity_hook text not null default '';
+alter table public.hooks add column if not exists starts_at timestamptz;
+alter table public.hooks add column if not exists ends_at timestamptz;
+alter table public.hooks add column if not exists title text not null default '';
+alter table public.hooks add column if not exists capacity int not null default 3;
+alter table public.hooks add column if not exists expires_at timestamptz;
+alter publication supabase_realtime add table public.hooks;
   end if;
 end $$;
 

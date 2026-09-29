@@ -1029,8 +1029,7 @@ function refreshAdminLive(){
   }catch(e){ try{ var h=document.getElementById('adminLiveHint'); if(h) h.textContent='Live refresh failed.'; }catch(e2){}}
 }
 function toggleNav(){try{var n=document.getElementById('mainNav');var t=document.querySelector('.nav-toggle');if(n&&t){n.classList.toggle('open');t.textContent=n.classList.contains('open')?'✕':'☰';}}catch(e){}}
-function toggleDevBar(){try{var b=document.getElementById('devBar');if(!b)return;b.classList.toggle('collapsed');var c=b.classList.contains('collapsed');try{localStorage.setItem('etie-devbar',c?'1':'0');}catch(e){}var t=document.getElementById('devBarToggle');if(t){t.textContent=c?'Prototype ▸':'Prototype ▾';t.setAttribute('aria-expanded',c?'false':'true');}}catch(e){}}
-function restoreDevBar(){try{var c=false;try{c=localStorage.getItem('etie-devbar')==='1';}catch(e){}var b=document.getElementById('devBar');if(b)b.classList.toggle('collapsed',c);var t=document.getElementById('devBarToggle');if(t){t.textContent=c?'Prototype ▸':'Prototype ▾';t.setAttribute('aria-expanded',c?'false':'true');}}catch(e){}}
+
 function setRole(role){try{ETIE.activeRole=role;}catch(e){}try{var u=new URL(window.location.href);u.searchParams.set('role',role);window.history.replaceState(null,'','?role='+role);}catch(e){}document.getElementById('travRole').classList.toggle('active',role==='traveller');document.getElementById('localRole').classList.toggle('active',role==='local');document.getElementById('travellerFlow').classList.toggle('hidden',role!=='traveller');document.getElementById('localFlow').classList.toggle('hidden',role!=='local');saveState();renderRoleGate();try{renderDerivedBadge();}catch(e){}if(role==='traveller')travNext(Math.min(17,Math.max(1,ETIE._lastTrav||1)));else localNext(Math.min(11,Math.max(1,ETIE._lastLocal||1)));showScreen('home');}
 function hasAnyLocalData(){try{var l=ETIE.local||{};if(l.city||l.age||l.nationality||l.displayName)return true;if((l.interests||[]).length)return true;if((l.styleInterests||[]).length)return true;if(l.offer)return true;if(l.photo)return true;if((l.travelPhotos||[]).filter(Boolean).length)return true;if((l.availDates||[]).length)return true;if((l.verificationMethods||[]).length)return true;return false;}catch(e){return false;}}
 function renderRoleGate(){
@@ -1971,13 +1970,17 @@ function haversineKm(lat1,lng1,lat2,lng2){
 }
 function applyDerivedRole(role,why){
   try{
-    ETIE.derivedRole=role;
     var signed=false;try{signed=isSignedIn();}catch(e){}
-    if(signed&&!ETIE.activeRole)ETIE.activeRole=role; // first fix wins; manual roleSwitch picks stick after
+    if(why==='gps'&&role){
+      ETIE.derivedRole=role; ETIE.locDenied=false;
+      if(signed&&!ETIE.activeRole)ETIE.activeRole=role; // first fix wins; manual roleSwitch picks stick after
+    }else{
+      ETIE.derivedRole=null; ETIE.locDenied=true; // never claim a role without a real GPS comparison
+    }
     saveState();renderDerivedBadge();
     if(!signed)return;
-    if(why==='denied'||why==='unavailable')toast('Location unavailable — you look like a Traveller. Flip the toggle any time.');
-    else toast((role==='local'?'🇭🇰 Local detected — ':'✈️ Traveller detected — ')+'role set from your location.');
+    if(why==='gps')toast((role==='local'?'🇭🇰 Local detected — ':'✈️ Traveller detected — ')+'role set from your location.');
+    else toast('Location unavailable — tap the 📍 badge to retry. No role assumed.');
   }catch(e){}
 }
 function renderDerivedBadge(){
@@ -1989,18 +1992,18 @@ function renderDerivedBadge(){
     var r=null;try{r=ETIE.derivedRole;}catch(e){}
     if(r==='local'){b.textContent='🇭🇰 Local';b.className='derived-badge derived-local';}
     else if(r==='traveller'){b.textContent='✈️ Traveller';b.className='derived-badge derived-traveller';}
-    else{b.textContent='📍 …';b.className='derived-badge';}
+    else{var denied=false;try{denied=!!ETIE.locDenied;}catch(e){}b.textContent=denied?'📍 Location off':'📍 …';b.className='derived-badge';}
   }catch(e){}
 }
 function locateUser(){
   try{
-    if(!navigator.geolocation){applyDerivedRole('traveller','unavailable');return;}
+    if(!navigator.geolocation){applyDerivedRole(null,'unavailable');return;}
     navigator.geolocation.getCurrentPosition(function(pos){
       try{
         var d=haversineKm(pos.coords.latitude,pos.coords.longitude,HK_HOME[0],HK_HOME[1]);
         applyDerivedRole(d<=50?'local':'traveller','gps');
       }catch(e){}
-    },function(err){applyDerivedRole('traveller','denied');},{timeout:9000,maximumAge:300000});
+    },function(err){applyDerivedRole(null,'denied');},{timeout:9000,maximumAge:300000});
   }catch(e){}
 }
 function normHookPin(p){
@@ -2450,7 +2453,6 @@ document.addEventListener('DOMContentLoaded',function(){
   alphabetisePickers();
   buildCountrySelects();
   restoreAll();
-  restoreDevBar();
   try{ initHKMap(); renderMapFilter(); renderMapPins(); }catch(e){}
   try{ renderDerivedBadge(); locateUser(); }catch(e){}
   try{

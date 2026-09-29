@@ -1937,7 +1937,8 @@ function alphabetisePickers(){
 // Pins render ONLY from live hooks: Supabase etie_pins (origin 'cloud') + local testing state.
 // No seed/demo/guide-presence pins. Empty map shows the first-pin banner.
 var MAP_CATS=[{id:'All',emoji:'🗺️'},{id:'Food',emoji:'🥟'},{id:'Nightlife',emoji:'🍺'},{id:'Photo',label:'Photo Walk',emoji:'📸'},{id:'Sports',emoji:'⚽'},{id:'Cafe',emoji:'☕'}];
-var MAP_ROLES=[{id:'All',label:'All Roles'},{id:'traveller',label:'✈️ Travellers Only'},{id:'local',label:'🇭🇰 HK Locals Only'}];
+var MAP_INTENTS=[{id:'All',label:'All Pins',emoji:'🗺️'},{id:'traveller',label:'✈️ Visiting Now'},{id:'local',label:'🇭🇰 Hosted by Locals'}];
+var MAP_VIBES=[{id:'Sports',emoji:'⚽'},{id:'Nightlife',emoji:'🍺'},{id:'Cafe',label:'Cafes',emoji:'☕'},{id:'Photo',label:'Photo Walks',emoji:'📸'}];
 var MAP_DISTRICT_LATLNG={'Central / Soho':[22.2819,114.1577],'Lan Kwai Fong':[22.2810,114.1550],'Sheung Wan':[22.2867,114.1520],'Tsim Sha Tsui':[22.2980,114.1722],'Mong Kok':[22.3193,114.1694],'Sham Shui Po':[22.3307,114.1625]};
 var HK_CENTER=[22.2819,114.1581],HK_ZOOM=13;
 var MAP_FILTER='All',MAP_ROLE='All';
@@ -2014,7 +2015,7 @@ function normHookPin(p){
   if(known.indexOf(cat)===-1)cat='Food';
   var role=(p.role==='local')?'local':'traveller';
   return {
-    id:String(p.id),kind:'hook',category:cat,role:role,
+    id:String(p.id),kind:'hook',category:cat,role:role,derivedRole:p.derivedRole||role,
     name:p.name||'Someone',verified:!!p.verified,
     location:p.location||nearestDistrictLabel(p.lat,p.lng),
     lat:p.lat,lng:p.lng,hook:String(p.hook||'').slice(0,140),
@@ -2040,7 +2041,7 @@ function pinLatLng(p){return [p.lat,p.lng];}
 function visibleMapPins(){
   var all=allMapPins();
   if(MAP_FILTER!=='All')all=all.filter(function(p){return p.category===MAP_FILTER;});
-  if(MAP_ROLE!=='All')all=all.filter(function(p){return p.role===MAP_ROLE;});
+  if(MAP_ROLE!=='All')all=all.filter(function(p){return ((p.derivedRole||p.role)==='local'?'local':'traveller')===MAP_ROLE;});
   return all;
 }
 function initHKMap(){
@@ -2104,24 +2105,26 @@ function renderMapFilter(){
   try{
     var bar=document.getElementById('mapFilterBar');if(!bar)return;
     bar.innerHTML='';
-    MAP_CATS.forEach(function(c){
-      var b=document.createElement('button');b.className='chip'+(MAP_FILTER===c.id?' active':'');b.textContent=c.emoji+' '+(c.label||c.id);b.style.padding='8px 12px';
-      b.onclick=(function(id){return function(){setMapFilter(id);};})(c.id);
+    MAP_INTENTS.forEach(function(c){
+      var on=(c.id==='All')?(MAP_ROLE==='All'&&MAP_FILTER==='All'):(MAP_ROLE===c.id);
+      var b=document.createElement('button');b.className='chip'+(on?' active':'');b.textContent=(c.emoji?c.emoji+' ':'')+c.label;b.style.padding='8px 12px';
+      b.onclick=(function(id){return function(){selectIntent(id);};})(c.id);
       bar.appendChild(b);
     });
     var sep=document.createElement('span');sep.className='filter-sep';sep.textContent='|';
     bar.appendChild(sep);
-    MAP_ROLES.forEach(function(r){
-      var b=document.createElement('button');b.className='chip role-chip'+(MAP_ROLE===r.id?' active':'');b.textContent=r.label;b.style.padding='8px 12px';
-      b.onclick=(function(id){return function(){setMapRole(id);};})(r.id);
+    MAP_VIBES.forEach(function(c){
+      var b=document.createElement('button');b.className='chip'+(MAP_FILTER===c.id?' active':'');b.textContent=c.emoji+' '+(c.label||c.id);b.style.padding='8px 12px';
+      b.onclick=(function(id){return function(){setMapFilter(id);};})(c.id);
       bar.appendChild(b);
     });
     var rb=document.getElementById('mapRoleBar');
     if(rb)rb.style.display='none';
   }catch(e){}
 }
-function setMapFilter(cat){MAP_FILTER=cat;renderMapFilter();renderMapPins();}
+function setMapFilter(cat){MAP_FILTER=(MAP_FILTER===cat)?'All':cat;renderMapFilter();renderMapPins();}
 function setMapRole(role){MAP_ROLE=role;renderMapFilter();renderMapPins();}
+function selectIntent(id){if(id==='All'){MAP_ROLE='All';MAP_FILTER='All';}else{MAP_ROLE=id;}renderMapFilter();renderMapPins();}
 function renderMapPins(){
   try{
     if(!window.L||!document.getElementById('hkMap'))return;
@@ -2133,7 +2136,8 @@ function renderMapPins(){
       try{
         var ll=pinLatLng(p);
         var fresh=(Date.now()-(p.ts||0))<3600*1000?' sq-pin-fresh':'';
-        var icon=L.divIcon({className:'',html:'<div class="sq-pin sq-pin-'+p.category.toLowerCase()+fresh+'">'+mapCatEmoji(p.category)+'</div>',iconSize:[36,36],iconAnchor:[18,18]});
+        var prole=((p.derivedRole||p.role)==='local')?'local':'traveller';
+        var icon=L.divIcon({className:'',html:'<div class="sq-pin sq-pin-'+prole+fresh+'">'+mapCatEmoji(p.category)+'</div>',iconSize:[36,36],iconAnchor:[18,18]});
         var mk=L.marker(ll,{icon:icon,title:(p.name||'Hook')+' · '+p.category});
         mk.on('click',(function(id){return function(){openPinDetail(id);};})(p.id));
         _mapLayer.addLayer(mk);
@@ -2193,7 +2197,7 @@ function saveDropHook(){
     if(!hook){toast('Write your hook first.');return;}
     if(hook.length>140){toast('Keep the hook under 140 characters.');return;}
     var nm=hookNick(),vf=hookVerified();
-    var pin={id:'pin-'+Date.now(),kind:'hook',category:_hookDraft.category,role:_hookDraft.role,
+    var pin={id:'pin-'+Date.now(),kind:'hook',category:_hookDraft.category,role:_hookDraft.role,derivedRole:(function(){try{return ETIE.derivedRole||_hookDraft.role;}catch(e){return _hookDraft.role;}})(),
       name:nm,verified:vf,location:loc,lat:_dropPoint.lat,lng:_dropPoint.lng,hook:hook,
       members:[{nick:nm,role:_hookDraft.role,verified:vf,bio:((ETIE.traveller&&ETIE.traveller.bio)||'').slice(0,140)}],pending:[],status:'open',
       ts:Date.now(),origin:'local',cloudId:null};

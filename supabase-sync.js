@@ -233,6 +233,7 @@
         memories: ((typeof ETIE!=='undefined'&&ETIE.traveller&&ETIE.traveller.memories)||[]).slice(0,3),
         role: (function(){try{return ((ETIE.activeRole||ETIE.derivedRole)==='local')?'local_host':'traveller';}catch(e){return 'traveller';}})(),
         recommended_spots: ((typeof ETIE!=='undefined'&&ETIE.traveller&&ETIE.traveller.spots)||[]).slice(0,3),
+        activity_stats: ((typeof ETIE!=='undefined'&&ETIE.traveller&&ETIE.traveller.activityStats)||{}),
         photo_url: (function(){try{var ph=(typeof ETIE!=='undefined'&&ETIE.traveller&&ETIE.traveller.photo)||'';return (ph.indexOf('http')===0)?ph.slice(0,500):'';}catch(e){return '';}})()
       };
       function tryUpsert(payload){
@@ -691,6 +692,7 @@
         derivedRole:r.derived_role||r.role||'traveller',
         name:r.nickname||'Someone',verified:!!r.verified,location:r.location||'Hong Kong',
         lat:r.lat,lng:r.lng,hook:String(r.activity_hook||r.content||r.hook||'').slice(0,140),
+        starts_at:r.starts_at||null,ends_at:r.ends_at||null,
         members:r.members||[{nick:r.nickname||'Someone',role:(r.role==='local'?'local':'traveller'),verified:!!r.verified}],
         pending:r.pending||[],status:r.status||'open',ts:(r.updated_at?new Date(r.updated_at).getTime():Date.now()),
         origin:'cloud',cloudId:String(r.id),authorId:r.user_id||null};
@@ -701,7 +703,7 @@
     return {id:String(p.cloudId||p.id),user_id:(session&&session.user&&session.user.id)||null,
       nickname:p.name||'Someone',verified:!!p.verified,role:p.role||'traveller',derived_role:dr,category:p.category||'Food',
       location:p.location||'Hong Kong',lat:p.lat,lng:p.lng,content:String(p.hook||'').slice(0,140),activity_hook:String(p.hook||'').slice(0,140),
-      members:p.members||[],pending:p.pending||[],status:p.status||'open',updated_at:new Date().toISOString()};
+      members:p.members||[],pending:p.pending||[],status:p.status||'open',starts_at:p.starts_at||null,ends_at:p.ends_at||null,updated_at:new Date().toISOString()};
   }
   function pullPins(){
     try{
@@ -812,6 +814,37 @@
       }).catch(function(){cb(null);});
     }catch(e){try{cb(null);}catch(_){}}
   }
+  function hangoutTable(){return 'hangout_logs';}
+  function pushHangoutLog(entry){
+    return new Promise(function(resolve){
+      try{
+        if(!client||!session||!entry){resolve(null);return;}
+        client.from(hangoutTable()).insert({
+          hook_id:String(entry.hookId||''), user_id:session.user.id,
+          nickname:entry.nick||'Someone', photo_url:String(entry.photoUrl||'').slice(0,500),
+          activity:String(entry.activity||'').slice(0,40),
+          taken_at:entry.takenAt||new Date().toISOString(),
+          is_live_verified:!!entry.verified
+        }).then(function(r){resolve(r&&!r.error);}).catch(function(){resolve(null);});
+      }catch(e){resolve(null);}
+    });
+  }
+  function fetchHookLogs(hookId,cb){
+    try{
+      if(!client||!hookId||typeof cb!=='function'){cb([]);return;}
+      client.from(hangoutTable()).select('*').eq('hook_id',String(hookId)).order('taken_at',{ascending:false}).limit(50).then(function(r){
+        try{cb(r&&!r.error?(r.data||[]):[]);}catch(e){cb([]);}
+      }).catch(function(){cb([]);});
+    }catch(e){try{cb([]);}catch(_){}}
+  }
+  function fetchUserLogs(userId,cb){
+    try{
+      if(!client||!userId||typeof cb!=='function'){cb([]);return;}
+      client.from(hangoutTable()).select('*').eq('user_id',userId).order('taken_at',{ascending:false}).limit(100).then(function(r){
+        try{cb(r&&!r.error?(r.data||[]):[]);}catch(e){cb([]);}
+      }).catch(function(){cb([]);});
+    }catch(e){try{cb([]);}catch(_){}}
+  }
   // ---- Expose ----
   window.EtieCloud={
     init:init, signInWithGoogle:signInWithGoogle, signOut:signOut,
@@ -819,6 +852,7 @@
     pullPins:pullPins, pushPin:pushPin, deletePin:deletePin,
     pushHookMessage:pushHookMessage, subscribeHookChat:subscribeHookChat,
     fetchProfile:fetchProfile,
+    pushHangoutLog:pushHangoutLog, fetchHookLogs:fetchHookLogs, fetchUserLogs:fetchUserLogs,
     syncProfile:syncProfile, pushSharedRequest:pushSharedRequest, pushSharedMessage:pushSharedMessage, pushSharedMeetup:pushSharedMeetup,
     pushSharedReview:pushSharedReview, pushSharedReport:pushSharedReport,
     uploadPhoto:uploadPhoto,

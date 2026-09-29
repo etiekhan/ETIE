@@ -223,6 +223,7 @@
       <div class="field"><label>Vibes</label><div class="chips" id="doneVibes"></div></div>
       <div class="field"><label>Personal Hook</label><p class="pin-hook" id="doneHook" style="font-size:16px;">—</p></div>
       <div class="field"><label>Favourite memories &amp; hangouts (up to 3)</label><div id="liteMemories" class="mem-grid"></div></div>
+      <div class="field"><label>Passion badges</label><div class="chips" id="donePassions"></div></div>
       <div class="field" id="doneSpotsWrap"><label id="doneSpotsTitle">Local spots</label><div id="doneSpots" class="spot-grid"></div></div>
       <div style="display:flex;gap:8px;margin-top:12px;"><button class="secondary" onclick="editProfile()">Edit Profile</button></div>
     </div>
@@ -291,8 +292,10 @@
   <p class="muted small" id="pinPendingNote" style="display:none;">Request sent — waiting for the group to approve.</p>
   <div id="pinHostBox"></div>
   <div id="pinMemories" class="mem-strip" style="display:none;"></div>
+  <div class="muted small" id="pinWindow" style="display:none;margin:4px 0;"></div>
+  <div id="pinLogs" style="display:none;margin:6px 0;"></div>
   <div id="pinSpots" class="spot-strip" style="display:none;"></div>
-  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;"><button class="primary" id="pinRequestBtn" onclick="requestPinConnect()">Request to Connect</button><button class="secondary" id="pinChatBtn" onclick="openChatDrawer(_openPinId)" style="display:none;">Open group chat</button><button class="secondary" id="pinDeleteBtn" onclick="deletePinSidequest()" style="display:none;">Delete Pin</button></div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;"><button class="secondary" id="pinLogBtn" onclick="openLogSheet(_openPinId)" style="display:none;">📸 Log Hangout</button><button class="primary" id="pinRequestBtn" onclick="requestPinConnect()">Request to Connect</button><button class="secondary" id="pinChatBtn" onclick="openChatDrawer(_openPinId)" style="display:none;">Open group chat</button><button class="secondary" id="pinDeleteBtn" onclick="deletePinSidequest()" style="display:none;">Delete Pin</button></div>
 </div>
 <div class="chat-overlay hidden" id="groupModal">
   <div class="chat-popup glass-modal" role="dialog" aria-modal="true" aria-label="Expand group" style="width:min(480px,calc(100vw - 24px));">
@@ -304,6 +307,23 @@
     </div>
   </div>
 </div>
+<div class="chat-overlay hidden" id="logHangoutModal" onclick="if(event.target===this)closeLogSheet()">
+  <div class="chat-popup glass-modal" role="dialog" aria-modal="true" aria-label="Log Hangout" style="width:min(480px,calc(100vw - 24px));">
+    <div class="chat-popup-head"><div><strong>📸 Log Hangout</strong><div class="muted small" id="logHookName">—</div></div><button class="secondary" onclick="closeLogSheet()" aria-label="Close" style="padding:8px 12px;">✕</button></div>
+    <div class="chat-popup-body" style="background:transparent;">
+      <p class="muted small" id="logWindow">—</p>
+      <div class="field"><label>Activity tag</label><select id="logActivity"><option>Food</option><option>Nightlife</option><option>Photo</option><option>Sports</option><option>Cafe</option><option>Salsa</option><option>Football</option><option>Coffee</option></select></div>
+      <div class="field"><label>Hangout photo</label>
+        <div id="logPreview" style="margin-bottom:8px;"></div>
+        <input type="file" id="logPhotoInput" accept="image/*" style="display:none;" onchange="handleLogPhoto(this)">
+        <button class="secondary" onclick="document.getElementById('logPhotoInput').click()">Choose photo / Take photo</button>
+      </div>
+      <p class="muted small">⚡ Photos taken during your hangout window earn a Verified Live badge!</p>
+      <p class="muted small" id="logOutboxNote" style="display:none;"></p>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;"><button class="secondary" onclick="closeLogSheet()">Cancel</button><button class="primary" id="logUploadBtn" onclick="submitHangoutLog()">Upload Log</button></div>
+    </div>
+  </div>
+</div>
 <div id="chatDrawer" class="chat-drawer hidden" role="dialog" aria-label="Hook group chat">
   <div class="chat-drawer-head"><div><strong id="chatHookTitle">—</strong><div class="muted small" id="chatHookSub">—</div></div><button class="secondary" onclick="closeChatDrawer()" aria-label="Close chat" style="padding:8px 12px;">✕</button></div>
   <div id="chatMemories" class="mem-strip" style="display:none;margin:0 12px;"></div>
@@ -312,12 +332,12 @@
 </div>
 <div class="toast" id="toast"></div>
 
-  <script src="data/locations.js?v=47"></script>
-    <script src="match.js?v=47"></script>
+  <script src="data/locations.js?v=48"></script>
+    <script src="match.js?v=48"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="supabase-config.js?v=47"></script>
-  <script src="app.js?v=47"></script>
-  <script src="supabase-sync.js?v=47"></script>
+  <script src="supabase-config.js?v=48"></script>
+  <script src="app.js?v=48"></script>
+  <script src="supabase-sync.js?v=48"></script>
 </body>
 </html>

@@ -99,6 +99,8 @@ function loadState() {
     s._editingProfile=false;
     if(!Array.isArray(s.traveller.memories)) s.traveller.memories=[];
     if(!Array.isArray(s.traveller.spots)) s.traveller.spots=[];
+    if(!s.traveller.activityStats||typeof s.traveller.activityStats!=='object') s.traveller.activityStats={};
+    if(!Array.isArray(s.photoOutbox)) s.photoOutbox=[];
     if(s.traveller.socialVibe==null){ var sc=s.traveller.personality&&s.traveller.personality.social||5; s.traveller.socialVibe=sc<=3?0:sc>=8?2:1; }
     if(s.traveller.travelPace==null){ var pc=s.traveller.personality&&s.traveller.personality.spontaneous||5; s.traveller.travelPace=pc<=3?0:pc>=8?2:1; }
     if(!s.traveller.styleInterests)s.traveller.styleInterests=[];
@@ -1297,7 +1299,7 @@ function renderDoneView(){
       vibes.forEach(function(v){var s=document.createElement('span');s.className='chip active';s.textContent=mapCatEmoji(v)+' '+v;vs.appendChild(s);});
     }
     var hk=document.getElementById('doneHook'); if(hk)hk.textContent='“'+(tr.bio||'No personal hook yet.')+'”';
-    renderMemories();renderSpots();
+    renderMemories();renderSpots();renderPassions();
   }catch(e){}
 }
 function getMemories(){try{var m=ETIE.traveller&&ETIE.traveller.memories;return Array.isArray(m)?m.slice(0,3):[];}catch(e){return [];}}
@@ -1340,6 +1342,26 @@ function renderMemories(){
         box.appendChild(card);
       })(i);
     }
+    try{
+      if(window.EtieCloud&&window.EtieCloud.fetchUserLogs){
+        var myId=null;try{var _s=window.EtieCloud.getSession();myId=_s&&_s.user&&_s.user.id;}catch(e){}
+        if(myId)window.EtieCloud.fetchUserLogs(myId,function(rows){
+          try{
+            var urls={};
+            (rows||[]).forEach(function(r){if(r&&r.is_live_verified&&r.photo_url)urls[r.photo_url]=1;});
+            if(!Object.keys(urls).length)return;
+            var cur=document.getElementById('liteMemories');
+            if(!cur||cur!==box)return;
+            Array.prototype.forEach.call(box.querySelectorAll('.mem-card'),function(card){
+              try{
+                var im=card.querySelector('img');if(!im||!urls[im.getAttribute('src')]||card.querySelector('.live-badge'))return;
+                var bdg=document.createElement('div');bdg.className='live-badge';bdg.textContent='⚡ Verified Live';card.appendChild(bdg);
+              }catch(e){}
+            });
+          }catch(e){}
+        });
+      }
+    }catch(e){}
   }catch(e){}
 }
 function pickMemoryFile(idx){
@@ -2153,7 +2175,7 @@ var _map=null,_mapLayer=null,_openPinId=null;
 var _dropPoint=null; // {lat,lng} set by tapping the map
 var _dropMarker=null;
 var _hookDraft={category:'Food',role:'traveller'};
-function mapCatEmoji(cat){for(var i=0;i<MAP_CATS.length;i++)if(MAP_CATS[i].id===cat)return MAP_CATS[i].emoji;return '📍';}
+function mapCatEmoji(cat){for(var i=0;i<MAP_CATS.length;i++)if(MAP_CATS[i].id===cat||MAP_CATS[i].label===cat)return MAP_CATS[i].emoji;return '📍';}
 function nearestDistrictLabel(lat,lng){
   var best='Central / Soho',bd=1e9;
   try{
@@ -2273,6 +2295,7 @@ function normHookPin(p){
   var role=(p.role==='local')?'local':'traveller';
   return {
     id:String(p.id),kind:'hook',category:cat,role:role,derivedRole:p.derivedRole||role,authorId:p.authorId||null,
+    starts_at:p.starts_at||null,ends_at:p.ends_at||null,
     name:p.name||'Someone',verified:!!p.verified,
     location:p.location||nearestDistrictLabel(p.lat,p.lng),
     lat:p.lat,lng:p.lng,hook:String(p.hook||'').slice(0,140),
@@ -2477,7 +2500,9 @@ function saveDropHook(){
     if(!hook){toast('Write your hook first.');return;}
     if(hook.length>140){toast('Keep the hook under 140 characters.');return;}
     var nm=hookNick(),vf=hookVerified();
-    var pin={id:'pin-'+Date.now(),kind:'hook',category:_hookDraft.category,role:_hookDraft.role,derivedRole:(function(){try{return ETIE.derivedRole||_hookDraft.role;}catch(e){return _hookDraft.role;}})(),authorId:(function(){try{return myUid();}catch(e){return null;}})(),
+    var nowTs=Date.now();
+    var pin={id:'pin-'+nowTs,kind:'hook',category:_hookDraft.category,role:_hookDraft.role,derivedRole:(function(){try{return ETIE.derivedRole||_hookDraft.role;}catch(e){return _hookDraft.role;}})(),authorId:(function(){try{return myUid();}catch(e){return null;}})(),
+      starts_at:new Date(nowTs).toISOString(),ends_at:new Date(nowTs+4*3600*1000).toISOString(),
       name:nm,verified:vf,location:loc,lat:_dropPoint.lat,lng:_dropPoint.lng,hook:hook,
       members:[{nick:nm,role:_hookDraft.role,verified:vf,bio:((ETIE.traveller&&ETIE.traveller.bio)||'').slice(0,140)}],pending:[],status:'open',
       ts:Date.now(),origin:'local',cloudId:null};
@@ -2516,6 +2541,8 @@ function openPinDetail(id){
     var nn=document.getElementById('pinNick');if(nn)nn.textContent=p.name||'Someone';
     var av2=document.getElementById('pinAvatar');if(av2)av2.textContent=((p.name||'?').charAt(0)||'?').toUpperCase();
     var cb=document.getElementById('pinChatBtn');if(cb)cb.style.display=isMember?'':'none';
+    var lb=document.getElementById('pinLogBtn');if(lb)lb.style.display=isMember?'':'none';
+    try{renderPinLogs(p.id);}catch(e){}
     var vb=document.getElementById('pinVerified');if(vb){vb.textContent=p.verified?'✅ Verified':'';vb.style.display=p.verified?'':'none';}
     var rb=document.getElementById('pinRoleBadge');if(rb){var pr=(p.role==='local')?'local':'traveller';rb.textContent=pr==='local'?'🇭🇰 Local Host':'✈️ Traveller';rb.classList.toggle('city-host',pr==='local');}
     var lc=document.getElementById('pinLoc');if(lc)lc.textContent=mapCatEmoji(p.category)+' '+(p.location||'Hong Kong');
@@ -2781,6 +2808,177 @@ function renderHookChatList(){
     });
   }catch(e){}
 }
+// ---- Initiative 2: hangout-window photo verification + passion logging ----
+var _logPinId=null,_logFile=null,_logTakenAt=0;
+function fmtWhen(ts){try{return new Date(ts).toLocaleString(undefined,{weekday:'short',hour:'numeric',minute:'2-digit'});}catch(e){return '';};}
+function pinWindow(p){
+  try{
+    var s=new Date(p.starts_at||p.ts||Date.now()).getTime();
+    var e=new Date(p.ends_at||((p.ts||Date.now())+6*3600*1000)).getTime();
+    return {start:s,end:e};
+  }catch(e){var n=Date.now();return {start:n,end:n+6*3600*1000};}
+}
+function openLogSheet(pinId){
+  try{
+    var p=findPin(pinId);if(!p){toast('Hook not found.');return;}
+    var me=hookNick();
+    if(!(p.members||[]).some(function(m){return m.nick===me;})){toast('Join this hook first to log photos.');return;}
+    _logPinId=pinId;_logFile=null;_logTakenAt=0;
+    var t=document.getElementById('logHookName');if(t)t.textContent=p.location||'Hook';
+    var w=pinWindow(p);
+    var wt=document.getElementById('logWindow');if(wt)wt.textContent='Hangout window: '+fmtWhen(w.start)+' → '+fmtWhen(w.end)+' (+2h grace for the badge)';
+    var sel=document.getElementById('logActivity');
+    if(sel){for(var i=0;i<sel.options.length;i++){if(sel.options[i].text===p.category){sel.selectedIndex=i;break;}}}
+    var pv=document.getElementById('logPreview');if(pv)pv.innerHTML='';
+    var pi=document.getElementById('logPhotoInput');if(pi)pi.value='';
+    var btn=document.getElementById('logUploadBtn');if(btn){btn.disabled=false;btn.textContent='Upload Log';}
+    updateOutboxNote();
+    var o=document.getElementById('logHangoutModal');if(o)o.classList.remove('hidden');
+  }catch(e){}
+}
+function closeLogSheet(){try{_logPinId=null;_logFile=null;var o=document.getElementById('logHangoutModal');if(o)o.classList.add('hidden');}catch(e){}}
+function handleLogPhoto(input){
+  try{
+    var f=input.files&&input.files[0];if(!f)return;
+    _logFile=f;_logTakenAt=f.lastModified||Date.now();
+    var pv=document.getElementById('logPreview');
+    if(pv){pv.innerHTML='';var im=document.createElement('img');im.src=URL.createObjectURL(f);im.style.cssText='width:100%;max-height:180px;object-fit:cover;border-radius:12px;';pv.appendChild(im);
+      var cap=document.createElement('div');cap.className='muted small';cap.textContent='Taken: '+fmtWhen(_logTakenAt);pv.appendChild(cap);}
+  }catch(e){}
+}
+function fileToDataURL(file,cb){try{var r=new FileReader();r.onload=function(e){cb(e.target.result);};r.onerror=function(){cb(null);};r.readAsDataURL(file);}catch(e){cb(null);}}
+function dataURLtoFile(du,name){
+  try{
+    var arr=du.split(','),mime=(arr[0].match(/:(.*?);/)||[])[1]||'image/jpeg';
+    var bstr=atob(arr[1]),n=bstr.length,u8=new Uint8Array(n);
+    for(var i=0;i<n;i++)u8[i]=bstr.charCodeAt(i);
+    return new File([u8],name||'log.jpg',{type:mime});
+  }catch(e){return null;}
+}
+function queueLog(hookId,act,taken,nick,du){
+  try{
+    ETIE.photoOutbox=ETIE.photoOutbox||[];
+    ETIE.photoOutbox.push({hookId:hookId,activity:act,takenAt:taken,nick:nick,dataUrl:du||null,ts:Date.now()});
+    saveState();updateOutboxNote();
+  }catch(e){}
+}
+function updateOutboxNote(){
+  try{
+    var n=document.getElementById('logOutboxNote');if(!n)return;
+    var q=(ETIE.photoOutbox||[]).length;
+    n.style.display=q?'':'none';
+    if(q)n.textContent=q+' photo'+(q===1?'':'s')+' queued for upload (offline).';
+  }catch(e){}
+}
+function submitHangoutLog(){
+  try{
+    var p=findPin(_logPinId);if(!p){toast('Hook not found.');return;}
+    if(!_logFile){toast('Choose a photo first.');return;}
+    var sel=document.getElementById('logActivity');
+    var act=sel?sel.options[sel.selectedIndex].text:'';
+    var taken=_logTakenAt||Date.now();
+    var w=pinWindow(p);
+    var ok=taken>=w.start-5*60*1000&&taken<=w.end+2*3600*1000;
+    var pid=p.cloudId||p.id, me=hookNick(), file=_logFile;
+    var btn=document.getElementById('logUploadBtn');
+    var restore=function(){if(btn){btn.disabled=false;btn.textContent='Upload Log';}};
+    var finishUpload=function(url){
+      try{
+        restore();
+        if(!url){fileToDataURL(file,function(du){queueLog(pid,act,taken,me,du);toast('Upload failed — queued for retry.');closeLogSheet();updateOutboxNote();});return;}
+        window.EtieCloud.pushHangoutLog({hookId:pid,nick:me,photoUrl:url,activity:act,takenAt:new Date(taken).toISOString(),verified:ok}).then(function(saved){
+          if(ok&&saved)bumpPassion(act);
+          toast(ok?('⚡ Verified Live Log · '+fmtWhen(taken)):'Logged — outside the window, no badge this time.');
+          closeLogSheet();renderPinLogs(p.id);
+        });
+      }catch(e){restore();}
+    };
+    if(!navigator.onLine){fileToDataURL(file,function(du){queueLog(pid,act,taken,me,du);toast('Offline — queued, will upload on reconnect.');closeLogSheet();updateOutboxNote();});return;}
+    if(btn){btn.disabled=true;btn.textContent='Uploading…';}
+    if(window.EtieCloud&&window.EtieCloud.uploadPhoto){
+      window.EtieCloud.uploadPhoto(file,'log').then(function(url){finishUpload(url||null);}).catch(function(){
+        fileToDataURL(file,function(du){restore();queueLog(pid,act,taken,me,du);toast('Upload failed — queued for retry.');closeLogSheet();updateOutboxNote();});
+      });
+    }else{
+      fileToDataURL(file,function(du){restore();queueLog(pid,act,taken,me,du);toast('Offline — queued, will upload on reconnect.');closeLogSheet();updateOutboxNote();});
+    }
+  }catch(e){}
+}
+function processPhotoOutbox(){
+  try{
+    var q=ETIE.photoOutbox||[];if(!q.length)return;
+    if(!navigator.onLine)return;
+    if(!window.EtieCloud||!window.EtieCloud.uploadPhoto||!isSignedIn())return;
+    var it=q[0];
+    var pin=null;
+    try{
+      var all=allMapPins()||[];
+      for(var i=0;i<all.length;i++){if(all[i]&&(all[i].id===it.hookId||all[i].cloudId===it.hookId)){pin=all[i];break;}}
+    }catch(e){}
+    if(!pin){ETIE.photoOutbox.shift();saveState();setTimeout(processPhotoOutbox,500);return;}
+    if(!it.dataUrl){ETIE.photoOutbox.shift();saveState();setTimeout(processPhotoOutbox,500);return;}
+    var f=dataURLtoFile(it.dataUrl,'log.jpg');
+    if(!f){ETIE.photoOutbox.shift();saveState();setTimeout(processPhotoOutbox,500);return;}
+    window.EtieCloud.uploadPhoto(f,'log').then(function(url){
+      if(!url){setTimeout(processPhotoOutbox,10000);return;}
+      var w=pinWindow(pin);
+      var vok=it.takenAt>=w.start-5*60*1000&&it.takenAt<=w.end+2*3600*1000;
+      window.EtieCloud.pushHangoutLog({hookId:(pin.cloudId||pin.id),nick:it.nick,photoUrl:url,activity:it.activity,takenAt:new Date(it.takenAt).toISOString(),verified:vok}).then(function(saved){
+        if(vok&&saved)bumpPassion(it.activity);
+        ETIE.photoOutbox.shift();saveState();updateOutboxNote();
+        if((ETIE.photoOutbox||[]).length)setTimeout(processPhotoOutbox,1500);
+        else toast('Queued logs uploaded.');
+      });
+    }).catch(function(){setTimeout(processPhotoOutbox,10000);});
+  }catch(e){}
+}
+function bumpPassion(act){
+  try{
+    if(!act)return;
+    ETIE.traveller.activityStats=ETIE.traveller.activityStats||{};
+    ETIE.traveller.activityStats[act]=(ETIE.traveller.activityStats[act]||0)+1;
+    saveState();renderPassions();
+  }catch(e){}
+}
+function passionEmoji(tag){
+  var m={'Salsa':'💃','Football':'⚽','Coffee':'☕'};
+  if(m[tag])return m[tag];
+  try{return mapCatEmoji(tag);}catch(e){return '⚡';}
+}
+function renderPassions(){
+  try{
+    var box=document.getElementById('donePassions');if(!box)return;
+    box.innerHTML='';
+    var st={};try{st=ETIE.traveller.activityStats||{};}catch(e){}
+    var keys=Object.keys(st).filter(function(k){return st[k]>0;}).sort(function(a,b){return st[b]-st[a];});
+    if(!keys.length){var e=document.createElement('span');e.className='muted small';e.textContent='No verified logs yet — log a hangout photo to earn badges.';box.appendChild(e);return;}
+    keys.forEach(function(k){var s=document.createElement('span');s.className='chip active';s.textContent=passionEmoji(k)+' '+k+' Regular · '+st[k]+' Verified Log'+(st[k]===1?'':'s');box.appendChild(s);});
+  }catch(e){}
+}
+function renderPinLogs(pinId){
+  try{
+    var p=findPin(pinId);if(!p)return;
+    var box=document.getElementById('pinLogs');if(!box)return;
+    box.innerHTML='';box.style.display='none';
+    var w=pinWindow(p);
+    var wt=document.getElementById('pinWindow');
+    if(wt){wt.textContent='Hangout window: '+fmtWhen(w.start)+' → '+fmtWhen(w.end);wt.style.display='';}
+    if(!window.EtieCloud||!window.EtieCloud.fetchHookLogs)return;
+    window.EtieCloud.fetchHookLogs(p.cloudId||p.id,function(rows){
+      try{
+        var verified=(rows||[]).filter(function(r){return r&&r.is_live_verified;});
+        if(!verified.length)return;
+        verified.slice(0,3).forEach(function(r){
+          var d=document.createElement('div');d.className='live-badge';
+          var ts='';try{ts=new Date(r.taken_at).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});}catch(e){}
+          d.textContent='⚡ Verified Live Log · '+ts;
+          box.appendChild(d);
+        });
+        box.style.display='';
+      }catch(e){}
+    });
+  }catch(e){}
+}
 function sendHookMessage(){
   try{
     var inp=document.getElementById('chatMsgInput');if(!inp)return;
@@ -2799,6 +2997,8 @@ document.addEventListener('DOMContentLoaded',function(){
   restoreAll();
   try{ initHKMap(); renderMapFilter(); renderMapPins(); }catch(e){}
   try{ renderDerivedBadge(); locateUser(); }catch(e){}
+  try{ processPhotoOutbox(); }catch(e){}
+  try{ window.addEventListener('online',function(){try{processPhotoOutbox();}catch(e){}}); }catch(e){}
   try{
     var r=new URLSearchParams(window.location.search).get('role');
     if(r==='traveller'||r==='local') setRole(r);
@@ -2821,7 +3021,7 @@ document.addEventListener('DOMContentLoaded',function(){
   var li=document.getElementById('localChatInput');if(li)li.addEventListener('keydown',function(e){if(e.key==='Enter')sendChat('local','localChatInput');});
   var li9=document.getElementById('localChatInput9');if(li9)li9.addEventListener('keydown',function(e){if(e.key==='Enter')sendChat('local','localChatInput9');});
   var pi=document.getElementById('chatPopupInput');if(pi)pi.addEventListener('keydown',function(e){if(e.key==='Enter')sendChatPopup();});
-  document.addEventListener('keydown',function(e){if(e.key==='Escape'){try{closeChatPopup();}catch(e2){}try{closeAdmin();}catch(e3){}try{closeAvatarMenu();}catch(e4){}try{closeChatDrawer();}catch(e5){}try{closePinDetail();}catch(e6){}try{closeGroupModal();}catch(e7){}try{closeDropHook();}catch(e8){}}});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'){try{closeChatPopup();}catch(e2){}try{closeAdmin();}catch(e3){}try{closeAvatarMenu();}catch(e4){}try{closeChatDrawer();}catch(e5){}try{closePinDetail();}catch(e6){}try{closeGroupModal();}catch(e7){}try{closeDropHook();}catch(e8){}try{closeLogSheet();}catch(e9){}}});
   document.addEventListener('click',function(e){try{var m=document.getElementById('avatarMenu');if(m&&e.target&&!m.contains(e.target))closeAvatarMenu();}catch(err){}});
   // re-sync header whenever the tab regains focus (session may have landed elsewhere)
   try{

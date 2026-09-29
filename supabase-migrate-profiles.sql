@@ -17,3 +17,4 @@ alter table public.etie_profiles add column if not exists photo_url text default
 alter table public.etie_profiles add column if not exists memories jsonb default '[]'::jsonb;
 alter table public.etie_profiles add column if not exists role text default 'traveller';
 alter table public.etie_profiles add column if not exists recommended_spots jsonb default '[]'::jsonb;
+alter table public.etie_profiles add column if not exists activity_stats jsonb default '{}'::jsonb;

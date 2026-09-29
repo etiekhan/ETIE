@@ -13,6 +13,8 @@ create table if not exists public.hooks (
   lng double precision not null,
   content text not null default '',
   activity_hook text not null default '',
+  starts_at timestamptz,
+  ends_at timestamptz,
   members jsonb not null default '[]'::jsonb,
   pending jsonb not null default '[]'::jsonb,
   status text not null default 'open',
@@ -29,6 +31,8 @@ create policy "hooks update own" on public.hooks for update using (auth.uid() = 
 drop policy if exists "hooks delete own" on public.hooks;
 create policy "hooks delete own" on public.hooks for delete using (auth.uid() = user_id);
 alter table public.hooks add column if not exists activity_hook text not null default '';
+alter table public.hooks add column if not exists starts_at timestamptz;
+alter table public.hooks add column if not exists ends_at timestamptz;
 create index if not exists hooks_updated_idx on public.hooks(updated_at desc);
 create index if not exists hooks_role_idx on public.hooks(role);
 create index if not exists hooks_category_idx on public.hooks(category);

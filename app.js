@@ -11,7 +11,7 @@ function etieDefaults() {
     trip: { destination: 'Hong Kong', dates: '', dateFrom: todayISO(), dateTo: '', country: 'HK', district: 'Central / Soho' },
     traveller: {
       nickname: '',
-      nationality: '',
+      nationality: 'HK',
       verificationMethods: [],
       interests: [],
       sidequestModifiers: {},
@@ -27,7 +27,7 @@ function etieDefaults() {
     },
     local: {
       displayName: '',
-      city: 'Hong Kong', district: 'Central / Soho', age: '', nationality: '',
+      city: 'Hong Kong', district: 'Central / Soho', age: '', nationality: 'HK',
       verificationMethods: [],
       interests: [],
       sidequestModifiers: {},

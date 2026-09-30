@@ -532,8 +532,6 @@ function gateState(){
   try{
     var signed=false;try{signed=isSignedIn();}catch(e){}
     if(!signed)return 'signin';
-    var inv=false;try{inv=!!ETIE.inviteOk;}catch(e){}
-    if(!inv)return 'invite';
     var cloud=false;try{cloud=!!ETIE.cloudOnboarded;}catch(e){}
     var local=false;try{local=!!ETIE.profileComplete||isProfileComplete();}catch(e){}
     if(!(cloud||local))return 'profile';
@@ -560,17 +558,6 @@ function renderGateBody(st){
       var btn=document.createElement('button');btn.className='primary';btn.textContent='Sign in with Google';btn.style.width='100%';
       btn.onclick=function(){try{window.EtieCloud.signInWithGoogle();}catch(e){}};
       b.appendChild(p);b.appendChild(btn);return;
-    }
-    if(st==='invite'){
-      var p2=document.createElement('p');p2.className='muted';p2.textContent='This network is invite-only. Enter the code a member shared with you.';
-      var inp=document.createElement('input');inp.id='inviteCodeInput';inp.placeholder='e.g. ETIE-HK-A7Q2';inp.autocomplete='off';
-      inp.style.cssText='width:100%;box-sizing:border-box;margin:10px 0;';
-      inp.onkeydown=function(e){if(e.key==='Enter')verifyInviteCode();};
-      var btn2=document.createElement('button');btn2.className='primary';btn2.textContent='Verify & Enter';btn2.style.width='100%';
-      btn2.onclick=function(){verifyInviteCode();};
-      var sw=document.createElement('button');sw.className='secondary';sw.textContent='Switch account';sw.style.cssText='width:100%;margin-top:8px;';
-      sw.onclick=function(){try{window.EtieCloud.signOut();}catch(e){}};
-      b.appendChild(p2);b.appendChild(inp);b.appendChild(btn2);b.appendChild(sw);return;
     }
     var tr=null;try{tr=ETIE.traveller||{};}catch(e){}
     var haveNick=false,havePhoto=false,haveVerify=false,haveHook=false;

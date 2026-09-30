@@ -522,7 +522,36 @@ html,body{height:100%;width:100%;margin:0;padding:0;overflow:hidden;background:#
 .chat-drawer-foot{display:flex;gap:8px;padding:10px;border-top:1px solid rgba(255,255,255,.1);}
 .chat-drawer-foot input{flex:1;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);border-radius:12px;padding:10px 12px;color:#fff;}
 .chat-drawer-foot .primary{background:#f43f5e!important;border-color:#f43f5e!important;padding:10px 16px;}
-@media(max-width:640px){.chat-drawer{right:0;left:0;bottom:0;width:auto;max-height:70vh;border-radius:18px 18px 0 0;}
+@media(max-width:640px){.chat-drawer{right:0;left:0;bottom:0;width:auto;max-height:70vh;border-radius:18px 18px 0 0;}}
+
+/* Quest Banner */
+.quest-banner{background:linear-gradient(135deg,rgba(244,63,94,.15),rgba(251,113,133,.15));border:1px solid rgba(244,63,94,.3);border-radius:12px;padding:8px 12px;}
+.quest-banner.hidden{display:none;}
+.quest-icon{flex-shrink:0;}
+.quest-content{overflow:hidden;}
+.quest-title{font-size:14px;}
+.quest-sub{font-size:11px;}
+.quest-action{background:rgba(255,255,255,.1)!important;border-color:rgba(255,255,255,.2)!important;color:#fff!important;}
+.quest-complete{background:linear-gradient(135deg,#f43f5e,#fb7185)!important;border:none!important;}
+
+/* Quest Camera Modal */
+#questCameraModal .chat-popup{padding:0;max-height:90vh;display:flex;flex-direction:column;}
+#questCameraModal .chat-popup-body{padding:8px;flex:1;overflow-y:auto;}
+#questCameraModal video,#questCameraModal canvas{border-radius:12px;background:#000;}
+#questCaptured{border-radius:12px;}
+#questCamOverlay{pointer-events:none;}
+#questCamGuidance{font-weight:600;font-size:16px;}
+#questRetakeBtn{display:none;}
+#questRetakeBtn.show{display:inline-flex;}
+#questNextBtn{flex:1;}
+
+/* Quest Badge on Memory Cards */
+.mem-card .quest-badge{position:absolute;top:8px;left:8px;z-index:3;background:rgba(244,63,94,.95);border:1px solid rgba(255,255,255,.3);border-radius:6px;padding:2px 8px;font-size:10px;font-weight:700;color:#fff;white-space:nowrap;box-shadow:0 2px 8px rgba(244,63,94,.4);}
+.featured-card .quest-badge{position:absolute;top:8px;left:8px;z-index:3;background:rgba(244,63,94,.95);border:1px solid rgba(255,255,255,.3);border-radius:6px;padding:2px 8px;font-size:10px;font-weight:700;color:#fff;white-space:nowrap;}
+.mem-strip .mem-card .quest-badge,.featured-grid .featured-card .quest-badge{display:block;}
+
+/* Quest of the Week styles */
+.quest-week-badge{display:inline-block;background:linear-gradient(135deg,#f43f5e,#fb7185);color:#fff;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700;margin-right:8px;vertical-align:middle;}
 .overlay-panel{top:64px;max-height:calc(100vh - 150px);}
 .glass-nav{top:12px;}#mapFilterBar.map-filter{top:66px;}#mapRoleBar.map-filter{top:118px;}
 .logo-float{top:14px;left:14px;font-size:22px;}.auth-float{top:12px;right:14px;}}

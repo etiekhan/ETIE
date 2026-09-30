@@ -362,8 +362,62 @@
     </div>
   </div>
 </div>
+<!-- Set Custom Quest Modal -->
+<div class="chat-overlay hidden" id="setQuestModal" onclick="if(event.target===this)closeSetQuestModal()">
+  <div class="chat-popup glass-modal" role="dialog" aria-modal="true" aria-label="Set Custom Quest" style="width:min(420px,calc(100vw - 24px));">
+    <div class="chat-popup-head"><div><strong>✍️ Set Custom Quest</strong><div class="muted small">Create a micro-challenge for your group</div></div><button class="secondary" onclick="closeSetQuestModal()" aria-label="Close" style="padding:8px 12px;">✕</button></div>
+    <div class="chat-popup-body" style="background:transparent;">
+      <div class="field"><label>Quest Title</label>
+        <input id="setQuestTitle" maxlength="60" placeholder="e.g. 'Best group selfie at sunset'" style="width:100%;padding:12px;border:1px solid rgba(255,255,255,.2);border-radius:10px;background:rgba(255,255,255,.05);color:#fff;">
+      </div>
+      <p class="muted small" style="margin-top:8px;">The quest will appear in the chat for all members.</p>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+        <button class="secondary" onclick="closeSetQuestModal()">Cancel</button>
+        <button class="primary" onclick="saveCustomQuest()">Save Quest</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Quest Camera Modal (Dual-Snap) -->
+<div class="chat-overlay hidden" id="questCameraModal" onclick="if(event.target===this)closeQuestCamera()">
+  <div class="chat-popup glass-modal" role="dialog" aria-modal="true" aria-label="Quest Camera" style="width:min(95vw,480px);max-height:90vh;">
+    <div class="chat-popup-head"><div><strong>📸 Quest Snap — Step <span id="questCamStep">1</span>/2</strong><div class="muted small" id="questCamLabel">Step 1: Group/Environment (rear camera)</div></div><button class="secondary" onclick="closeQuestCamera()" aria-label="Close" style="padding:8px 12px;">✕</button></div>
+    <div class="chat-popup-body" style="background:transparent;padding:8px;">
+      <div style="position:relative;background:#000;border-radius:12px;overflow:hidden;aspect-ratio:4/3;">
+        <video id="questVideo" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover;display:none;"></video>
+        <canvas id="questCanvas" style="width:100%;height:100%;display:none;"></canvas>
+        <div id="questCaptured" style="position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:#000;">
+          <img id="questCapturedImg" style="max-width:100%;max-height:100%;object-fit:contain;">
+        </div>
+        <div id="questCamOverlay" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;">
+          <div style="text-align:center;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.8);">
+            <div id="questCamGuidance" style="font-size:14px;margin-bottom:8px;"></div>
+            <div class="muted small" style="font-size:12px;">Tap screen to capture</div>
+          </div>
+        </div>
+      </div>
+      <div id="questCamHint" class="muted small" style="margin-top:8px;text-align:center;"></div>
+      <div style="display:flex;gap:8px;justify-content:center;margin-top:12px;">
+        <button class="secondary" id="questRetakeBtn" onclick="retakeQuestPhoto()" style="display:none;">Retake</button>
+        <button class="primary" id="questNextBtn" onclick="nextQuestPhotoStep()">Capture</button>
+      </div>
+    </div>
+  </div>
+</div>
 <div id="chatDrawer" class="chat-drawer hidden" role="dialog" aria-label="Hook group chat">
   <div class="chat-drawer-head"><div><strong id="chatHookTitle">—</strong><div class="muted small" id="chatHookSub">—</div></div><button class="secondary" onclick="closeChatDrawer()" aria-label="Close chat" style="padding:8px 12px;">✕</button></div>
+  <!-- Quest Banner -->
+  <div id="questBanner" class="quest-banner hidden" style="margin:8px 12px;">
+    <div class="quest-header" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <span class="quest-icon" style="font-size:18px;">🏆</span>
+      <div class="quest-content" style="flex:1;min-width:0;">
+        <div class="quest-title" style="font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
+        <div class="quest-sub" style="font-size:11px;color:rgba(255,255,255,.7);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
+      </div>
+      <button class="quest-action secondary" style="padding:6px 10px;font-size:12px;white-space:nowrap;" onclick="openSetQuestModal()">✍️ Set Custom Quest</button>
+      <button class="quest-complete primary" style="padding:6px 10px;font-size:12px;display:none;" onclick="openQuestCamera()">Complete Quest & Take Snap</button>
+    </div>
+  </div>
   <div id="chatMemories" class="mem-strip" style="display:none;margin:0 12px;"></div>
   <div class="chat-drawer-list" id="chatMsgList"></div>
   <div class="chat-drawer-foot"><input id="chatMsgInput" placeholder="Message the group..." onkeydown="if(event.key==='Enter')sendHookMessage()"><button class="primary" onclick="sendHookMessage()">Send</button></div>
@@ -377,12 +431,12 @@
 </div>
 <div class="toast" id="toast"></div>
 
-  <script src="data/locations.js?v=52"></script>
-    <script src="match.js?v=52"></script>
+  <script src="data/locations.js?v=53"></script>
+    <script src="match.js?v=53"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="supabase-config.js?v=52"></script>
-  <script src="app.js?v=52"></script>
-  <script src="supabase-sync.js?v=52"></script>
+  <script src="supabase-config.js?v=53"></script>
+  <script src="app.js?v=53"></script>
+  <script src="supabase-sync.js?v=53"></script>
 </body>
 </html>

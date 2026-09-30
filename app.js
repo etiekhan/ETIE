@@ -3212,6 +3212,7 @@ function openChatDrawer(pinId){
     var t=document.getElementById('chatHookTitle');if(t)t.textContent=p.location||'Group chat';
     var s=document.getElementById('chatHookSub');
     if(s)s.textContent=((p.members||[]).map(function(m){return m.nick;}).join(' · ')||'Open hook');
+    renderQuestBanner(p);
     renderHookChat();
     var d=document.getElementById('chatDrawer');if(d)d.classList.remove('hidden');
     try{fillMemoryStrip('chatMemories',p.authorId||null);}catch(e){}
@@ -3551,6 +3552,254 @@ function openHandshakeModal(log){
   }catch(e){}
 }
 function closeHandshakeModal(){try{_handshakeLogId=null;if(_handshakeTimer){clearInterval(_handshakeTimer);_handshakeTimer=null;}var o=document.getElementById('handshakeModal');if(o)o.classList.add('hidden');}catch(e){}}
+// ---- Quest / Custom Quest Engine ----
+var _questPinId=null;
+var _questStep=1;
+var _questPhotos=[null,null];
+var _questStream=null;
+var _questFacing='environment';
+function openSetQuestModal(){
+  try{
+    var p=findPin(_chatPinId);if(!p)return;
+    _questPinId=p.id;
+    var inp=document.getElementById('setQuestTitle');
+    if(inp){inp.value=''; inp.placeholder='e.g. Best group selfie at sunset';}
+    var o=document.getElementById('setQuestModal');if(o)o.classList.remove('hidden');
+  }catch(e){}
+}
+function closeSetQuestModal(){try{var o=document.getElementById('setQuestModal');if(o)o.classList.add('hidden');}catch(e){}}
+function saveCustomQuest(){
+  try{
+    var inp=document.getElementById('setQuestTitle');
+    var title=inp?inp.value.trim():'';
+    if(!title){toast('Enter a quest title.');return;}
+    if(title.length>60){toast('Max 60 characters.');return;}
+    var p=findPin(_questPinId);if(!p)return;
+    p.quest={title:title,setBy:hookNick(),setAt:Date.now(),completed:false};
+    storePin(p);
+    closeSetQuestModal();
+    renderQuestBanner(p);
+    toast('Quest set: '+title);
+  }catch(e){toast('Could not set quest.');}
+}
+function renderQuestBanner(p){
+  try{
+    var banner=document.getElementById('questBanner');
+    if(!banner)return;
+    var q=p?.quest;
+    if(!q){banner.classList.add('hidden');return;}
+    banner.classList.remove('hidden');
+    var titleEl=banner.querySelector('.quest-title');
+    var subEl=banner.querySelector('.quest-sub');
+    var actionBtn=banner.querySelector('.quest-action');
+    var completeBtn=banner.querySelector('.quest-complete');
+    if(titleEl)titleEl.textContent=q.title;
+    if(subEl)subEl.textContent='Set by '+q.setBy+' · '+fmtWhen(q.setAt);
+    if(actionBtn)actionBtn.style.display=q.completed?'none':'inline-flex';
+    if(completeBtn)completeBtn.style.display=q.completed?'none':'inline-flex';
+  }catch(e){}
+}
+function openQuestCamera(){
+  try{
+    var p=findPin(_chatPinId);if(!p||!p.quest||p.quest.completed){toast('No active quest.');return;}
+    _questPinId=p.id;
+    _questStep=1;
+    _questPhotos=[null,null];
+    _questFacing='environment';
+    var stepEl=document.getElementById('questCamStep');
+    var labelEl=document.getElementById('questCamLabel');
+    var guidanceEl=document.getElementById('questCamGuidance');
+    var hintEl=document.getElementById('questCamHint');
+    var video=document.getElementById('questVideo');
+    var canvas=document.getElementById('questCanvas');
+    var captured=document.getElementById('questCaptured');
+    var capturedImg=document.getElementById('questCapturedImg');
+    var overlay=document.getElementById('questCamOverlay');
+    var retakeBtn=document.getElementById('questRetakeBtn');
+    var nextBtn=document.getElementById('questNextBtn');
+    if(stepEl)stepEl.textContent='1';
+    if(labelEl)labelEl.textContent='Step 1: Group/Environment (rear camera)';
+    if(guidanceEl)guidanceEl.textContent='📷 Frame the group & surroundings';
+    if(hintEl)hintEl.textContent='Tap the screen or press Capture';
+    if(video){video.style.display='none'; video.srcObject=null;}
+    if(canvas){canvas.style.display='none';}
+    if(captured){captured.style.display='none';}
+    if(overlay){overlay.style.display='flex';}
+    if(retakeBtn){retakeBtn.classList.remove('show');}
+    if(nextBtn){nextBtn.textContent='Capture'; nextBtn.disabled=false;}
+    startQuestCamera();
+    var o=document.getElementById('questCameraModal');if(o)o.classList.remove('hidden');
+  }catch(e){toast('Could not open camera.');}
+}
+function startQuestCamera(){
+  try{
+    var video=document.getElementById('questVideo');
+    if(!video) return;
+    var constraints={video:{facingMode:{exact:_questFacing}},audio:false};
+    navigator.mediaDevices.getUserMedia(constraints).then(function(stream){
+      _questStream=stream;
+      video.srcObject=stream;
+      video.style.display='block';
+      video.onloadedmetadata=function(){video.play();};
+    }).catch(function(err){
+      console.warn('Camera error:',err);
+      toast('Camera access denied or unavailable.');
+    });
+  }catch(e){}
+}
+function stopQuestCamera(){
+  try{if(_questStream){_questStream.getTracks().forEach(function(t){t.stop();});_questStream=null;}}catch(e){}
+}
+function captureQuestPhoto(){
+  try{
+    var video=document.getElementById('questVideo');
+    var canvas=document.getElementById('questCanvas');
+    var captured=document.getElementById('questCaptured');
+    var capturedImg=document.getElementById('questCapturedImg');
+    var overlay=document.getElementById('questCamOverlay');
+    var retakeBtn=document.getElementById('questRetakeBtn');
+    var nextBtn=document.getElementById('questNextBtn');
+    if(!video||!canvas)return;
+    var ctx=canvas.getContext('2d');
+    canvas.width=video.videoWidth;
+    canvas.height=video.videoHeight;
+    ctx.drawImage(video,0,0,canvas.width,canvas.height);
+    _questPhotos[_questStep-1]=canvas.toDataURL('image/jpeg',0.85);
+    video.style.display='none';
+    canvas.style.display='none';
+    if(captured && capturedImg){
+      capturedImg.src=_questPhotos[_questStep-1];
+      captured.style.display='flex';
+    }
+    if(overlay)overlay.style.display='none';
+    if(retakeBtn)retakeBtn.classList.add('show');
+    if(nextBtn){
+      if(_questStep===1){
+        nextBtn.textContent='Next: Selfie';
+      }else{
+        nextBtn.textContent='Finish & Save';
+      }
+    }
+  }catch(e){}
+}
+function retakeQuestPhoto(){
+  try{
+    var video=document.getElementById('questVideo');
+    var canvas=document.getElementById('questCanvas');
+    var captured=document.getElementById('questCaptured');
+    var overlay=document.getElementById('questCamOverlay');
+    var retakeBtn=document.getElementById('questRetakeBtn');
+    var nextBtn=document.getElementById('questNextBtn');
+    _questPhotos[_questStep-1]=null;
+    if(video){video.style.display='block';}
+    if(canvas){canvas.style.display='none';}
+    if(captured){captured.style.display='none';}
+    if(overlay){overlay.style.display='flex';}
+    if(retakeBtn)retakeBtn.classList.remove('show');
+    if(nextBtn){nextBtn.textContent='Capture'; nextBtn.disabled=false;}
+  }catch(e){}
+}
+function nextQuestPhotoStep(){
+  try{
+    if(!_questPhotos[_questStep-1]){
+      captureQuestPhoto();
+      return;
+    }
+    if(_questStep===1){
+      _questStep=2;
+      _questFacing='user';
+      var stepEl=document.getElementById('questCamStep');
+      var labelEl=document.getElementById('questCamLabel');
+      var guidanceEl=document.getElementById('questCamGuidance');
+      var hintEl=document.getElementById('questCamHint');
+      if(stepEl)stepEl.textContent='2';
+      if(labelEl)labelEl.textContent='Step 2: Selfie (front camera)';
+      if(guidanceEl)guidanceEl.textContent='🤳 Quick selfie!';
+      if(hintEl)hintEl.textContent='Tap the screen or press Capture';
+      stopQuestCamera();
+      setTimeout(startQuestCamera,300);
+      var retakeBtn=document.getElementById('questRetakeBtn');
+      var nextBtn=document.getElementById('questNextBtn');
+      if(retakeBtn)retakeBtn.classList.remove('show');
+      if(nextBtn){nextBtn.textContent='Capture'; nextBtn.disabled=false;}
+    }else{
+      // Both photos captured, stitch and upload
+      finishQuestSnap();
+    }
+  }catch(e){}
+}
+function finishQuestSnap(){
+  try{
+    stopQuestCamera();
+    var p=findPin(_questPinId);if(!p||!p.quest)return;
+    if(!_questPhotos[0] || !_questPhotos[1]){toast('Both photos required.');return;}
+    // Stitch side-by-side
+    var canvas=document.createElement('canvas');
+    var ctx=canvas.getContext('2d');
+    var img1=new Image();
+    var img2=new Image();
+    img1.onload=function(){
+      img2.onload=function(){
+        var h=Math.max(img1.height,img2.height);
+        canvas.width=img1.width+img2.width;
+        canvas.height=h;
+        ctx.drawImage(img1,0,0,img1.width,h);
+        ctx.drawImage(img2,img1.width,0,img2.width,h);
+        var dataUrl=canvas.toDataURL('image/jpeg',0.85);
+        uploadQuestResult(p, dataUrl);
+      };
+      img2.src=_questPhotos[1];
+    };
+    img1.src=_questPhotos[0];
+    closeQuestCamera();
+  }catch(e){toast('Failed to stitch photos.');}
+}
+function uploadQuestResult(p, dataUrl){
+  try{
+    var me=hookNick();
+    var file=dataURLtoFile(dataUrl,'quest.jpg');
+    if(!file){toast('Failed to prepare image.');return;}
+    var btn=document.getElementById('questNextBtn');
+    if(btn){btn.disabled=true;btn.textContent='Uploading…';}
+    var act=p.quest?.title||'Quest';
+    var taken=Date.now();
+    var w=pinWindow(p);
+    var ok=taken>=w.start-5*60*1000&&taken<=w.end+2*3600*1000;
+    var pid=p.cloudId||p.id;
+    var restore=function(){if(btn){btn.disabled=false;btn.textContent='Finish & Save';}};
+    window.EtieCloud.uploadPhoto(file,'quest').then(function(url){
+      if(!url){restore();fileToDataURL(file,function(du){queueLog(pid,act,taken,me,du);toast('Upload failed — queued.');updateOutboxNote();});return;}
+      var logEntry={
+        hookId:pid,nick:me,photoUrl:url,activity:act,takenAt:new Date(taken).toISOString(),
+        verified:ok,questTitle:p.quest.title,questCompleted:true
+      };
+      window.EtieCloud.pushHangoutLog(logEntry).then(function(saved){
+        if(ok&&saved)bumpPassion(act);
+        // Mark quest completed
+        p.quest.completed=true;p.quest.completedAt=Date.now();p.quest.completedBy=me;
+        storePin(p);
+        renderQuestBanner(p);
+        toast('🏆 Quest completed! ⚡ Quest Completed: '+p.quest.title);
+        renderPinLogs(p.id);
+      });
+    }).catch(function(){
+      restore();
+      fileToDataURL(file,function(du){queueLog(pid,act,taken,me,du);toast('Upload failed — queued.');updateOutboxNote();});
+    });
+  }catch(e){toast('Upload failed.');}
+}
+function closeQuestCamera(){
+  try{stopQuestCamera();_questPinId=null;_questStep=1;_questPhotos=[null,null];_questFacing='environment';
+  var o=document.getElementById('questCameraModal');if(o)o.classList.add('hidden');}catch(e){}
+}
+function dataURLtoFile(du,name){
+  try{
+    var arr=du.split(','),mime=(arr[0].match(/:(.*?);/)||[])[1]||'image/jpeg';
+    var bstr=atob(arr[1]),n=bstr.length,u8=new Uint8Array(n);
+    for(var i=0;i<n;i++)u8[i]=bstr.charCodeAt(i);
+    return new File([u8],name||'img.jpg',{type:mime});
+  }catch(e){return null;}
+}
 function startHandshakeTimer(log){
   try{
     if(_handshakeTimer){clearInterval(_handshakeTimer);}
@@ -3700,8 +3949,15 @@ function renderPinLogs(pinId){
         if(!verified.length)return;
         verified.slice(0,3).forEach(function(r){
           var d=document.createElement('div');d.className='live-badge';
+          d.style.position='relative';
           var ts='';try{ts=new Date(r.taken_at).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});}catch(e){}
           d.textContent='⚡ Verified Live Log · '+ts;
+          if(r.questCompleted && r.questTitle){
+            var qb=document.createElement('span');qb.className='quest-badge';
+            qb.textContent='⚡ Quest Completed: '+r.questTitle;
+            qb.style.marginLeft='8px';
+            d.appendChild(qb);
+          }
           box.appendChild(d);
         });
         box.style.display='';

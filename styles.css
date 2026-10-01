@@ -524,6 +524,23 @@ html,body{height:100%;width:100%;margin:0;padding:0;overflow:hidden;background:#
 .chat-drawer-foot .primary{background:#f43f5e!important;border-color:#f43f5e!important;padding:10px 16px;}
 @media(max-width:640px){.chat-drawer{right:0;left:0;bottom:0;width:auto;max-height:70vh;border-radius:18px 18px 0 0;}}
 
+/* Pin Drawer (mobile bottom sheet) */
+.pin-drawer{position:fixed;z-index:900;bottom:0;left:0;right:0;max-height:85vh;background:rgba(18,18,20,.96);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.14);border-radius:20px 20px 0 0;overflow:hidden;color:#f5f3ef;display:flex;flex-direction:column;box-shadow:0 -12px 40px rgba(0,0,0,.5);}
+.pin-drawer.hidden{display:none;}
+.drawer-grab{width:40px;height:5px;background:rgba(255,255,255,.3);border-radius:3px;margin:8px auto 4px;}
+.drawer-top{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.1);}
+.pin-idrow{display:flex;gap:12px;align-items:center;}
+.pin-avatar{width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#f43f5e,#fb7185);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#fff;}
+.pin-title{font-size:22px;font-weight:800;padding:8px 16px 0;color:#fff;}
+.pin-drawer .muted.small{padding:0 16px 8px;}
+.pin-hook{padding:0 16px 8px;color:#fff;}
+.pin-drawer .chips,#pinMembers,#pinHostBox{padding:0 16px;}
+.pin-drawer .field{padding:0 16px;margin:8px 0;}
+.pin-drawer .pin-window,#pinLogs{padding:0 16px 8px;}
+.pin-drawer .mem-strip,#pinSpots{padding:0 16px 8px;}
+.pin-drawer .actions{padding:12px 16px;border-top:1px solid rgba(255,255,255,.1);display:flex;gap:8px;flex-wrap:wrap;}
+.pin-drawer .actions button{flex:1 1 auto;min-width:120px;}
+
 /* Quest Banner */
 .quest-banner{background:linear-gradient(135deg,rgba(244,63,94,.15),rgba(251,113,133,.15));border:1px solid rgba(244,63,94,.3);border-radius:12px;padding:8px 12px;}
 .quest-banner.hidden{display:none;}
@@ -665,3 +682,26 @@ html,body{height:100%;width:100%;margin:0;padding:0;overflow:hidden;background:#
 /* hook modal as slide-up bottom sheet */
 #dropHookModal{justify-content:center;}
 #dropHookModal .chat-popup{width:100%;max-width:640px;margin:0 auto;border-radius:20px 20px 0 0;}
+
+/* Profile Tabs */
+.profile-tabs{display:flex;gap:4px;}
+.tab-btn{flex:1;padding:10px 16px;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.7);font-weight:600;font-size:14px;transition:all .2s;}
+.tab-btn.active{background:linear-gradient(135deg,#f43f5e,#fb7185);border-color:transparent;color:#fff;box-shadow:0 4px 16px rgba(244,63,94,.4);}
+
+/* Mobile adjustments */
+@media(max-width:480px){
+  .chat-popup{width:100%!important;max-width:100%!important;}
+  #questCameraModal .chat-popup{width:100%!important;}
+  .pin-drawer{max-height:90vh;}
+  .quest-banner .quest-action,.quest-banner .quest-complete{font-size:11px;padding:5px 8px;}
+  .actions .primary,.actions .secondary{padding:10px 14px;}
+  .tab-btn{font-size:12px;padding:8px 10px;}
+  .featured-grid{grid-template-columns:1fr;}
+  .featured-card{min-height:140px;}
+  .featured-card img{height:100px;}
+}
+@media(max-width:640px){
+  #mapFilterBar.map-filter{top:60px;}
+  .glass-nav{top:10px;}
+  .pin-drawer{max-height:90vh;}
+}

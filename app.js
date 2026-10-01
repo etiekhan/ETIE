@@ -2835,7 +2835,8 @@ function initHKMap(){
     if(_map||!window.L)return;
     var el=document.getElementById('hkMap');if(!el)return;
     var _anchor=getAnchor();
-    _map=L.map('hkMap',{zoomControl:false,minZoom:11,maxZoom:20,maxBounds:anchorBounds(_anchor),maxBoundsViscosity:1.0,worldCopyJump:true}).setView([_anchor.lat,_anchor.lng],HK_ZOOM);
+    var globalBounds=[[-85,-180],[85,180]];
+    _map=L.map('hkMap',{zoomControl:false,minZoom:2,maxZoom:20,maxBounds:globalBounds,maxBoundsViscosity:0.3,worldCopyJump:true}).setView([_anchor.lat,_anchor.lng],HK_ZOOM);
     try{L.control.zoom({position:'bottomright'}).addTo(_map);}catch(e){}
     L.tileLayer('https://tiles.stadiamaps.com/tiles/stamen_toner_background/{z}/{x}/{y}{r}.png?api_key=cc9c3230-65b0-44c0-8361-2c86413b0744',{maxZoom:20,attribution:'&copy; <a href="https://stadiamaps.com/">Stadia Maps</a> &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}).addTo(_map);
     _map.on('click',onMapTap);
@@ -3542,6 +3543,35 @@ function toggleAreaSidebar(){
     _areasCollapsed=!_areasCollapsed;
     var b=document.getElementById('areaList');if(b)b.style.display=_areasCollapsed?'none':'';
     var t=document.getElementById('areaToggle');if(t)t.textContent=_areasCollapsed?'▸ Areas':'▾ Areas';
+  }catch(e){}
+}
+function flyToArea(lat,lng,label){
+  try{
+    if(!window.L||!_map)return;
+    _map.setMaxBounds([[lat-1.1,lng-1.8],[lat+1.1,lng+1.8]]);
+    _map.flyTo([lat,lng],13,{duration:1.0});
+    toast(label||'Flying there.');
+  }catch(e){}
+}
+function toggleGlobalView(){
+  try{
+    if(!window.L||!_map)return;
+    var btn=document.querySelector('.fab-globe');
+    var isGlobal=_map.getZoom()<5;
+    if(!isGlobal){
+      // Go global
+      _map.setMaxBounds([[-85,-180],[85,180]]);
+      _map.flyTo([22.3,114.1],3,{duration:1.5});
+      if(btn)btn.classList.add('active');
+      toast('🌍 Global view — drag to explore');
+    }else{
+      // Return to HK
+      var a=getAnchor();
+      _map.setMaxBounds([[-85,-180],[85,180]]);
+      _map.flyTo([a.lat,a.lng],HK_ZOOM,{duration:1.5});
+      if(btn)btn.classList.remove('active');
+      toast('🇭🇰 Back to Hong Kong');
+    }
   }catch(e){}
 }
 function flyToArea(lat,lng,label){

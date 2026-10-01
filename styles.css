@@ -651,9 +651,13 @@ html,body{height:100%;width:100%;margin:0;padding:0;overflow:hidden;background:#
 .featured-pin{position:absolute;top:8px;right:8px;z-index:2;}
 .featured-pin button{width:32px;height:32px;border-radius:50%;background:rgba(0,0,0,.7);border:1px solid rgba(255,255,255,.3);color:#fff;font-size:16px;display:flex;align-items:center;justify-content:center;}
 .featured-pin button.pinned{background:#f43f5e;border-color:#f43f5e;}
-.profile-tabs{display:flex;gap:4px;}
-.tab-btn{flex:1;padding:10px 16px;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.7);font-weight:600;font-size:14px;transition:all .2s;}
-.tab-btn.active{background:linear-gradient(135deg,#f43f5e,#fb7185);border-color:transparent;color:#fff;box-shadow:0 4px 16px rgba(244,63,94,.4);}
+.profile-tabs{display:flex;gap:8px;margin-top:20px;padding:4px;background:rgba(255,255,255,.03);border-radius:16px;border:1px solid rgba(255,255,255,.08);}
+.tab-btn{flex:1;padding:14px 20px;border-radius:12px;background:transparent;border:none;color:rgba(255,255,255,.5);font-weight:600;font-size:14px;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px;}
+.tab-btn::before{font-size:16px;}
+.tab-btn:first-child::before{content:'👤';}
+.tab-btn:last-child::before{content:'🛂';}
+.tab-btn.active{background:linear-gradient(135deg,#f43f5e,#fb7185);color:#fff;box-shadow:0 4px 20px rgba(244,63,94,.4);transform:scale(1.02);}
+.tab-btn:not(.active):hover{background:rgba(255,255,255,.08);color:rgba(255,255,255,.8);}
 .visit-list{display:flex;flex-direction:column;gap:8px;}
 .visit-item{display:flex;gap:12px;align-items:center;padding:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:12px;}
 .visit-icon{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#f43f5e,#fb7185);display:flex;align-items:center;justify-content:center;font-size:18px;}
@@ -668,6 +672,9 @@ html,body{height:100%;width:100%;margin:0;padding:0;overflow:hidden;background:#
 .connection-info{flex:1;}
 .connection-note{font-style:italic;color:#ffe4e6;margin-bottom:4px;font-size:13px;}
 .connection-meta{font-size:11px;color:rgba(255,255,255,.6);}
+.profile-view{background:rgba(255,255,255,.02);border-radius:16px;padding:16px;}
+.passport-view{background:linear-gradient(180deg,rgba(244,63,94,.03),rgba(34,211,238,.03));border-radius:16px;padding:16px;border:1px solid rgba(255,255,255,.05);position:relative;}
+.passport-view::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background-image:radial-gradient(circle at 20% 20%,rgba(244,63,94,.04) 0%,transparent 50%),radial-gradient(circle at 80% 80%,rgba(34,211,238,.04) 0%,transparent 50%);pointer-events:none;}
 #passportView{display:none;}
 #passportView.active{display:block;}
 #liteDoneView.active{display:block;}
@@ -702,9 +709,13 @@ html,body{height:100%;width:100%;margin:0;padding:0;overflow:hidden;background:#
 #dropHookModal .chat-popup{width:100%;max-width:640px;margin:0 auto;border-radius:20px 20px 0 0;}
 
 /* Profile Tabs */
-.profile-tabs{display:flex;gap:4px;}
-.tab-btn{flex:1;padding:10px 16px;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.7);font-weight:600;font-size:14px;transition:all .2s;}
-.tab-btn.active{background:linear-gradient(135deg,#f43f5e,#fb7185);border-color:transparent;color:#fff;box-shadow:0 4px 16px rgba(244,63,94,.4);}
+.profile-tabs{display:flex;gap:8px;margin-top:20px;padding:4px;background:rgba(255,255,255,.03);border-radius:16px;border:1px solid rgba(255,255,255,.08);}
+.tab-btn{flex:1;padding:14px 20px;border-radius:12px;background:transparent;border:none;color:rgba(255,255,255,.5);font-weight:600;font-size:14px;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px;}
+.tab-btn::before{font-size:16px;}
+.tab-btn:first-child::before{content:'👤';}
+.tab-btn:last-child::before{content:'🛂';}
+.tab-btn.active{background:linear-gradient(135deg,#f43f5e,#fb7185);color:#fff;box-shadow:0 4px 20px rgba(244,63,94,.4);transform:scale(1.02);}
+.tab-btn:not(.active):hover{background:rgba(255,255,255,.08);color:rgba(255,255,255,.8);}
 
 /* Mobile adjustments */
 @media(max-width:480px){
@@ -713,7 +724,8 @@ html,body{height:100%;width:100%;margin:0;padding:0;overflow:hidden;background:#
   .pin-drawer{max-height:90vh;}
   .quest-banner .quest-action,.quest-banner .quest-complete{font-size:11px;padding:5px 8px;}
   .actions .primary,.actions .secondary{padding:10px 14px;}
-  .tab-btn{font-size:12px;padding:8px 10px;}
+  .tab-btn{font-size:12px;padding:10px 12px;}
+  .tab-btn::before{font-size:14px;}
   .featured-grid{grid-template-columns:1fr;}
   .featured-card{min-height:140px;}
   .featured-card img{height:100px;}

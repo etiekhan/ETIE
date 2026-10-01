@@ -1425,6 +1425,228 @@ function toggleFeaturedMemory(logEntry){
     saveFeaturedMemories(featured);
   }catch(e){}
 }
+function openProfileDrawer(){
+  try{
+    renderProfileDrawer();
+    var o=document.getElementById('profileDrawer');
+    if(o)o.classList.remove('hidden');
+  }catch(e){}
+}
+function closeProfileDrawer(){
+  try{
+    var o=document.getElementById('profileDrawer');
+    if(o)o.classList.add('hidden');
+  }catch(e){}
+}
+function showProfileDrawerTab(tab){
+  try{
+    var prof=document.getElementById('profileDrawerView');
+    var pass=document.getElementById('passportDrawerView');
+    var t1=document.getElementById('tabDrawerProfile');
+    var t2=document.getElementById('tabDrawerPassport');
+    if(tab==='passport'){
+      if(prof)prof.classList.remove('active');
+      if(pass)pass.classList.add('active');
+      if(t1)t1.classList.remove('active');
+      if(t2)t2.classList.add('active');
+      renderPassportDrawer();
+    }else{
+      if(prof)prof.classList.add('active');
+      if(pass)pass.classList.remove('active');
+      if(t1)t1.classList.add('active');
+      if(t2)t2.classList.remove('active');
+    }
+  }catch(e){}
+}
+function renderProfileDrawer(){
+  try{
+    var tr=ETIE.traveller||{};
+    var nick=tr.nickname||ETIE.local.displayName||'Someone';
+    var photo=tr.photo||ETIE.local.photo||googleAvatar();
+    var av=document.getElementById('drawerAvatar');
+    if(av){if(photo)av.innerHTML='<img src="'+photo+'">';else av.innerHTML='<span>+</span>';}
+    var nm=document.getElementById('drawerName'); if(nm)nm.textContent=nick;
+    var vb=document.getElementById('drawerVerified');
+    if(vb){var v=(tr.verificationMethods||[]).length>0;vb.textContent=v?'✅ Verified':'';vb.style.display=v?'':'none';}
+    var rl=document.getElementById('drawerRole');
+    if(rl){var role=(ETIE.derivedRole||ETIE.activeRole||'traveller');rl.textContent=role==='local'?'🇭🇰 Local Host':'✈️ Traveller';rl.classList.toggle('city-host',role==='local');}
+    var ct=document.getElementById('drawerCity'); if(ct)ct.textContent='🏠 '+(ETIE.local.city||'Hong Kong');
+    var vs=document.getElementById('drawerVibes');
+    if(vs){vs.innerHTML='';var vibes=myHookVibes();
+      if(!vibes.length){var e=document.createElement('span');e.className='muted small';e.textContent='No vibes yet — drop a hook.';vs.appendChild(e);}
+      vibes.forEach(function(v){var s=document.createElement('span');s.className='chip active';s.textContent=mapCatEmoji(v)+' '+v;vs.appendChild(s);});
+    }
+    var hk=document.getElementById('drawerHook'); if(hk)hk.textContent='“'+(tr.bio||'No personal hook yet.')+'”';
+    renderDrawerMemories();
+    renderDrawerSpots();
+    renderDrawerPassions();
+    renderDrawerFeaturedMemories();
+  }catch(e){}
+}
+function renderPassportDrawer(){
+  try{
+    var visitsBox=document.getElementById('drawerPassportVisits');
+    var connBox=document.getElementById('drawerPassportConnections');
+    if(!visitsBox || !connBox) return;
+    visitsBox.innerHTML='';
+    connBox.innerHTML='';
+    var tr=ETIE.traveller||{};
+    var diary=tr.activityDiary||[];
+    // Neighborhood Visit Log
+    var visits={};
+    diary.forEach(function(e){
+      if(e.neighborhood){
+        var key=e.neighborhood;
+        if(!visits[key]) visits[key]={count:0,last:0,icon:'🏙️'};
+        visits[key].count++;
+        if(e.timestamp>visits[key].last) visits[key].last=e.timestamp;
+      }
+    });
+    if(Object.keys(visits).length===0){
+      visitsBox.innerHTML='<div class="muted small" style="text-align:center;padding:24px;">No neighborhood visits yet.<br>Complete a verified hangout to log your first visit.</div>';
+    }else{
+      Object.entries(visits).sort(function(a,b){return b[1].last-a[1].last;}).forEach(function(entry){
+        var name=entry[0], data=entry[1];
+        var item=document.createElement('div');item.className='visit-item';
+        item.innerHTML='<div class="visit-icon">🏙️</div>'
+          +'<div class="visit-info"><div class="visit-name">'+name+'</div>'
+          +'<div class="visit-meta">'+data.count+' visit'+(data.count===1?'':'s')+' · Last: '+fmtWhen(data.last)+'</div></div>';
+        visitsBox.appendChild(item);
+      });
+    }
+    // Co-Signed Connections
+    var connections=diary.filter(function(e){return e.handshakeNote;});
+    if(connections.length===0){
+      connBox.innerHTML='<div class="muted small" style="text-align:center;padding:24px;">No co-signed connections yet.<br>Tag a friend in a memory to start a handshake.</div>';
+    }else{
+      connections.forEach(function(c){
+        var item=document.createElement('div');item.className='connection-card';
+        var initials=c.guestNick?c.guestNick.charAt(0).toUpperCase():'?';
+        item.innerHTML='<div class="connection-avatars">'
+          +'<div class="avatar" style="background:linear-gradient(135deg,#f43f5e,#fb7185);">'+initials+'</div>'
+          +'<div class="avatar" style="background:linear-gradient(135deg,#0ea5e9,#22d3ee);">'+(hookNick()||'?').charAt(0).toUpperCase()+'</div>'
+          +'</div>'
+          +'<div class="connection-info">'
+          +'<div class="connection-note">“'+c.handshakeNote+'”</div>'
+          +'<div class="connection-meta">with '+c.guestNick+' · '+fmtWhen(c.timestamp)+'</div>'
+          +'</div>';
+        connBox.appendChild(item);
+      });
+    }
+  }catch(e){}
+}
+function renderDrawerMemories(){
+  try{
+    var box=document.getElementById('drawerMemories');if(!box)return;
+    box.innerHTML='';
+    var mems=getMemories();
+    for(var i=0;i<3;i++){
+      (function(idx){
+        var m=mems[idx];
+        var card=document.createElement('div');card.className='mem-card';
+        if(m&&m.image_url){
+          var im=document.createElement('img');im.src=m.image_url;im.alt='Memory '+(idx+1);card.appendChild(im);
+          var cap=document.createElement('input');cap.className='mem-cap';cap.maxLength=80;cap.placeholder='Add a caption…';cap.value=m.caption||'';
+          cap.onchange=function(){var a=getMemories();if(a[idx]){a[idx].caption=cap.value.slice(0,80);saveMemories(a);}};
+          card.appendChild(cap);
+          var del=document.createElement('button');del.className='mem-del';del.textContent='✕ Remove';
+          del.onclick=function(){var a=getMemories();a.splice(idx,1);saveMemories(a);toast('Memory removed.');};
+          card.appendChild(del);
+        }else{
+          card.className='mem-card mem-empty';
+          var plus=document.createElement('button');plus.className='mem-plus';plus.textContent='+';plus.title='Add Memory Photo';
+          plus.onclick=function(){pickMemoryFile(idx);};
+          card.appendChild(plus);
+          var lab=document.createElement('span');lab.className='muted small';lab.textContent='Add Memory Photo';card.appendChild(lab);
+          var urlrow=document.createElement('div');urlrow.className='mem-urlrow';
+          var ui=document.createElement('input');ui.placeholder='or paste image URL…';
+          var ub=document.createElement('button');ub.className='secondary';ub.textContent='Add';
+          ub.onclick=function(){var u=(ui.value||'').trim();if(!u){toast('Paste an image URL first.');return;}var a=getMemories();a[idx]={id:Date.now(),image_url:u,caption:''};saveMemories(a);toast('Memory added.');};
+          urlrow.appendChild(ui);urlrow.appendChild(ub);card.appendChild(urlrow);
+        }
+        box.appendChild(card);
+      })(i);
+    }
+  }catch(e){}
+}
+function renderDrawerSpots(){
+  try{
+    var box=document.getElementById('drawerSpots');if(!box)return;
+    var title=document.getElementById('drawerSpotsTitle');
+    var tr=ETIE.traveller||{};var spots=tr.spots||[];
+    if(title)title.textContent=spots.length?'Local spots':'Local spots (add up to 3)';
+    box.innerHTML='';
+    for(var i=0;i<3;i++){
+      (function(idx){
+        var s=spots[idx];
+        var card=document.createElement('div');card.className='spot-card';
+        if(s&&s.name){
+          var em=document.createElement('div');em.className='spot-emoji';em.textContent=s.emoji||'📍';card.appendChild(em);
+          var nm=document.createElement('div');nm.className='spot-name';nm.textContent=s.name;card.appendChild(nm);
+          var nb=document.createElement('div');nb.className='spot-nbhd';nm.textContent=s.neighborhood||'';card.appendChild(nb);
+          var del=document.createElement('button');del.className='mem-del';del.textContent='✕';del.onclick=function(){var a=spots;a.splice(idx,1);tr.spots=a;saveState();renderLiteProfile();renderProfileDrawer();};
+          card.appendChild(del);
+        }else{
+          card.className='spot-card spot-empty';
+          var plus=document.createElement('button');plus.className='mem-plus';plus.textContent='+';plus.title='Add Local Spot';
+          plus.onclick=function(){pickSpotFile(idx);};
+          card.appendChild(plus);
+          var lab=document.createElement('span');lab.className='muted small';lab.textContent='Add Local Spot';card.appendChild(lab);
+        }
+        box.appendChild(card);
+      })(i);
+    }
+  }catch(e){}
+}
+function renderDrawerPassions(){
+  try{
+    var box=document.getElementById('drawerPassions');if(!box)return;
+    box.innerHTML='';
+    var stats=ETIE.traveller?.activityStats||{};
+    var keys=Object.keys(stats);
+    if(!keys.length){var e=document.createElement('span');e.className='muted small';e.textContent='No passion badges yet — log a hangout to earn one.';box.appendChild(e);return;}
+    keys.sort(function(a,b){return stats[b]-stats[a];});
+    keys.slice(0,6).forEach(function(k){
+      var cnt=stats[k];
+      var emoji=passionEmoji(k);
+      var badge=emoji+' '+k+(cnt>1?' ('+cnt+')':'');
+      var s=document.createElement('span');s.className='chip active';s.textContent=badge;box.appendChild(s);
+    });
+  }catch(e){}
+}
+function renderDrawerFeaturedMemories(){
+  try{
+    var box=document.getElementById('drawerFeaturedMemories');if(!box)return;
+    box.innerHTML='';
+    var featured=getFeaturedMemories();
+    if(!featured.length){
+      box.innerHTML='<div class="mem-card mem-empty" style="grid-column:1/-1;text-align:center;padding:24px;"><div class="muted small">No featured memories yet.<br>Confirm a handshake to unlock pinning.</div></div>';
+      return;
+    }
+    featured.forEach(function(f){
+      var card=document.createElement('div');card.className='featured-card';
+      if(f.photoUrl){
+        var im=document.createElement('img');im.src=f.photoUrl;im.alt='Featured Memory';card.appendChild(im);
+      }
+      var cap=document.createElement('div');cap.className='featured-caption';cap.textContent='“'+(f.handshakeNote||'')+'”';card.appendChild(cap);
+      var meta=document.createElement('div');meta.className='featured-meta';
+      meta.innerHTML='<span>'+(f.activity||'Hangout')+'</span><span>'+(f.guestNick||'Co-signer')+'</span><span>'+fmtWhen(f.timestamp)+'</span>';
+      card.appendChild(meta);
+      var pin=document.createElement('div');pin.className='featured-pin';
+      var isPinned=true;
+      var btn=document.createElement('button');btn.textContent='★';btn.className=isPinned?'pinned':'';btn.title='Unpin from featured';
+      btn.onclick=function(){toggleFeaturedMemory(f);};
+      pin.appendChild(btn);card.appendChild(pin);
+      box.appendChild(card);
+    });
+    var remaining=3-featured.length;
+    for(var i=0;i<remaining;i++){
+      var empty=document.createElement('div');empty.className='mem-card mem-empty';
+      empty.innerHTML='<button class="mem-plus" style="opacity:.4;" disabled>+</button><span class="muted small">Pin a memory</span>';
+      box.appendChild(empty);
+    }
+  }catch(e){}
+}
 function renderFeaturedMemories(){
   try{
     var box=document.getElementById('featuredMemories');if(!box)return;
@@ -2743,24 +2965,13 @@ function applyHookPreset(i){
 }
 function selectHookWindow(el,v){
   try{
-    _hookDraft.window=(v==='tonight'||v==='tomorrow'||v==='custom')?v:'now';
+    _hookDraft.window='custom';
     var c=document.getElementById('hookWindowPills');
     if(c)Array.prototype.forEach.call(c.querySelectorAll('.chip'),function(x){x.classList.remove('active');});
     if(el)el.classList.add('active');
-    else if(c){
-      var map={now:0,tonight:1,tomorrow:2,custom:3};
-      var b=c.querySelectorAll('.chip');
-      if(b[map[_hookDraft.window]])b[map[_hookDraft.window]].classList.add('active');
-    }
     var drawer=document.getElementById('customTimeDrawer');
-    if(drawer){
-      if(_hookDraft.window==='custom'){
-        drawer.classList.remove('hidden');
-      }else{
-        drawer.classList.add('hidden');
-      }
-    }
-  }catch(e){_hookDraft.window='now';}
+    if(drawer)drawer.classList.remove('hidden');
+  }catch(e){_hookDraft.window='custom';}
 }
 function hookCap(d){
   try{
@@ -2782,21 +2993,16 @@ function renderHookRoleLine(){
 }
 function windowExpires(w,nowTs){
   try{
-    if(w==='custom'){
-      var dateStr=document.getElementById('customDate')?.value;
-      var startStr=document.getElementById('customStartTime')?.value;
-      var endStr=document.getElementById('customEndTime')?.value;
-      if(!dateStr || !startStr){
-        return {s:nowTs,e:nowTs+3*3600*1000};
-      }
-      var start=new Date(dateStr+'T'+startStr).getTime();
-      var end=endStr ? new Date(dateStr+'T'+endStr).getTime() : start+3*3600*1000;
-      if(end<=start) end=start+3*3600*1000;
-      return {s:start,e:end};
+    var dateStr=document.getElementById('customDate')?.value;
+    var startStr=document.getElementById('customStartTime')?.value;
+    var endStr=document.getElementById('customEndTime')?.value;
+    if(!dateStr || !startStr){
+      return {s:nowTs,e:nowTs+3*3600*1000};
     }
-    if(w==='tonight'){var d=new Date(nowTs);d.setHours(3,0,0,0);if(d.getTime()<=nowTs)d.setDate(d.getDate()+1);return {s:nowTs,e:d.getTime()};}
-    if(w==='tomorrow')return {s:nowTs,e:nowTs+24*3600*1000};
-    return {s:nowTs,e:nowTs+3*3600*1000};
+    var start=new Date(dateStr+'T'+startStr).getTime();
+    var end=endStr ? new Date(dateStr+'T'+endStr).getTime() : start+3*3600*1000;
+    if(end<=start) end=start+3*3600*1000;
+    return {s:start,e:end};
   }catch(e){return {s:nowTs,e:nowTs+3*3600*1000};}
 }
 function hookCountTick(){
@@ -2824,9 +3030,9 @@ function openDropHook(){
     if(needProfile('drop a hook'))return;
     var startRole='traveller';
     try{startRole=(ETIE.derivedRole||ETIE.activeRole)==='local'?'local':'traveller';}catch(e){}
-    _hookDraft={category:'general',role:startRole,window:'now',capacity:3,customStart:null,customEnd:null,photos:[]};
+    _hookDraft={category:'general',role:startRole,window:'custom',capacity:3,customStart:null,customEnd:null,photos:[]};
     var ht0=document.getElementById('hookTitle');if(ht0)ht0.value='';
-    selectHookWindow(null,'now');hookCap(0);renderHookRoleLine();
+    hookCap(0);renderHookRoleLine();
     renderHookPresets();
     var today=new Date().toISOString().slice(0,10);
     var cd=document.getElementById('customDate'); if(cd) cd.value=today;

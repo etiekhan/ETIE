@@ -2773,6 +2773,11 @@ function hookCap(d){
   try{
     _hookDraft.capacity=Math.min(4,Math.max(2,(_hookDraft.capacity||3)+d));
     var v=document.getElementById('hookCapVal');if(v)v.textContent=_hookDraft.capacity;
+    var h=document.getElementById('hookCapHint');
+    if(h){
+      var cap=_hookDraft.capacity;
+      h.textContent=cap===2?'You + 1 guest (1-on-1)':(cap===3?'You + 2 guests (Trio)':'You + 3 guests (Group Max)');
+    }
   }catch(e){}
 }
 function toggleHookRole(){try{setHookRole(_hookDraft.role==='local'?'traveller':'local');renderHookRoleLine();}catch(e){}}

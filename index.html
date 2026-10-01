@@ -283,14 +283,9 @@
   <div class="chat-popup glass-modal" role="dialog" aria-modal="true" aria-label="Drop a Hook" style="width:min(560px,calc(100vw - 24px));">
     <div class="chat-popup-head"><div><strong>📍 Drop a Hook</strong><div class="muted small">Pin a hangout on the HK map</div></div><button class="secondary" onclick="closeDropHook()" aria-label="Close" style="padding:8px 12px;">✕</button></div>
     <div class="chat-popup-body" style="background:#fff;">
-      <div class="field"><label>Quick drop — 1 tap</label><div class="preset-row" id="hookPresets">
-        <button class="chip preset-chip" onclick="applyHookPreset(0)">⚽ 5-a-side +1</button>
-        <button class="chip preset-chip" onclick="applyHookPreset(1)">🍺 Drinks / Speakeasy</button>
-        <button class="chip preset-chip" onclick="applyHookPreset(2)">☕ Coffee &amp; Co-Work</button>
-        <button class="chip preset-chip" onclick="applyHookPreset(3)">🥟 Street Food / Dim Sum</button>
-      </div></div>
+<div class="field"><label>Quick drop — 1 tap</label><div class="preset-row" id="hookPresets"></div></div>
       <div class="field"><label>1 · Activity title</label><input id="hookTitle" maxlength="60" placeholder="e.g. Sunrise hike up Dragon's Back"><div class="chips" id="hookInterestPills" style="margin-top:8px;"><button class="chip" onclick="selectHookCategory(this,'Food')">🥟 Food</button><button class="chip" onclick="selectHookCategory(this,'Nightlife')">🍺 Nightlife</button><button class="chip" onclick="selectHookCategory(this,'Photo')">📸 Photo Walk</button><button class="chip" onclick="selectHookCategory(this,'Sports')">⚽ Sports</button><button class="chip" onclick="selectHookCategory(this,'Cafe')">☕ Cafe</button></div></div>
-      <div class="field"><label>2 · Time window</label><div class="chips" id="hookWindowPills"><button class="chip active" onclick="selectHookWindow(this,'now')">Right Now<div class="window-hint">3h</div></button><button class="chip" onclick="selectHookWindow(this,'tonight')">Tonight<div class="window-hint">3 AM</div></button><button class="chip" onclick="selectHookWindow(this,'tomorrow')">Tomorrow<div class="window-hint">24h</div></button></div></div>
+      <div class="field"><label>2 · Time window</label><div class="chips" id="hookWindowPills"><button class="chip active" onclick="selectHookWindow(this,'now')">Right Now<div class="window-hint">3h</div></button><button class="chip" onclick="selectHookWindow(this,'tonight')">Tonight<div class="window-hint">3 AM</div></button><button class="chip" onclick="selectHookWindow(this,'tomorrow')">Tomorrow<div class="window-hint">24h</div></button><button class="chip" onclick="selectHookWindow(this,'custom')">📅 Custom Date & Time</button></div><div id="customTimeDrawer" class="custom-time-drawer hidden" style="margin-top:12px;padding:16px;background:rgba(255,255,255,.05);border-radius:12px;border:1px solid rgba(255,255,255,.1);"><div class="row"><div class="field"><label>Date</label><input id="customDate" type="date"></div><div class="field"><label>Start Time</label><input id="customStartTime" type="time"></div></div><div class="field"><label>End Time (optional)</label><input id="customEndTime" type="time" placeholder="e.g. 23:00"></div></div></div>
       <div class="field"><label>3 · Location</label><input id="hookLocation" placeholder='e.g. "Sham Shui Po Street Market" or "Soho Escalators"'><p class="muted small" style="margin:4px 0 0;">Auto-filled from your map tap — edit freely.</p><div style="margin-top:8px;"><button class="secondary" onclick="pickOnMap('hook')" style="padding:8px 14px;">📍 Pick on Map</button></div></div>
       <div class="field"><label>4 · Spots</label><div class="stepper"><button class="secondary" onclick="hookCap(-1)" style="padding:8px 14px;">−</button><strong id="hookCapVal">3</strong><button class="secondary" onclick="hookCap(1)" style="padding:8px 14px;">+</button></div></div>
       <div class="field role-pill-row"><span class="role-pill" id="hookRolePill">✈️ Traveller</span><button class="role-switch-btn" onclick="toggleHookRole();return false;" aria-label="Switch role">Switch</button></div>
@@ -435,12 +430,12 @@
 </div>
 <div class="toast" id="toast"></div>
 
-  <script src="data/locations.js?v=58"></script>
-    <script src="match.js?v=58"></script>
+  <script src="data/locations.js?v=59"></script>
+    <script src="match.js?v=59"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="supabase-config.js?v=58"></script>
-  <script src="app.js?v=58"></script>
-  <script src="supabase-sync.js?v=58"></script>
+  <script src="supabase-config.js?v=59"></script>
+  <script src="app.js?v=59"></script>
+  <script src="supabase-sync.js?v=59"></script>
 </body>
 </html>

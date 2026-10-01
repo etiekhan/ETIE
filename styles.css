@@ -401,6 +401,11 @@ header .secondary{background:rgba(255,255,255,.96)!important;color:#171717!impor
 /* Drop Hook modal enhancements */
 .window-hint{display:block;font-size:10px;font-weight:600;color:rgba(255,255,255,.6);margin-top:2px;line-height:1;}
 #hookWindowPills .chip{flex-direction:column;align-items:center;padding:10px 14px;gap:2px;}
+.custom-time-drawer{display:flex;flex-direction:column;gap:12px;}
+.custom-time-drawer .row{display:flex;gap:12px;}
+.custom-time-drawer .row .field{flex:1;margin:0;}
+.custom-time-drawer input[type="date"],.custom-time-drawer input[type="time"]{width:100%;padding:12px;border:1px solid rgba(255,255,255,.16);border-radius:10px;background:rgba(255,255,255,.08);color:#fff;font-size:14px;}
+.custom-time-drawer input[type="date"]::-webkit-calendar-picker-indicator,.custom-time-drawer input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.7;}
 .role-pill-row{display:flex;align-items:center;gap:10px;justify-content:center;padding-top:4px;}
 .role-pill{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:999px;font-size:13px;font-weight:700;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:#fff;}
 .role-pill::before{content:'';width:8px;height:8px;border-radius:50%;background:currentColor;opacity:.8;}

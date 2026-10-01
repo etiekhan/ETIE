@@ -2727,10 +2727,10 @@ function setHookRole(v){
   }catch(e){}
 }
 var HOOK_PRESETS=[
-  {cat:'Sports',text:'5-a-side football — need +1 to join?'},
-  {cat:'Nightlife',text:'Drinks run — hidden speakeasy crawl, who is in?'},
-  {cat:'Cafe',text:'Coffee & co-work session — bring a laptop?'},
-  {cat:'Food',text:'Street food crawl — dai pai dong + dim sum?'}
+  {cat:'Nightlife',emoji:'💃',label:'Salsa & Bachata',title:'Salsa & Bachata night — down for a dance?'},
+  {cat:'Food',emoji:'🥟',label:'Foodie Time',title:'Foodie run — hunting for hidden local gems'},
+  {cat:'Nightlife',emoji:'🍸',label:'Drinks in Soho',title:'Casual drinks & speakeasy in Soho'},
+  {cat:'Photo',emoji:'🎬',label:'Letterboxd & Movie',title:'Movie night for Letterboxd film heads'}
 ];
 function applyHookPreset(i){
   try{
@@ -2750,11 +2750,23 @@ function applyHookPreset(i){
 }
 function selectHookWindow(el,v){
   try{
-    _hookDraft.window=(v==='tonight'||v==='tomorrow')?v:'now';
+    _hookDraft.window=(v==='tonight'||v==='tomorrow'||v==='custom')?v:'now';
     var c=document.getElementById('hookWindowPills');
     if(c)Array.prototype.forEach.call(c.querySelectorAll('.chip'),function(x){x.classList.remove('active');});
     if(el)el.classList.add('active');
-    else if(c){var map={now:0,tonight:1,tomorrow:2};var b=c.querySelectorAll('.chip');if(b[map[_hookDraft.window]])b[map[_hookDraft.window]].classList.add('active');}
+    else if(c){
+      var map={now:0,tonight:1,tomorrow:2,custom:3};
+      var b=c.querySelectorAll('.chip');
+      if(b[map[_hookDraft.window]])b[map[_hookDraft.window]].classList.add('active');
+    }
+    var drawer=document.getElementById('customTimeDrawer');
+    if(drawer){
+      if(_hookDraft.window==='custom'){
+        drawer.classList.remove('hidden');
+      }else{
+        drawer.classList.add('hidden');
+      }
+    }
   }catch(e){_hookDraft.window='now';}
 }
 function hookCap(d){
@@ -2772,6 +2784,18 @@ function renderHookRoleLine(){
 }
 function windowExpires(w,nowTs){
   try{
+    if(w==='custom'){
+      var dateStr=document.getElementById('customDate')?.value;
+      var startStr=document.getElementById('customStartTime')?.value;
+      var endStr=document.getElementById('customEndTime')?.value;
+      if(!dateStr || !startStr){
+        return {s:nowTs,e:nowTs+3*3600*1000};
+      }
+      var start=new Date(dateStr+'T'+startStr).getTime();
+      var end=endStr ? new Date(dateStr+'T'+endStr).getTime() : start+3*3600*1000;
+      if(end<=start) end=start+3*3600*1000;
+      return {s:start,e:end};
+    }
     if(w==='tonight'){var d=new Date(nowTs);d.setHours(3,0,0,0);if(d.getTime()<=nowTs)d.setDate(d.getDate()+1);return {s:nowTs,e:d.getTime()};}
     if(w==='tomorrow')return {s:nowTs,e:nowTs+24*3600*1000};
     return {s:nowTs,e:nowTs+3*3600*1000};
@@ -2783,14 +2807,33 @@ function hookCountTick(){
     if(t&&c)c.textContent=(t.value||'').length+' / 140';
   }catch(e){}
 }
+function renderHookPresets(){
+  try{
+    var box=document.getElementById('hookPresets');
+    if(!box) return;
+    box.innerHTML='';
+    HOOK_PRESETS.forEach(function(p,i){
+      var btn=document.createElement('button');
+      btn.className='chip preset-chip';
+      btn.textContent=p.emoji+' '+p.label;
+      btn.onclick=function(){applyHookPreset(i);};
+      box.appendChild(btn);
+    });
+  }catch(e){}
+}
 function openDropHook(){
   try{
     if(needProfile('drop a hook'))return;
     var startRole='traveller';
     try{startRole=(ETIE.derivedRole||ETIE.activeRole)==='local'?'local':'traveller';}catch(e){}
-    _hookDraft={category:'Food',role:startRole,window:'now',capacity:3};
+    _hookDraft={category:'Food',role:startRole,window:'now',capacity:3,customStart:null,customEnd:null};
     var ht0=document.getElementById('hookTitle');if(ht0)ht0.value='';
     selectHookWindow(null,'now');hookCap(0);renderHookRoleLine();
+    renderHookPresets();
+    var today=new Date().toISOString().slice(0,10);
+    var cd=document.getElementById('customDate'); if(cd) cd.value=today;
+    var cst=document.getElementById('customStartTime'); if(cst) cst.value='19:30';
+    var cet=document.getElementById('customEndTime'); if(cet) cet.value='';
     // default coords: last map tap, else live map center
     if(!_dropPoint){
       try{if(_map)_dropPoint={lat:_map.getCenter().lat,lng:_map.getCenter().lng};}catch(e){}
@@ -2827,6 +2870,13 @@ function saveDropHook(){
       name:nm,verified:vf,location:loc,lat:_dropPoint.lat,lng:_dropPoint.lng,hook:hook,
       members:[{nick:nm,role:_hookDraft.role,verified:vf,bio:((ETIE.traveller&&ETIE.traveller.bio)||'').slice(0,140)}],pending:[],requests:[],status:'active',
       ts:Date.now(),origin:'local',cloudId:null};
+    if(_hookDraft.window==='custom'){
+      var cs=document.getElementById('customDate')?.value;
+      var cst=document.getElementById('customStartTime')?.value;
+      var cet=document.getElementById('customEndTime')?.value;
+      if(cs && cst) pin.customStart=cs+'T'+cst;
+      if(cs && cet) pin.customEnd=cs+'T'+cet;
+    }
     if(!ETIE.mapPins)ETIE.mapPins=[];
     ETIE.mapPins.push(pin);
     saveState();persistPinCloud(pin);

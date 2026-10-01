@@ -2766,7 +2766,7 @@ function hookCap(d){
 function toggleHookRole(){try{setHookRole(_hookDraft.role==='local'?'traveller':'local');renderHookRoleLine();}catch(e){}}
 function renderHookRoleLine(){
   try{
-    var r=document.getElementById('hookRoleLine');
+    var r=document.getElementById('hookRolePill');
     if(r)r.textContent=_hookDraft.role==='local'?'🇭🇰 Local Host':'✈️ Traveller';
   }catch(e){}
 }

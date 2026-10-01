@@ -2727,23 +2727,16 @@ function setHookRole(v){
   }catch(e){}
 }
 var HOOK_PRESETS=[
-  {cat:'Nightlife',emoji:'💃',label:'Salsa & Bachata',title:'Salsa & Bachata night — down for a dance?'},
-  {cat:'Food',emoji:'🥟',label:'Foodie Time',title:'Foodie run — hunting for hidden local gems'},
-  {cat:'Nightlife',emoji:'🍸',label:'Drinks in Soho',title:'Casual drinks & speakeasy in Soho'},
-  {cat:'Photo',emoji:'🎬',label:'Letterboxd & Movie',title:'Movie night for Letterboxd film heads'}
+  {cat:'Nightlife',emoji:'💃',label:'salsa?',title:'Salsa & Bachata night — down for a dance?'},
+  {cat:'Food',emoji:'🥟',label:'foodie time?',title:'Foodie run — hunting for hidden local gems'},
+  {cat:'Nightlife',emoji:'🍸',label:'drinks in soho?',title:'Casual drinks & speakeasy in Soho'},
+  {cat:'Photo',emoji:'🎬',label:'movie movie',title:'Movie night for film heads'}
 ];
 function applyHookPreset(i){
   try{
     var p=HOOK_PRESETS[i];if(!p)return;
-    selectHookCategory(null,p.cat);
-    try{
-      var c=document.getElementById('hookInterestPills');
-      if(c)Array.prototype.forEach.call(c.querySelectorAll('.chip'),function(x){
-        var t=(x.textContent||'').toLowerCase();
-        x.classList.toggle('active',t.indexOf(p.cat.toLowerCase())!==-1||(p.cat==='Photo'&&t.indexOf('photo')!==-1));
-      });
-    }catch(e){}
-    var ht0=document.getElementById('hookTitle');if(ht0)ht0.value=p.text.slice(0,60);
+    _hookDraft.category=p.cat;
+    var ht0=document.getElementById('hookTitle');if(ht0)ht0.value=p.title.slice(0,60);
     var ht=document.getElementById('hookText');if(ht)ht.focus();
     hookCountTick();
   }catch(e){}
@@ -2831,7 +2824,7 @@ function openDropHook(){
     if(needProfile('drop a hook'))return;
     var startRole='traveller';
     try{startRole=(ETIE.derivedRole||ETIE.activeRole)==='local'?'local':'traveller';}catch(e){}
-    _hookDraft={category:'Food',role:startRole,window:'now',capacity:3,customStart:null,customEnd:null};
+    _hookDraft={category:'general',role:startRole,window:'now',capacity:3,customStart:null,customEnd:null,photos:[]};
     var ht0=document.getElementById('hookTitle');if(ht0)ht0.value='';
     selectHookWindow(null,'now');hookCap(0);renderHookRoleLine();
     renderHookPresets();
@@ -2839,6 +2832,7 @@ function openDropHook(){
     var cd=document.getElementById('customDate'); if(cd) cd.value=today;
     var cst=document.getElementById('customStartTime'); if(cst) cst.value='19:30';
     var cet=document.getElementById('customEndTime'); if(cet) cet.value='';
+    var pv=document.getElementById('hookPhotoPreview'); if(pv) pv.innerHTML='';
     // default coords: last map tap, else live map center
     if(!_dropPoint){
       try{if(_map)_dropPoint={lat:_map.getCenter().lat,lng:_map.getCenter().lng};}catch(e){}
@@ -2848,12 +2842,41 @@ function openDropHook(){
     var li=document.getElementById('hookLocation');
     if(li){li.value=window._pendingDropGuess||('Near '+nearestDistrictLabel(_dropPoint.lat,_dropPoint.lng));window._pendingDropGuess=null;}
     var ht=document.getElementById('hookText');if(ht){ht.value='';var ph='';try{ph=(ETIE.traveller&&ETIE.traveller.bio)||'';}catch(e){}ht.placeholder=ph||"e.g. Grabbing late-night claypot rice in Sham Shui Po—who's down to join?";}
-    hookCountTick();setHookRole(_hookDraft.role);selectHookCategory(null,_hookDraft.category);
+    hookCountTick();setHookRole(_hookDraft.role);
     if(_dropMarker){try{_map.removeLayer(_dropMarker);}catch(e){}_dropMarker=null;}
     try{_dropMarker=L.marker([_dropPoint.lat,_dropPoint.lng],{title:'Your pin location'}).addTo(_map);}catch(e){}
   }catch(e){}
 }
 function closeDropHook(){try{var o=document.getElementById('dropHookModal');if(o)o.classList.add('hidden');}catch(e){}}
+function handleHookPhotos(input){
+  try{
+    var files=Array.from(input.files||[]).slice(0,3);
+    if(!files.length) return;
+    var pv=document.getElementById('hookPhotoPreview'); if(!pv) return;
+    files.forEach(function(file){
+      if(_hookDraft.photos.length>=3) return;
+      var reader=new FileReader();
+      reader.onload=function(e){
+        _hookDraft.photos.push({dataUrl:e.target.result,name:file.name,type:file.type});
+        renderHookPhotoPreviews();
+      };
+      reader.readAsDataURL(file);
+    });
+    input.value='';
+  }catch(e){}
+}
+function renderHookPhotoPreviews(){
+  try{
+    var pv=document.getElementById('hookPhotoPreview'); if(!pv) return;
+    pv.innerHTML='';
+    (_hookDraft.photos||[]).forEach(function(p,idx){
+      var wrap=document.createElement('div'); wrap.style.position='relative'; wrap.style.width='80px'; wrap.style.height='80px'; wrap.style.borderRadius='12px'; wrap.style.overflow='hidden'; wrap.style.flexShrink='0';
+      var im=document.createElement('img'); im.src=p.dataUrl; im.style.width='100%'; im.style.height='100%'; im.style.objectFit='cover'; wrap.appendChild(im);
+      var del=document.createElement('button'); del.textContent='✕'; del.style.position='absolute'; del.style.top='4px'; del.style.right='4px'; del.style.width='20px'; del.style.height='20px'; del.style.borderRadius='50%'; del.style.background='rgba(0,0,0,.7)'; del.style.border='none'; del.style.color='#fff'; del.style.fontSize='12px'; del.style.cursor='pointer'; del.onclick=function(){_hookDraft.photos.splice(idx,1);renderHookPhotoPreviews();}; wrap.appendChild(del);
+      pv.appendChild(wrap);
+    });
+  }catch(e){}
+}
 function persistPinCloud(pin){
   try{if(window.EtieCloud&&window.EtieCloud.pushPin)window.EtieCloud.pushPin(pin);}catch(e){}
 }
@@ -2872,7 +2895,7 @@ function saveDropHook(){
     var hook=details||title;
     var pin={id:'pin-'+nowTs,kind:'hook',title:title,category:_hookDraft.category,role:_hookDraft.role,derivedRole:(function(){try{return ETIE.derivedRole||_hookDraft.role;}catch(e){return _hookDraft.role;}})(),authorId:(function(){try{return myUid();}catch(e){return null;}})(),
       starts_at:new Date(win.s).toISOString(),ends_at:new Date(win.e).toISOString(),expires_at:new Date(win.e).toISOString(),capacity:cap,spotsAvailable:cap,
-      name:nm,verified:vf,location:loc,lat:_dropPoint.lat,lng:_dropPoint.lng,hook:hook,
+      name:nm,verified:vf,location:loc,lat:_dropPoint.lat,lng:_dropPoint.lng,hook:hook,photos:(_hookDraft.photos||[]).map(function(p){return p.dataUrl;}),
       members:[{nick:nm,role:_hookDraft.role,verified:vf,bio:((ETIE.traveller&&ETIE.traveller.bio)||'').slice(0,140)}],pending:[],requests:[],status:'active',
       ts:Date.now(),origin:'local',cloudId:null};
     if(_hookDraft.window==='custom'){

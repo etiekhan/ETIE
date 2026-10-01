@@ -460,6 +460,52 @@
     </div>
   </div>
 </div>
+<!-- Quest of the Week Drawer -->
+<div class="chat-overlay hidden" id="questDrawer" onclick="if(event.target===this)closeQuestDrawer()">
+  <div class="quest-drawer" role="dialog" aria-modal="true" aria-label="Side Quest" style="width:min(95vw,420px);max-height:90vh;">
+    <div class="quest-drawer-head"><div><strong>⚡ Side Quest</strong></div><button class="secondary" onclick="closeQuestDrawer()" aria-label="Close" style="padding:8px 12px;">✕</button></div>
+    <div class="quest-drawer-body" style="padding:20px 24px;">
+      <!-- Quest of the Week Card -->
+      <div id="questWeekCard" class="quest-week-card" style="background:linear-gradient(135deg,rgba(244,63,94,.15),rgba(251,113,133,.15));border:1px solid rgba(244,63,94,.3);border-radius:16px;padding:20px;margin-bottom:16px;">
+        <div style="display:flex;gap:12px;align-items:flex-start;">
+          <span class="quest-icon" style="font-size:28px;flex-shrink:0;">⚡</span>
+          <div class="quest-week-content" style="flex:1;min-width:0;">
+            <div class="quest-week-label" style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,.5);margin-bottom:4px;">Quest of the Week</div>
+            <div class="quest-week-title" id="questWeekTitle" style="font-size:18px;font-weight:700;color:#fff;line-height:1.3;"></div>
+            <div class="quest-week-desc" id="questWeekDesc" style="font-size:13px;color:rgba(255,255,255,.7);margin-top:4px;"></div>
+          </div>
+        </div>
+        <div class="quest-week-actions" style="display:flex;gap:8px;margin-top:16px;">
+          <button class="quest-accept primary" style="flex:1;padding:12px 16px;border-radius:12px;font-weight:700;font-size:13px;" onclick="acceptCuratedQuest()">Accept Quest of the Week</button>
+          <button class="quest-custom secondary" style="padding:12px 16px;border-radius:12px;font-weight:600;font-size:13px;" onclick="openCustomQuestInput()">✍️ Propose Custom</button>
+        </div>
+      </div>
+      <!-- Custom Quest Input (hidden initially) -->
+      <div id="customQuestInput" class="custom-quest-input hidden" style="margin-top:16px;padding:16px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:12px;">
+        <div class="field" style="margin:0;">
+          <label>Custom Quest Title</label>
+          <input id="customQuestTitle" maxlength="60" placeholder="e.g. Best group selfie at sunset" style="width:100%;padding:12px;border:1px solid rgba(255,255,255,.2);border-radius:10px;background:rgba(255,255,255,.05);color:#fff;">
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
+          <button class="secondary" onclick="closeCustomQuestInput()">Cancel</button>
+          <button class="primary" onclick="acceptCustomQuest()">Accept Custom Quest</button>
+        </div>
+      </div>
+      <!-- Active Quest Display (shown after accepting) -->
+      <div id="activeQuestDisplay" class="active-quest-display hidden" style="padding:16px;background:linear-gradient(135deg,rgba(244,63,94,.15),rgba(251,113,133,.15));border:1px solid rgba(244,63,94,.3);border-radius:16px;">
+        <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px;">
+          <span class="quest-icon" style="font-size:24px;">✅</span>
+          <div style="flex:1;">
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,.5);margin-bottom:2px;">Active Quest</div>
+            <div id="activeQuestTitle" style="font-size:16px;font-weight:700;color:#fff;"></div>
+            <div id="activeQuestMeta" style="font-size:11px;color:rgba(255,255,255,.6);margin-top:2px;"></div>
+          </div>
+        </div>
+        <button class="quest-complete-drawer primary" style="width:100%;padding:14px 16px;border-radius:12px;font-weight:700;font-size:14px;" onclick="openQuestCamera()">📸 Complete & Take Snap</button>
+      </div>
+    </div>
+  </div>
+</div>
 <div id="chatDrawer" class="chat-drawer hidden" role="dialog" aria-label="Hook group chat">
   <div class="chat-drawer-head"><div><strong id="chatHookTitle">—</strong><div class="muted small" id="chatHookSub">—</div></div><button class="secondary" onclick="closeChatDrawer()" aria-label="Close chat" style="padding:8px 12px;">✕</button></div>
   <!-- Quest Banner -->
@@ -487,12 +533,12 @@
 </div>
 <div class="toast" id="toast"></div>
 
-  <script src="data/locations.js?v=65"></script>
-    <script src="match.js?v=65"></script>
+  <script src="data/locations.js?v=66"></script>
+    <script src="match.js?v=66"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="supabase-config.js?v=65"></script>
-  <script src="app.js?v=65"></script>
-  <script src="supabase-sync.js?v=65"></script>
+  <script src="supabase-config.js?v=66"></script>
+  <script src="app.js?v=66"></script>
+  <script src="supabase-sync.js?v=66"></script>
 </body>
 </html>

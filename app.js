@@ -3893,6 +3893,89 @@ function saveCustomQuest(){
     toast('Quest set: '+title);
   }catch(e){toast('Could not set quest.');}
 }
+function openQuestDrawer(){
+  try{
+    var p=findPin(_chatPinId);if(!p)return;
+    // Configure Quest of the Week (static for now, could come from backend)
+    var questWeek={
+      title:'Salsa & Bachata Night — Find the Hidden Speakeasy',
+      desc:'Dance your way through a secret salsa spot in Soho. Find the unmarked door, order the house cocktail, and learn 3 moves from a local.'
+    };
+    document.getElementById('questWeekTitle').textContent=questWeek.title;
+    document.getElementById('questWeekDesc').textContent=questWeek.desc;
+    document.getElementById('questWeekCard').style.display='block';
+    document.getElementById('customQuestInput').classList.add('hidden');
+    document.getElementById('activeQuestDisplay').classList.add('hidden');
+    var o=document.getElementById('questDrawer');
+    if(o)o.classList.remove('hidden');
+  }catch(e){}
+}
+function closeQuestDrawer(){
+  try{var o=document.getElementById('questDrawer');if(o)o.classList.add('hidden');}catch(e){}
+}
+function acceptCuratedQuest(){
+  try{
+    var p=findPin(_chatPinId);if(!p)return;
+    var questWeek={
+      title:'Salsa & Bachata Night — Find the Hidden Speakeasy',
+      desc:'Dance your way through a secret salsa spot in Soho. Find the unmarked door, order the house cocktail, and learn 3 moves from a local.'
+    };
+    p.quest={title:questWeek.title,setBy:'Side Quest',setAt:Date.now(),completed:false};
+    storePin(p);
+    closeQuestDrawer();
+    renderQuestBanner(p);
+    // Pin quest banner to chat
+    pinQuestToChat(p);
+    toast('Quest accepted: '+questWeek.title);
+  }catch(e){toast('Could not accept quest.');}
+}
+function openCustomQuestInput(){
+  try{
+    document.getElementById('questWeekCard').style.display='none';
+    document.getElementById('customQuestInput').classList.remove('hidden');
+    var inp=document.getElementById('customQuestTitle');
+    if(inp){inp.value=''; inp.focus();}
+  }catch(e){}
+}
+function closeCustomQuestInput(){
+  try{
+    document.getElementById('customQuestInput').classList.add('hidden');
+    document.getElementById('questWeekCard').style.display='block';
+  }catch(e){}
+}
+function acceptCustomQuest(){
+  try{
+    var inp=document.getElementById('customQuestTitle');
+    var title=inp?inp.value.trim():'';
+    if(!title){toast('Enter a quest title.');return;}
+    if(title.length>60){toast('Max 60 characters.');return;}
+    var p=findPin(_chatPinId);if(!p)return;
+    p.quest={title:title,setBy:hookNick(),setAt:Date.now(),completed:false};
+    storePin(p);
+    closeQuestDrawer();
+    renderQuestBanner(p);
+    pinQuestToChat(p);
+    toast('Custom quest set: '+title);
+  }catch(e){toast('Could not set quest.');}
+}
+function pinQuestToChat(p){
+  try{
+    var q=p?.quest;if(!q)return;
+    var box=document.getElementById('chatMsgList');if(!box)return;
+    // Remove existing quest banner
+    var existing=box.querySelector('.quest-pinned-banner');
+    if(existing)existing.remove();
+    // Create pinned banner
+    var banner=document.createElement('div');
+    banner.className='quest-pinned-banner';
+    banner.innerHTML='<span class="quest-icon">🏆</span>'
+      +'<div class="quest-info"><div class="quest-title">'+q.title+'</div>'
+      +'<div class="quest-meta">Set by '+q.setBy+' · '+fmtWhen(q.setAt)+'</div></div>'
+      +'<button class="quest-complete-btn primary" onclick="openQuestCamera()">📸 Complete & Take Snap</button>';
+box.insertBefore(banner,box.firstChild);
+    box.scrollTop=0;
+  }catch(e){}
+}
 function renderQuestBanner(p){
   try{
     var banner=document.getElementById('questBanner');

@@ -842,7 +842,17 @@ function formatTripDates(f,t){
 
 function setTravDate(el, val){ try{ var c=document.getElementById('travDatePills'); if(c) Array.prototype.forEach.call(c.querySelectorAll('.chip'),function(x){x.classList.remove('active');}); el.classList.add('active'); var today=todayISO(); if(val==='Tonight'){ ETIE.trip.dateFrom=today; ETIE.trip.dateTo=today; ETIE.trip.dates=formatTripDates(today,today); } else { var end=new Date(); end.setDate(new Date().getDate()+7); var eISO=end.toISOString().slice(0,10); ETIE.trip.dateFrom=today; ETIE.trip.dateTo=eISO; ETIE.trip.dates=formatTripDates(today,eISO); } saveState(); }catch(e){} }
 function saveTrav1(){
-  ETIE.trip.destination='Hong Kong'; ETIE.trip.country='HK';
+  var cityInp=document.getElementById('travCity');
+  var city=cityInp?cityInp.value.trim():'';
+  var countrySel=document.getElementById('travNationality');
+  var country=countrySel?countrySel.value:'';
+  if(city){
+    ETIE.trip.destination=city;
+    ETIE.trip.country=country||'HK';
+  } else {
+    ETIE.trip.destination='Hong Kong';
+    ETIE.trip.country='HK';
+  }
   try{ var sel=document.querySelector('#travDistrictPills .chip.active'); if(sel) ETIE.trip.district=sel.textContent.trim(); if(!ETIE.trip.district) ETIE.trip.district='Central / Soho'; }catch(e){ if(!ETIE.trip.district)ETIE.trip.district='Central / Soho'; }
   try{ var selD=document.querySelector('#travDatePills .chip.active'); var val=selD?selD.textContent.trim():'Tonight'; var today=todayISO(); if(val==='Tonight'){ ETIE.trip.dateFrom=today; ETIE.trip.dateTo=today; ETIE.trip.dates=formatTripDates(today,today); } else { var end=new Date(); end.setDate(new Date().getDate()+7); var eISO=end.toISOString().slice(0,10); ETIE.trip.dateFrom=today; ETIE.trip.dateTo=eISO; ETIE.trip.dates=formatTripDates(today,eISO); } }catch(e){ var today=todayISO(); ETIE.trip.dateFrom=today; ETIE.trip.dateTo=today; ETIE.trip.dates=formatTripDates(today,today); }
   var nn=document.getElementById('travNickname'); if(nn) ETIE.traveller.nickname=nn.value.trim();
@@ -3980,7 +3990,7 @@ document.addEventListener('DOMContentLoaded',function(){
   document.addEventListener('click',function(e){
     try{
       if(!e.target||!e.target.closest)return;
-      if(!e.target.closest('.suggest')&&e.target.id!=='travCity'&&e.target.id!=='localCity'){
+      if(!e.target.closest('.suggest')&&e.target.id!=='travCity'&&e.target.id!=='localCity'&&e.target.id!=='travNationality'&&e.target.id!=='localNationality'){
         ['travCitySuggest','localCitySuggest'].forEach(function(id){var b=document.getElementById(id);if(b)b.classList.remove('open');});
       }
     }catch(err){}

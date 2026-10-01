@@ -2949,10 +2949,10 @@ function setHookRole(v){
   }catch(e){}
 }
 var HOOK_PRESETS=[
-  {cat:'Nightlife',emoji:'💃',label:'salsa?',title:'Salsa & Bachata night — down for a dance?'},
+  {cat:'Nightlife',emoji:'💃',label:'dance? or even better... salsa?',title:'Salsa & Bachata night — down for a dance?'},
   {cat:'Food',emoji:'🥟',label:'foodie time?',title:'Foodie run — hunting for hidden local gems'},
   {cat:'Nightlife',emoji:'🍸',label:'drinks in soho?',title:'Casual drinks & speakeasy in Soho'},
-  {cat:'Photo',emoji:'🎬',label:'movie movie',title:'Movie night for film heads'}
+  {cat:'Photo',emoji:'🎬',label:'letterboxd? sounds like movie movie',title:'Movie night for film heads'}
 ];
 function applyHookPreset(i){
   try{

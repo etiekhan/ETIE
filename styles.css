@@ -727,8 +727,8 @@ html,body{height:100%;width:100%;margin:0;padding:0;overflow:hidden;background:#
 .connection-info{flex:1;}
 .connection-note{font-style:italic;color:#ffe4e6;margin-bottom:4px;font-size:13px;}
 .connection-meta{font-size:11px;color:rgba(255,255,255,.6);}
-.profile-view{background:rgba(255,255,255,.02);border-radius:16px;padding:16px;}
-.passport-view{background:linear-gradient(180deg,rgba(244,63,94,.03),rgba(34,211,238,.03));border-radius:16px;padding:16px;border:1px solid rgba(255,255,255,.05);position:relative;}
+.profile-view{background:rgba(255,255,255,.02);border-radius:16px;padding:16px;box-sizing:border-box;max-width:100%;overflow:hidden;}
+.passport-view{background:linear-gradient(180deg,rgba(244,63,94,.03),rgba(34,211,238,.03));border-radius:16px;padding:16px;border:1px solid rgba(255,255,255,.05);position:relative;box-sizing:border-box;max-width:100%;overflow:hidden;}
 .passport-view::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background-image:radial-gradient(circle at 20% 20%,rgba(244,63,94,.04) 0%,transparent 50%),radial-gradient(circle at 80% 80%,rgba(34,211,238,.04) 0%,transparent 50%);pointer-events:none;}
 #passportView{display:none;}
 #passportView.active{display:block;}

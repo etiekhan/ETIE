@@ -24,6 +24,7 @@
   <div class="avatar-menu" id="avatarMenu" style="display:none;">
     <button class="header-profile" id="headerProfile" onclick="toggleAvatarMenu(event)" aria-haspopup="true" title="Your account"><span class="header-avatar" id="headerAvatar">+</span><span id="headerName">Guest</span><span aria-hidden="true">▾</span></button>
     <div class="avatar-dropdown hidden" id="avatarDropdown" role="menu">
+      <button class="menu-item" id="navMapBtn" onclick="closeAvatarMenu();closeAllModals();showScreen('map')">🗺️ Map</button>
       <button class="menu-item" id="navProfileBtn" onclick="closeAvatarMenu();showScreen('profile')">Profile</button>
       <button class="menu-item" id="signOutBtn" onclick="EtieCloud.signOut()">Sign out</button>
     </div>
@@ -525,12 +526,12 @@
 </div>
 <div class="toast" id="toast"></div>
 
-  <script src="data/locations.js?v=67"></script>
-    <script src="match.js?v=67"></script>
+  <script src="data/locations.js?v=68"></script>
+    <script src="match.js?v=68"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="supabase-config.js?v=67"></script>
-  <script src="app.js?v=67"></script>
-  <script src="supabase-sync.js?v=67"></script>
+  <script src="supabase-config.js?v=68"></script>
+  <script src="app.js?v=68"></script>
+  <script src="supabase-sync.js?v=68"></script>
 </body>
 </html>

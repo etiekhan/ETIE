@@ -1181,6 +1181,36 @@ function updateAuthHeader(){
 }
 function toggleAvatarMenu(e){ try{ if(e&&e.stopPropagation) e.stopPropagation(); var d=document.getElementById('avatarDropdown'); if(d) d.classList.toggle('hidden'); }catch(_){} }
 function closeAvatarMenu(){ try{ var d=document.getElementById('avatarDropdown'); if(d) d.classList.add('hidden'); }catch(_){} }
+function closeAllModals(){
+  try{closeChatPopup();}catch(_){}
+  try{closeChatDrawer();}catch(_){}
+  try{closePinDetail();}catch(_){}
+  try{closeDropHook();}catch(_){}
+  try{closeLogSheet();}catch(_){}
+  try{closeGroupModal();}catch(_){}
+  try{closeQuestDrawer();}catch(_){}
+  try{closeQuestCamera();}catch(_){}
+  try{closeSetQuestModal();}catch(_){}
+  try{closeCustomQuestInput();}catch(_){}
+  try{closeProfileDrawer();}catch(_){}
+  try{closeQuestDrawer();}catch(_){}
+  try{closeQuestCamera();}catch(_){}
+  try{closeSetQuestModal();}catch(_){}
+  try{closeCustomQuestInput();}catch(_){}
+  try{closeQuestDrawer();}catch(_){}
+  try{closeProfileDrawer();}catch(_){}
+  try{var o=document.getElementById('profileDrawer');if(o)o.classList.add('hidden');}catch(_){}
+  try{var o=document.getElementById('questDrawer');if(o)o.classList.add('hidden');}catch(_){}
+  try{var o=document.getElementById('questCameraModal');if(o)o.classList.add('hidden');}catch(_){}
+  try{var o=document.getElementById('setQuestModal');if(o)o.classList.add('hidden');}catch(_){}
+  try{var o=document.getElementById('handshakeModal');if(o)o.classList.add('hidden');}catch(_){}
+  try{var o=document.getElementById('logHangoutModal');if(o)o.classList.add('hidden');}catch(_){}
+  try{var o=document.getElementById('groupModal');if(o)o.classList.add('hidden');}catch(_){}
+  try{var o=document.getElementById('adminOverlay');if(o)o.classList.add('hidden');}catch(_){}
+  try{var o=document.getElementById('chatPopupOverlay');if(o)o.classList.add('hidden');}catch(_){}
+  try{var o=document.getElementById('dropHookModal');if(o)o.classList.add('hidden');}catch(_){}
+  try{var o=document.getElementById('logHangoutModal');if(o)o.classList.add('hidden');}catch(_){}
+}
 function renderHeaderProfile(){
   try{
     var box=document.getElementById('headerProfile'); if(!box)return;

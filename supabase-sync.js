@@ -916,7 +916,11 @@
       }).catch(function(){cb([]);});
     }catch(e){try{cb([]);}catch(_){}}
   }
-  // ---- Expose ----
+  // TODO(OAuth): Set up custom domain (e.g. auth.etie.app) in Supabase OAuth settings
+// to replace the raw supabase.co redirect URL on Google login.
+// Configure in Supabase Dashboard > Authentication > URL Configuration > Site URL & Redirect URLs.
+// Then update Google Cloud Console OAuth 2.0 Client ID > Authorized redirect URIs.
+//  // ---- Expose ----
   window.EtieCloud={
     init:init, signInWithGoogle:signInWithGoogle, signOut:signOut,
     push:push, pull:pull, status:status,

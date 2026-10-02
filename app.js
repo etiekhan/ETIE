@@ -2920,17 +2920,51 @@ function renderMapPins(){
     if(_mapLayer){try{_map.removeLayer(_mapLayer);}catch(e){}}
     _mapLayer=L.layerGroup().addTo(_map);
     var pins=visibleMapPins();
+    // Group pins by rounded coordinates to detect overlaps
+    var pinGroups={};
     pins.forEach(function(p){
+      var key=Math.round(p.lat*1000)+','+Math.round(p.lng*1000); // ~100m precision
+      if(!pinGroups[key])pinGroups[key]=[];
+      pinGroups[key].push(p);
+    });
+    // Render each group with spread for overlapping pins
+    Object.keys(pinGroups).forEach(function(key){
+      var group=pinGroups[key];
+      if(group.length===1){
+        renderSinglePin(group[0]);
+      }else{
+        renderPinCluster(group);
+      }
+    });
+    function renderSinglePin(p){
       try{
         var ll=pinLatLng(p);
         var fresh=(Date.now()-(p.ts||0))<3600*1000?' sq-pin-fresh':'';
         var prole=((p.derivedRole||p.role)==='local')?'local':'traveller';
         var icon=L.divIcon({className:'',html:'<div class="sq-pin sq-pin-'+prole+fresh+'">'+mapCatEmoji(p.category)+'</div>',iconSize:[36,36],iconAnchor:[18,18]});
-        var mk=L.marker(ll,{icon:icon,title:(p.name||'Hook')+' · '+p.category});
+        var mk=L.marker(pinLatLng(p),{icon:icon,title:(p.name||'Hook')+' · '+p.category});
         mk.on('click',(function(id){return function(){openPinDetail(id);};})(p.id));
         _mapLayer.addLayer(mk);
       }catch(e){}
-    });
+    }
+    function renderPinCluster(group){
+      var center=pinLatLng(group[0]);
+      var count=group.length;
+      var radius=25; // pixels from center
+      group.forEach(function(p,i){
+        var angle=(i/group.length)*2*Math.PI;
+        var offsetLat=center[0]+(radius/111000)*Math.cos(angle); // ~111km per degree
+        var offsetLng=center[1]+(radius/111000)*Math.sin(angle)/Math.cos(center[0]*Math.PI/180);
+        try{
+          var fresh=(Date.now()-(p.ts||0))<3600*1000?' sq-pin-fresh':'';
+          var prole=((p.derivedRole||p.role)==='local')?'local':'traveller';
+          var icon=L.divIcon({className:'',html:'<div class="sq-pin sq-pin-'+prole+fresh+'">'+mapCatEmoji(p.category)+'</div>',iconSize:[36,36],iconAnchor:[18,18]});
+          var mk=L.marker([offsetLat,offsetLng],{icon:icon,title:(p.name||'Hook')+' · '+p.category});
+          mk.on('click',(function(id){return function(){openPinDetail(id);};})(p.id));
+          _mapLayer.addLayer(mk);
+        }catch(e){}
+      });
+    }
     try{sweepExpiredPins();pins=visibleMapPins();}catch(e){}
     var c=document.getElementById('mapPinCount');
     if(c)c.textContent=pins.length?pins.length+' hook'+(pins.length===1?'':'s')+' live in HK':'';

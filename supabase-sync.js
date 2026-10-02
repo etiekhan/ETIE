@@ -287,7 +287,7 @@
             status: localReq.status,
             message: localReq.message||'',
             local_name: localReq.localName||k,
-            destination: (typeof ETIE!=='undefined' && ETIE.trip && ETIE.trip.destination)||'Lisbon',
+destination: (typeof ETIE!=='undefined' && ETIE.trip && ETIE.trip.destination)||'Hong Kong',
             dates: (typeof ETIE!=='undefined' && ETIE.trip && ETIE.trip.dates)||'',
             updated_at: new Date().toISOString()
           }).eq('id', existing.id).select('id').maybeSingle().then(function(r){
@@ -302,7 +302,7 @@
           local_id: null,
           status: localReq.status,
           message: localReq.message||'',
-          destination: (typeof ETIE!=='undefined' && ETIE.trip && ETIE.trip.destination)||'Lisbon',
+          destination: (typeof ETIE!=='undefined' && ETIE.trip && ETIE.trip.destination)||'Hong Kong',
           dates: (typeof ETIE!=='undefined' && ETIE.trip && ETIE.trip.dates)||'',
           traveller_name: (typeof ETIE!=='undefined' && ETIE.traveller && (ETIE.traveller.nickname||ETIE.traveller.name))||'Traveller',
           local_name: localReq.localName||k,

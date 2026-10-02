@@ -256,7 +256,7 @@ create index if not exists etie_reports_reporter_idx on public.etie_reports(repo
 create index if not exists etie_reports_reported_idx on public.etie_reports(reported_id);
 -- ===== 3/6 profile columns =====
 -- Etie — add missing profile columns (run once in SQL Editor)
-alter table public.etie_profiles add column if not exists nationality text default 'PT';
+alter table public.etie_profiles add column if not exists nationality text default 'HK';
 alter table public.etie_profiles add column if not exists tier text default 'Rookie';
 alter table public.etie_profiles add column if not exists hosted_count int default 0;
 alter table public.etie_profiles add column if not exists avg_host_rating numeric default 0;

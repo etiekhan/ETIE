@@ -3023,6 +3023,7 @@ function applyHookPreset(i){
   try{
     var p=HOOK_PRESETS[i];if(!p)return;
     _hookDraft.category=p.cat;
+    try{var c=document.getElementById('hookInterestPills');if(c)Array.prototype.forEach.call(c.querySelectorAll('.chip'),function(x){var t=(x.textContent||'').toLowerCase();x.classList.toggle('active',t.indexOf(p.cat.toLowerCase())!==-1||(p.cat==='Photo'&&t.indexOf('photo')!==-1));});}catch(e){}
     var ht0=document.getElementById('hookTitle');if(ht0)ht0.value=p.title.slice(0,60);
     var ht=document.getElementById('hookText');if(ht)ht.focus();
     hookCountTick();
@@ -3099,6 +3100,7 @@ function openDropHook(){
     var ht0=document.getElementById('hookTitle');if(ht0)ht0.value='';
     hookCap(0);renderHookRoleLine();
     renderHookPresets();
+    try{var pc=document.getElementById('hookInterestPills');if(pc)Array.prototype.forEach.call(pc.querySelectorAll('.chip'),function(x){x.classList.remove('active');});}catch(e){}
     var today=new Date().toISOString().slice(0,10);
     var cd=document.getElementById('customDate'); if(cd) cd.value=today;
     var cst=document.getElementById('customStartTime'); if(cst) cst.value='19:30';

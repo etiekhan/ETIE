@@ -45,12 +45,11 @@
     <div class="map-wrap2">
       <div id="hkMap"></div>
       <div id="mapEmptyBanner" class="map-empty hidden">No active hooks nearby yet. Be the first to drop a pin around you!</div>
-      <button class="fab" onclick="openDropHook()" style="margin-bottom:56px;">+ Drop a Hook</button>
-      <button class="fab fab-globe" onclick="toggleGlobalView()" title="Toggle global view" style="bottom:72px;">🌍</button>
+      <button class="fab" onclick="openDropHook()">+ Drop a Hook</button>
     </div>
     <div class="map-foot"><span class="muted small" id="mapPinCount"></span><span class="muted small">Tap anywhere on the map to place your pin.</span></div>
     <div class="map-credit">© Stadia Maps © OpenMapTiles © OpenStreetMap</div>
-    <div id="areaSidebar"><div class="area-head" onclick="toggleAreaSidebar()"><strong id="areaToggle">▾ Areas</strong><span class="muted small" id="areaCount"></span></div><div id="areaList"></div></div>
+    <div id="areaSidebar"><div class="area-head" onclick="toggleAreaSidebar()"><strong id="areaToggle">▾ Areas</strong><span class="muted small" id="areaCount"></span><button class="fab fab-globe" onclick="toggleGlobalView()" title="Toggle global view" style="padding:6px 10px;font-size:16px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;">🌍</button></div><div id="areaList"></div></div>
   </div>
 </section>
 

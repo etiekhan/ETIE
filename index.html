@@ -291,7 +291,6 @@
           <div class="field"><label>End Time (optional)</label><input id="customEndTime" type="time" placeholder="e.g. 23:00"></div>
         </div>
       </div>
-      <div class="field"><label>3 · Location</label><input id="hookLocation" placeholder='e.g. "Sham Shui Po Street Market" or "Soho Escalators"'><p class="muted small" style="margin:4px 0 0;">Auto-filled from your map tap — edit freely.</p><div style="margin-top:8px;"><button class="secondary" onclick="pickOnMap('hook')" style="padding:8px 14px;">📍 Pick on Map</button></div></div>
       <div class="field"><label>4 · Spots</label><div class="stepper"><button class="secondary" onclick="hookCap(-1)" style="padding:8px 14px;">−</button><strong id="hookCapVal">3</strong><button class="secondary" onclick="hookCap(1)" style="padding:8px 14px;">+</button></div><p class="muted small" id="hookCapHint" style="margin:4px 0 0;"></p></div>
       <div class="field"><label>📸 Photos (max 3)</label>
         <div class="photo-preview-row" id="hookPhotoPreview" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;"></div>
@@ -299,16 +298,10 @@
         <button class="secondary" onclick="document.getElementById('hookPhotoInput').click()">Add Photos</button>
         <p class="muted small" style="margin:4px 0 0;">Tap to add up to 3 photos</p>
       </div>
-      <div class="field"><label>4 · Spots</label><div class="stepper"><button class="secondary" onclick="hookCap(-1)" style="padding:8px 14px;">−</button><strong id="hookCapVal">3</strong><button class="secondary" onclick="hookCap(1)" style="padding:8px 14px;">+</button></div><p class="muted small" id="hookCapHint" style="margin:4px 0 0;"></p></div>
       <div class="field role-pill-row"><span class="role-pill" id="hookRolePill">✈️ Traveller</span><button class="role-switch-btn" onclick="toggleHookRole();return false;" aria-label="Switch role">Switch</button></div>
       <div class="field"><label>The plan & photos (optional)</label>
         <textarea id="hookText" maxlength="140" rows="2" oninput="hookCountTick()" placeholder="e.g. Grabbing late-night claypot rice in Sham Shui Po—who's down to join?"></textarea>
         <p class="muted small" style="margin:4px 0 0;text-align:right;"><span id="hookCount">0 / 140</span></p>
-        <label>📸 Photos (max 3, optional)</label>
-        <div class="photo-preview-row" id="hookPhotoPreview" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;"></div>
-        <input type="file" id="hookPhotoInput" accept="image/*" multiple style="display:none;" onchange="handleHookPhotos(this)">
-        <button class="secondary" onclick="document.getElementById('hookPhotoInput').click()">Add Photos</button>
-        <p class="muted small" style="margin:4px 0 0;">Tap to add up to 3 photos</p>
       </div>
     </div>
   </div>

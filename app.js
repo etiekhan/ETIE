@@ -304,6 +304,7 @@ function formatTripDates(f,t){
 
 window.ETIE_ADMINS=['kan.ethan.cy@gmail.com'];
 function isEtieAdmin(){try{var s=window.EtieCloud&&window.EtieCloud.getSession&&window.EtieCloud.getSession();var em=s&&s.user&&s.user.email;if(em&&window.ETIE_ADMINS.indexOf(em.toLowerCase())!==-1)return true;}catch(e){} try{var q=new URLSearchParams(window.location.search).get('admin');if(q==='1'&&localStorage.getItem('etie-admin-unlock')==='1')return true;}catch(e){} return false;}
+function canManagePin(p){try{var myId=myUid();if(myId&&p&&p.authorId&&myId===p.authorId)return true;if(isEtieAdmin())return true;}catch(e){}try{if(p&&!p.authorId){var me=hookNick();if(me&&(p.members||[])[0]&&(p.members||[])[0].nick===me)return true;}}catch(e){}return false;}
 function updateAdminVisibility(){try{var b=document.getElementById('adminBtn');if(b)b.style.display=isEtieAdmin()?'':'none';if(!isEtieAdmin())closeAdmin();}catch(e){}}
 function openAdmin(){if(!isEtieAdmin()){toast('Admin restricted.');return;}try{var o=document.getElementById('adminOverlay');if(o)o.classList.remove('hidden');}catch(e){} try{ refreshAdminLive(); }catch(e){}}
 function closeAdmin(){try{var o=document.getElementById('adminOverlay');if(o)o.classList.add('hidden');}catch(e){}}
@@ -1820,10 +1821,9 @@ function openPinDetail(id){
     _openPinId=id;
     var me=hookNick();
     var myId=null;try{myId=myUid();}catch(e){}
-    // host = author by user id (nicknames are not unique — never use them for permissions)
-    var isHost=!!(myId&&p.authorId&&myId===p.authorId);
-    if(!isHost){try{if(isEtieAdmin())isHost=true;}catch(e){}} // admin can manage any pin
-    if(!isHost&&!p.authorId&&me){try{isHost=!!((p.members||[])[0]&&(p.members||[])[0].nick===me);}catch(e){}} // legacy pins pre-id
+    // host = author by user id (nicknames are not unique — never use them for permissions).
+    // Admin can manage any pin; legacy pins without an author id fall back to member nick.
+    var isHost=canManagePin(p);
     var isMember=(p.members||[]).some(function(m){return m.uid?m.uid===myId:m.nick===me;});
     if(isHost)isMember=true;
     var isPending=(p.pending||[]).some(function(r){return r.nick===me;})||(p.requests||[]).some(function(r){return r.nick===me&&r.status==='pending';});
@@ -1926,7 +1926,7 @@ function acceptHookRequest(idx){
 function declineHookRequest(pinId,idx){
   try{
     var p=findPin(pinId);if(!p||!p.requests||!p.requests[idx])return;
-    try{if(!(myUid()&&p.authorId&&myUid()===p.authorId)){toast('Only the host can decline.');return;}}catch(e){return;}
+    try{if(!canManagePin(p)){toast('Only the host can decline.');return;}}catch(e){return;}
     var req=p.requests[idx];
     if(req.status!=='pending') return;
     req.status='declined';
@@ -1937,7 +1937,7 @@ function declineHookRequest(pinId,idx){
 function approveHookRequest(pinId,idx){
   try{
     var p=findPin(pinId);if(!p||!p.requests||!p.requests[idx])return;
-    try{if(!(myUid()&&p.authorId&&myUid()===p.authorId)){toast('Only the host can approve.');return;}}catch(e){return;}
+    try{if(!canManagePin(p)){toast('Only the host can approve.');return;}}catch(e){return;}
     var req=p.requests[idx];
     if(req.status!=='pending') return;
     // Check capacity
@@ -2097,7 +2097,7 @@ function deletePinSidequest(){
   try{
     if(!_openPinId)return;
     var p=findPin(_openPinId);
-    try{if(!(myUid()&&p&&p.authorId&&myUid()===p.authorId)){toast('Only the host can delete this pin.');return;}}catch(e){return;}
+    try{if(!canManagePin(p)){toast('Only the host can delete this pin.');return;}}catch(e){return;}
     ETIE.mapPins=(ETIE.mapPins||[]).filter(function(x){return x&&x.id!==_openPinId;});
     try{if(window.EtieCloud&&window.EtieCloud.deletePin&&p)window.EtieCloud.deletePin(p);}catch(e){}
     saveState();closePinDetail();renderMapPins();toast('Pin deleted.');

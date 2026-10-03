@@ -1649,9 +1649,8 @@ function renderHookPhotoPreviews(){
 function pinSyncState(p){
   try{
     if(!p)return 'local';
-    if(p.origin==='cloud')return 'live';
-    if(p.syncState==='live'||p.syncState==='syncing')return p.syncState;
-    if(p.cloudId&&p.syncState!=='local')return 'live'; // legacy pins pushed before sync tracking
+    if(p.syncState==='live'||p.syncState==='syncing'||p.syncState==='local')return p.syncState; // explicit last-push outcome wins (incl. guests on host pins)
+    if(p.origin==='cloud'||p.cloudId)return 'live'; // legacy pins pushed before sync tracking
     return 'local';
   }catch(e){return 'local';}
 }
@@ -1684,13 +1683,17 @@ function persistPinCloud(pin){
   try{if(window.EtieCloud&&window.EtieCloud.pushPin)window.EtieCloud.pushPin(pin);}catch(e){}
 }
 function retryLocalPins(){
-  // upload pins that were dropped while signed out (or failed before) — called once a session exists
+  // upload pins that never reached the cloud: signed-out drops AND failed updates
+  // (e.g. a join request that was rejected by RLS). Called once a session exists.
   try{
     var arr=ETIE.mapPins||[],n=0;
     for(var i=0;i<arr.length&&n<20;i++){
       var p=arr[i];
-      if(!p||p.origin!=='local'||p.cloudId)continue;
+      if(!p)continue;
       try{if(isPinExpired(p))continue;}catch(e){}
+      var st=pinSyncState(p);
+      if(st!=='local')continue;
+      if(p.origin!=='local'&&!p.syncState)continue; // untouched cloud pins stay put
       p.syncState='syncing';p.syncError=null;
       try{persistPinCloud(p);n++;}catch(e){}
     }

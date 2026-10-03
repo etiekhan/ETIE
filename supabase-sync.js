@@ -734,8 +734,13 @@ destination: (typeof ETIE!=='undefined' && ETIE.trip && ETIE.trip.destination)||
             var l2=local[di],own=false,unsent=false;
             try{own=!!(l2&&session&&session.user&&l2.authorId&&l2.authorId===session.user.id);}catch(e){}
             try{unsent=(typeof pinSyncState==='function'&&pinSyncState(l2)==='local');}catch(e){}
-            if(own&&!unsent)local[di]=c;
-            // guest copies keep local (preserves unsent requests until they upload)
+            // cloud wins for own pins, or whenever the cloud copy is newer (guest
+            // requests/vibes only exist there). Unsent local work is never clobbered.
+            var lt=0,ct=0;
+            try{lt=new Date(l2.updated_at||l2.ts||0).getTime()||0;}catch(e){}
+            try{ct=new Date(c.ts||0).getTime()||0;}catch(e){}
+            if(!unsent&&(own||ct>lt))local[di]=c;
+            // guest copies with unsent changes keep local until they upload
           });
           ETIE.mapPins=local;
           try{if(typeof renderMapPins==='function')renderMapPins();}catch(e){}
@@ -811,7 +816,17 @@ destination: (typeof ETIE!=='undefined' && ETIE.trip && ETIE.trip.destination)||
         hook_id:String((pin.cloudId||pin.id)),
         sender_id:session.user.id, sender_nick:msg.nick||'Someone',
         sender_role:(msg.role==='local'?'local':'traveller'), text:String(msg.text).slice(0,500)
-      }).then(function(){}).catch(function(){});
+      }).then(function(r){
+        try{
+          if(r&&r.error){
+            try{console.error('[Etie] chat send failed:',r.error.code,r.error.message);}catch(e){}
+            try{if(typeof toast==='function')toast('Message not sent ('+(r.error.code||'offline')+').');}catch(e){}
+          }
+        }catch(e){}
+      }).catch(function(e){
+        try{console.error('[Etie] chat send failed:',e&&e.message);}catch(_){}
+        try{if(typeof toast==='function')toast('Message not sent (offline).');}catch(e){}
+      });
     }catch(e){}
   }
   function subscribeHookChat(pinId,cb){

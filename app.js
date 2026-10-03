@@ -304,7 +304,7 @@ function formatTripDates(f,t){
 
 window.ETIE_ADMINS=['kan.ethan.cy@gmail.com'];
 function isEtieAdmin(){try{var s=window.EtieCloud&&window.EtieCloud.getSession&&window.EtieCloud.getSession();var em=s&&s.user&&s.user.email;if(em&&window.ETIE_ADMINS.indexOf(em.toLowerCase())!==-1)return true;}catch(e){} try{var q=new URLSearchParams(window.location.search).get('admin');if(q==='1'&&localStorage.getItem('etie-admin-unlock')==='1')return true;}catch(e){} return false;}
-function canManagePin(p){try{var myId=myUid();if(myId&&p&&p.authorId&&myId===p.authorId)return true;if(isEtieAdmin())return true;}catch(e){}try{if(p&&!p.authorId){var me=hookNick();if(me&&(p.members||[])[0]&&(p.members||[])[0].nick===me)return true;}}catch(e){}return false;}
+function canManagePin(p){try{var myId=myUid();if(myId&&p&&p.authorId&&myId===p.authorId)return true;}catch(e){}return false;}
 function updateAdminVisibility(){try{var b=document.getElementById('adminBtn');if(b)b.style.display=isEtieAdmin()?'':'none';if(!isEtieAdmin())closeAdmin();}catch(e){}}
 function openAdmin(){if(!isEtieAdmin()){toast('Admin restricted.');return;}try{var o=document.getElementById('adminOverlay');if(o)o.classList.remove('hidden');}catch(e){} try{ refreshAdminLive(); }catch(e){}}
 function closeAdmin(){try{var o=document.getElementById('adminOverlay');if(o)o.classList.add('hidden');}catch(e){}}

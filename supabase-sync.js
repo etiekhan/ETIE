@@ -733,15 +733,23 @@ destination: (typeof ETIE!=='undefined' && ETIE.trip && ETIE.trip.destination)||
   }
   function pushPin(pin){
     try{
-      if(!client||!session||!pin||pin.lat==null)return; // logged-out pins stay local-only
+      if(!client||!session||!pin||pin.lat==null){
+        try{if(typeof markPinSynced==='function'&&pin&&pin.id)markPinSynced(pin.id,false);}catch(e){} // logged-out pins stay local-only
+        return;
+      }
       var row=pinToRow(pin);
       client.from(pinTable()).upsert(row).then(function(r){
         try{
-          if(r&&!r.error&&typeof ETIE!=='undefined'){
-            (ETIE.mapPins||[]).forEach(function(p){if(p&&(p.id===pin.id))p.cloudId=String(row.id);});
+          var ok=!!(r&&!r.error);
+          if(typeof ETIE!=='undefined'){
+            (ETIE.mapPins||[]).forEach(function(p){if(p&&(p.id===pin.id)){p.cloudId=String(row.id);p.syncState=ok?'live':'local';}});
+            try{if(typeof saveState==='function')saveState();}catch(e){}
           }
+          try{if(typeof markPinSynced==='function')markPinSynced(pin.id,ok);}catch(e){}
         }catch(e){}
-      }).catch(function(){});
+      }).catch(function(){
+        try{if(typeof markPinSynced==='function')markPinSynced(pin.id,false);}catch(e){}
+      });
     }catch(e){}
   }
   function deletePin(pin){

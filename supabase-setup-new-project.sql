@@ -294,7 +294,6 @@ create table if not exists public.hooks (
   pending jsonb not null default '[]'::jsonb,
   requests jsonb not null default '[]'::jsonb,
   spots_available int,
-  pending jsonb not null default '[]'::jsonb,
   status text not null default 'open',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()

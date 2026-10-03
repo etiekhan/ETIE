@@ -51,6 +51,7 @@
           paint('on','Cloud: on');
           try{pull();}catch(e){} try{pullShared();}catch(e){} try{subscribeShared();}catch(e){}
           try{subscribeLiveProfiles();}catch(e){} try{syncProfile();}catch(e){} try{pullPins();}catch(e){}
+          try{if(typeof retryLocalPins==='function')retryLocalPins();}catch(e){}
           try{fetchOwnProfile();}catch(e){}
         }
         else{paint('offline','Cloud: offline — sign in');try{if(typeof refreshGate==='function')refreshGate();}catch(e){}}
@@ -70,6 +71,7 @@
           paint('on','Cloud: on');
           try{pull();}catch(e){} try{pullShared();}catch(e){} try{subscribeShared();}catch(e){}
           try{subscribeLiveProfiles();}catch(e){} try{syncProfile();}catch(e){} try{pullPins();subscribePins();}catch(e){}
+          try{if(typeof retryLocalPins==='function')retryLocalPins();}catch(e){}
           try{fetchOwnProfile();}catch(e){}
         }
         else{paint('offline','Cloud: offline — sign in');try{if(typeof refreshGate==='function')refreshGate();}catch(e){}}

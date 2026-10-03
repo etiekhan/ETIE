@@ -1683,6 +1683,20 @@ function markPinSynced(pinId,ok){
 function persistPinCloud(pin){
   try{if(window.EtieCloud&&window.EtieCloud.pushPin)window.EtieCloud.pushPin(pin);}catch(e){}
 }
+function retryLocalPins(){
+  // upload pins that were dropped while signed out (or failed before) — called once a session exists
+  try{
+    var arr=ETIE.mapPins||[],n=0;
+    for(var i=0;i<arr.length&&n<20;i++){
+      var p=arr[i];
+      if(!p||p.origin!=='local'||p.cloudId)continue;
+      try{if(isPinExpired(p))continue;}catch(e){}
+      p.syncState='syncing';p.syncError=null;
+      try{persistPinCloud(p);n++;}catch(e){}
+    }
+    if(n){saveState();renderMapPins();}
+  }catch(e){}
+}
 function saveDropHook(){
   try{
     if(!_dropPoint){toast('Tap the map first to place your pin.');return;}

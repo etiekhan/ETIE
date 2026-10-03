@@ -3025,7 +3025,6 @@ function applyHookPreset(i){
     _hookDraft.category=p.cat;
     try{var c=document.getElementById('hookInterestPills');if(c)Array.prototype.forEach.call(c.querySelectorAll('.chip'),function(x){var t=(x.textContent||'').toLowerCase();x.classList.toggle('active',t.indexOf(p.cat.toLowerCase())!==-1||(p.cat==='Photo'&&t.indexOf('photo')!==-1));});}catch(e){}
     var ht0=document.getElementById('hookTitle');if(ht0)ht0.value=p.title.slice(0,60);
-    var ht=document.getElementById('hookText');if(ht)ht.focus();
     hookCountTick();
   }catch(e){}
 }
@@ -3101,9 +3100,11 @@ function openDropHook(){
     hookCap(0);renderHookRoleLine();
     renderHookPresets();
     try{var pc=document.getElementById('hookInterestPills');if(pc)Array.prototype.forEach.call(pc.querySelectorAll('.chip'),function(x){x.classList.remove('active');});}catch(e){}
-    var today=new Date().toISOString().slice(0,10);
-    var cd=document.getElementById('customDate'); if(cd) cd.value=today;
-    var cst=document.getElementById('customStartTime'); if(cst) cst.value='19:30';
+    var _now=new Date();
+    var _p2=function(n){return (n<10?'0':'')+n;};
+    var _today=_now.getFullYear()+'-'+_p2(_now.getMonth()+1)+'-'+_p2(_now.getDate());
+    var cd=document.getElementById('customDate'); if(cd) cd.value=_today;
+    var cst=document.getElementById('customStartTime'); if(cst) cst.value=_p2(_now.getHours())+':'+_p2(_now.getMinutes());
     var cet=document.getElementById('customEndTime'); if(cet) cet.value='';
     var pv=document.getElementById('hookPhotoPreview'); if(pv) pv.innerHTML='';
     // default coords: last map tap, else live map center
@@ -3111,7 +3112,7 @@ function openDropHook(){
       try{if(_map)_dropPoint={lat:_map.getCenter().lat,lng:_map.getCenter().lng};}catch(e){}
       if(!_dropPoint)_dropPoint={lat:HK_CENTER[0],lng:HK_CENTER[1]};
     }
-    var o=document.getElementById('dropHookModal');if(o)o.classList.remove('hidden');
+    var o=document.getElementById('dropHookModal');if(o){o.classList.remove('hidden');try{var _mb=o.querySelector('.chat-popup-body');if(_mb)_mb.scrollTop=0;}catch(e){}}
     var li=document.getElementById('hookLocation');
     if(li){li.value=window._pendingDropGuess||('Near '+nearestDistrictLabel(_dropPoint.lat,_dropPoint.lng));window._pendingDropGuess=null;}
     var ht=document.getElementById('hookText');if(ht){ht.value='';var ph='';try{ph=(ETIE.traveller&&ETIE.traveller.bio)||'';}catch(e){}ht.placeholder=ph||"e.g. Grabbing late-night claypot rice in Sham Shui Po—who's down to join?";}

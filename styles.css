@@ -761,8 +761,8 @@ html,body{height:100%;width:100%;margin:0;padding:0;overflow:hidden;background:#
 #mapRoleBar.map-filter{display:none;}
 .filter-sep{color:rgba(255,255,255,.3);align-self:center;flex-shrink:0;padding:0 2px;}
 /* hook modal as slide-up bottom sheet */
-#dropHookModal{justify-content:center;}
-#dropHookModal .chat-popup{width:100%;max-width:640px;margin:0 auto;border-radius:20px 20px 0 0;}
+#dropHookModal{align-items:center;justify-content:center;}
+#dropHookModal .chat-popup{width:100%;max-width:640px;margin:0 auto;border-radius:20px;}
 
 /* Profile Tabs */
 .profile-tabs{display:flex;gap:8px;margin-top:20px;padding:4px;background:rgba(255,255,255,.03);border-radius:16px;border:1px solid rgba(255,255,255,.08);}

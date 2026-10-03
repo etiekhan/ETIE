@@ -1879,6 +1879,8 @@ function openPinDetail(id){
     }
     var del=document.getElementById('pinDeleteBtn');
     if(del)del.style.display=isHost?'':'none';
+    var claim=document.getElementById('pinClaimBtn');
+    if(claim)claim.style.display=(!isHost&&isEtieAdmin())?'':'none';
     try{fillMemoryStrip('pinMemories',p.authorId||null);}catch(e){}
     try{fillSpotsStrip('pinSpots',p.authorId||null);}catch(e){}
     var d=document.getElementById('pinDrawer');if(d)d.classList.remove('hidden');
@@ -2092,6 +2094,16 @@ function sendPinVibe(){
     req.messageCount=(req.messageCount||0)+1;req.updatedAt=Date.now();
     storePin(p);renderPinVibe(p,me);
   }catch(e){}
+}
+function claimPinHost(){
+  try{
+    var p=findPin(_openPinId);if(!p){toast('Pin not found.');return;}
+    var myId=myUid();if(!myId){toast('Sign in first.');return;}
+    p.authorId=myId;
+    storePin(p);
+    openPinDetail(p.id);
+    toast('You are now the host of this pin.');
+  }catch(e){toast('Could not claim host.');}
 }
 function deletePinSidequest(){
   try{

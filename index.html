@@ -178,7 +178,7 @@
 </div>
 <div id="pinDrawer" class="pin-drawer hidden" role="dialog" aria-label="Hook preview">
   <div class="drawer-grab"></div>
-  <div class="drawer-top"><div class="pin-idrow"><div class="pin-avatar" id="pinAvatar">?</div><div><strong id="pinNick">—</strong> <span id="pinVerified" class="small"></span><div><span id="pinRoleBadge" class="role-badge">—</span></div></div></div><div style="display:flex;gap:4px;align-items:center;"><button class="pin-delete" id="pinDeleteBtn" onclick="deletePinSidequest()" style="display:none;" aria-label="Delete pin">Delete</button><button class="secondary" onclick="closePinDetail()" aria-label="Close" style="padding:8px 12px;">✕</button></div></div>
+  <div class="drawer-top"><div class="pin-idrow"><div class="pin-avatar" id="pinAvatar">?</div><div><strong id="pinNick">—</strong> <span id="pinVerified" class="small"></span><div><span id="pinRoleBadge" class="role-badge">—</span></div></div></div><div style="display:flex;gap:4px;align-items:center;"><button class="pin-delete" id="pinDeleteBtn" onclick="deletePinSidequest()" style="display:none;" aria-label="Delete pin">Delete</button><button class="secondary" id="pinClaimBtn" onclick="claimPinHost()" style="display:none;padding:8px 12px;" aria-label="Claim host">Claim host</button><button class="secondary" onclick="closePinDetail()" aria-label="Close" style="padding:8px 12px;">✕</button></div></div>
   <div class="pin-title" id="pinTitle">—</div>
   <div class="muted small" id="pinLoc">—</div>
   <div class="small" id="pinSyncBadge" style="display:none;margin:2px 0 6px;"></div>
@@ -401,7 +401,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="supabase-config.js?v=69"></script>
-  <script src="app.js?v=80"></script>
+  <script src="app.js?v=81"></script>
   <script src="supabase-sync.js?v=73"></script>
 </body>
 </html>

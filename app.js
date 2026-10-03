@@ -1661,7 +1661,9 @@ function paintSyncBadge(el,p){
     var st=pinSyncState(p);
     el.style.display='';
     el.className='small sync-badge sync-'+st;
-    el.textContent=st==='live'?'☁️ Live — visible to everyone':(st==='syncing'?'⏳ Sharing…':'📴 Only on this device');
+    var label=st==='live'?'☁️ Live — visible to everyone':(st==='syncing'?'⏳ Sharing…':'📴 Only on this device');
+    try{if(st!=='live'&&p.syncError)label+=' · '+p.syncError;}catch(e){}
+    el.textContent=label;
   }catch(e){}
 }
 function markPinSynced(pinId,ok){

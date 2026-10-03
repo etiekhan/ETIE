@@ -731,24 +731,37 @@ destination: (typeof ETIE!=='undefined' && ETIE.trip && ETIE.trip.destination)||
       }).catch(function(){});
     }catch(e){}
   }
+  var _lastPinErrToast=0;
+  function notePinErr(code,msg){
+    // surface the real Supabase error: console always, toast throttled, code kept on the pin for the badge
+    try{console.error('[Etie] pushPin failed:',code,msg);}catch(e){}
+    try{
+      var now=Date.now();
+      if(now-_lastPinErrToast>15000){_lastPinErrToast=now;if(typeof toast==='function')toast('Pin kept on this device — share failed ('+(code||'offline')+').');}
+    }catch(e){}
+  }
   function pushPin(pin){
     try{
-      if(!client||!session||!pin||pin.lat==null){
-        try{if(typeof markPinSynced==='function'&&pin&&pin.id)markPinSynced(pin.id,false);}catch(e){} // logged-out pins stay local-only
+      if(!pin||pin.lat==null)return;
+      if(!client||!session){
+        try{if(typeof markPinSynced==='function'&&pin.id)markPinSynced(pin.id,false);}catch(e){}
         return;
       }
       var row=pinToRow(pin);
       client.from(pinTable()).upsert(row).then(function(r){
         try{
           var ok=!!(r&&!r.error);
+          var code=(r&&r.error&&(r.error.code||r.error.message))||null;
+          if(!ok)notePinErr(code,(r&&r.error&&r.error.message)||'');
           if(typeof ETIE!=='undefined'){
-            (ETIE.mapPins||[]).forEach(function(p){if(p&&(p.id===pin.id)){p.cloudId=String(row.id);p.syncState=ok?'live':'local';}});
+            (ETIE.mapPins||[]).forEach(function(p){if(p&&(p.id===pin.id)){p.cloudId=String(row.id);p.syncState=ok?'live':'local';p.syncError=ok?null:code;}});
             try{if(typeof saveState==='function')saveState();}catch(e){}
           }
           try{if(typeof markPinSynced==='function')markPinSynced(pin.id,ok);}catch(e){}
         }catch(e){}
-      }).catch(function(){
-        try{if(typeof markPinSynced==='function')markPinSynced(pin.id,false);}catch(e){}
+      }).catch(function(e){
+        try{notePinErr(null,e&&e.message);}catch(_){}
+        try{if(typeof markPinSynced==='function')markPinSynced(pin.id,false);}catch(_){}
       });
     }catch(e){}
   }

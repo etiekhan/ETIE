@@ -722,13 +722,30 @@ destination: (typeof ETIE!=='undefined' && ETIE.trip && ETIE.trip.destination)||
           var cloud=(r.data||[]).map(pinRowToPin).filter(Boolean);
           if(typeof ETIE==='undefined')return;
           var local=(ETIE.mapPins||[]).filter(function(p){return p&&p.origin!=='cloud';});
+          var openReqN=-1;
+          try{if(typeof _openPinId!=='undefined'&&_openPinId&&typeof findPin==='function'){var _op=findPin(_openPinId);openReqN=_op?((_op.requests||[]).filter(function(r){return r.status==='pending';}).length):-1;}}catch(e){}
           cloud.forEach(function(c){
-            // local edits win for pins we also hold locally
-            var dup=local.some(function(l){return l&&(l.cloudId===c.cloudId||l.id===c.id);});
-            if(!dup)local.push(c);
+            var di=-1;
+            for(var i=0;i<local.length;i++){var l=local[i];if(l&&(l.cloudId===c.cloudId||l.id===c.id)){di=i;break;}}
+            if(di<0){local.push(c);return;}
+            // own pins: cloud wins so guest mutations (requests, vibes) arrive.
+            // A host's own edits always push successfully, so cloud is authoritative —
+            // unless this copy has unsent changes (failed push), which retry will deliver.
+            var l2=local[di],own=false,unsent=false;
+            try{own=!!(l2&&session&&session.user&&l2.authorId&&l2.authorId===session.user.id);}catch(e){}
+            try{unsent=(typeof pinSyncState==='function'&&pinSyncState(l2)==='local');}catch(e){}
+            if(own&&!unsent)local[di]=c;
+            // guest copies keep local (preserves unsent requests until they upload)
           });
           ETIE.mapPins=local;
           try{if(typeof renderMapPins==='function')renderMapPins();}catch(e){}
+          try{
+            if(openReqN>=0&&typeof findPin==='function'&&typeof openPinDetail==='function'&&typeof _openPinId!=='undefined'&&_openPinId){
+              var _np=findPin(_openPinId);
+              var _nn=_np?((_np.requests||[]).filter(function(r){return r.status==='pending';}).length):-1;
+              if(_nn!==openReqN)openPinDetail(_openPinId); // new request/approval arrived on the open pin
+            }
+          }catch(e){}
         }catch(e){}
       }).catch(function(){});
     }catch(e){}

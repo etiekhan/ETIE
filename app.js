@@ -1822,6 +1822,7 @@ function openPinDetail(id){
     var myId=null;try{myId=myUid();}catch(e){}
     // host = author by user id (nicknames are not unique — never use them for permissions)
     var isHost=!!(myId&&p.authorId&&myId===p.authorId);
+    if(!isHost&&!p.authorId&&me){try{isHost=!!((p.members||[])[0]&&(p.members||[])[0].nick===me);}catch(e){}} // legacy pins pre-id
     var isMember=(p.members||[]).some(function(m){return m.uid?m.uid===myId:m.nick===me;});
     if(isHost)isMember=true;
     var isPending=(p.pending||[]).some(function(r){return r.nick===me;})||(p.requests||[]).some(function(r){return r.nick===me&&r.status==='pending';});

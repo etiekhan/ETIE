@@ -1822,12 +1822,13 @@ function openPinDetail(id){
     var me=hookNick();
     var myId=null;try{myId=myUid();}catch(e){}
     // host = author by user id (nicknames are not unique — never use them for permissions).
-    // Admin can manage any pin; legacy pins without an author id fall back to member nick.
-    var isHost=canManagePin(p);
+    var isHost=!!(myId&&p.authorId&&myId===p.authorId);
     var isMember=(p.members||[]).some(function(m){return m.uid?m.uid===myId:m.nick===me;});
     if(isHost)isMember=true;
-    var isPending=(p.pending||[]).some(function(r){return r.nick===me;})||(p.requests||[]).some(function(r){return r.nick===me&&r.status==='pending';});
-    var hasApproved=hasApprovedRequest(p,me);
+    // find this user's request if any
+    var myReq=null;
+    (p.requests||[]).forEach(function(r){if(r.uid===myId||r.nick===me)myReq=r;});
+    var reqStatus=myReq?myReq.status:null; // 'pending' | 'approved' | 'declined' | 'expired'
     var nn=document.getElementById('pinNick');if(nn)nn.textContent=p.name||'Someone';
     var av2=document.getElementById('pinAvatar');if(av2)av2.textContent=((p.name||'?').charAt(0)||'?').toUpperCase();
     var cb=document.getElementById('pinChatBtn');if(cb)cb.style.display=isMember?'':'none';
@@ -1843,40 +1844,10 @@ function openPinDetail(id){
     var sb=document.getElementById('pinSyncBadge');if(sb)paintSyncBadge(sb,p);
     var mem=document.getElementById('pinMembers');
     if(mem){mem.innerHTML='';(p.members||[]).forEach(function(m){var s=document.createElement('span');s.className='chip';s.textContent=(m.role==='local'?'🇭🇰 ':'✈️ ')+m.nick;mem.appendChild(s);});}
-    var req=document.getElementById('pinRequestBtn');
-    if(req){
-      if(isHost){req.style.display='none';} // hosts never request their own hook
-      else if(isPending){req.style.display='';req.textContent='Request Sent';req.disabled=true;}
-      else{req.style.display=(!isMember&&(p.members||[]).length<3&&!isPinExpired(p))?'':'none';req.textContent='Request to Connect';req.disabled=false;}
-    }
-    var wait=document.getElementById('pinPendingNote');
-    if(wait)wait.style.display=isPending?'':'none';
-    try{renderPinVibe(p,me);}catch(e){}
-    // host controls: only the author (by id) sees incoming requests
-    var hostBox=document.getElementById('pinHostBox');
-    if(hostBox){
-      hostBox.innerHTML='';
-      if(isHost&&(p.requests||[]).length){
-        p.requests.forEach(function(r,idx){
-          if(r.status!=='pending') return;
-          var row=document.createElement('div');row.style.cssText='display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;padding:8px;background:rgba(255,255,255,.05);border-radius:8px;';
-          var avatar=document.createElement('div');avatar.className='avatar small';avatar.style.width='32px;height:32px;font-size:14px;';avatar.textContent=(r.nick||'?').charAt(0).toUpperCase();
-          var lab=document.createElement('span');lab.className='small';lab.style.flex='1';lab.textContent=(r.nick||'Someone')+' wants to join';
-          if(r.verified) lab.textContent+=' ✅';
-          if((r.vibe||[]).length){var vd=document.createElement('div');vd.className='small muted';vd.style.cssText='flex-basis:100%;font-style:italic;';vd.textContent='💬 “'+((r.vibe[r.vibe.length-1]||{}).text||'')+'” ('+r.vibe.length+'/3)';lab.appendChild(vd);}
-          var ok=document.createElement('button');ok.className='primary';ok.style.padding='8px 12px';ok.textContent='Approve';
-          ok.onclick=(function(i){return function(){approveHookRequest(p.id,i);};})(idx);
-          var no=document.createElement('button');no.className='secondary';no.style.padding='8px 12px';no.textContent='Decline';
-          no.onclick=(function(i){return function(){declineHookRequest(p.id,i);};})(idx);
-          row.appendChild(avatar);row.appendChild(lab);row.appendChild(ok);row.appendChild(no);
-          hostBox.appendChild(row);
-        });
-      }
-    }
-    // Host Request Drawer for pending applicants (full detail view)
-    if(isHost){
-      renderHostRequestDrawer(p);
-    }
+    // GUEST VIEW: request status tab
+    renderGuestRequestTab(p, myReq, reqStatus, isMember, isHost);
+    // HOST VIEW: pending requests with Approve/Decline
+    renderHostRequestView(p, isHost);
     var del=document.getElementById('pinDeleteBtn');
     if(del)del.style.display=isHost?'':'none';
     var claim=document.getElementById('pinClaimBtn');
@@ -1887,6 +1858,102 @@ function openPinDetail(id){
   }catch(e){}
 }
 function closePinDetail(){try{_openPinId=null;var d=document.getElementById('pinDrawer');if(d)d.classList.add('hidden');}catch(e){}}
+
+// ===== GUEST REQUEST STATUS TAB =====
+function renderGuestRequestTab(p, myReq, reqStatus, isMember, isHost){
+  // hide old pending note
+  var wait=document.getElementById('pinPendingNote');if(wait)wait.style.display='none';
+  // hide old request button (we rebuild below)
+  var req=document.getElementById('pinRequestBtn');if(req)req.style.display='none';
+
+  // no request yet, not a member, not host → show Request to Connect
+  if(!myReq && !isMember && !isHost && !isPinExpired(p)){
+    if(req){req.style.display='';req.textContent='Request to Connect';req.disabled=false;req.onclick=requestPinConnect;}
+    return;
+  }
+
+  // build status tab
+  var statusBox=document.getElementById('pinRequestStatus');
+  if(!statusBox){
+    statusBox=document.createElement('div');
+    statusBox.id='pinRequestStatus';
+    statusBox.style.cssText='margin-top:12px;padding:12px;background:rgba(255,255,255,.05);border-radius:10px;border:1px solid rgba(255,255,255,.1);';
+    var btn=document.getElementById('pinRequestBtn');
+    if(btn)btn.parentNode.insertBefore(statusBox,btn.nextSibling);
+  }
+  var label='',cls='',actionHtml='';
+  if(reqStatus==='pending'){
+    label='⏳ Awaiting host approval';cls='pending';actionHtml='<button class="secondary" style="margin-top:8px;padding:10px 16px;" onclick="cancelMyRequest()">Cancel request</button>';
+  }else if(reqStatus==='approved'){
+    label='✅ Approved — you\'re in!';cls='approved';actionHtml='<button class="primary" style="margin-top:8px;padding:10px 16px;width:100%;" onclick="openChatDrawer(_openPinId)">Open group chat</button>';
+  }else if(reqStatus==='declined'){
+    label='❌ Request declined';cls='declined';actionHtml='<button class="secondary" style="margin-top:8px;padding:10px 16px;" onclick="clearMyDeclined()">Select another activity</button>';
+  }else if(reqStatus==='expired'){
+    label='⌛ Request expired (hook filled)';cls='expired';actionHtml='<button class="secondary" style="margin-top:8px;padding:10px 16px;" onclick="clearMyDeclined()">Select another activity</button>';
+  }else if(isMember){
+    label='✅ You\'re in this hangout';cls='approved';actionHtml='<button class="primary" style="margin-top:8px;padding:10px 16px;width:100%;" onclick="openChatDrawer(_openPinId)">Open group chat</button>';
+  }else{
+    label='—';cls='';
+  }
+  statusBox.className='pin-request-status '+cls;
+  statusBox.innerHTML='<div style="font-weight:600;color:#fff;margin-bottom:4px;">'+label+'</div>'+actionHtml;
+}
+
+// ===== HOST REQUEST VIEW (Approve/Decline) =====
+function renderHostRequestView(p, isHost){
+  var hostBox=document.getElementById('pinHostBox');
+  if(!hostBox)return;
+  hostBox.innerHTML='';
+  if(!isHost)return;
+  var pending=(p.requests||[]).filter(function(r){return r.status==='pending';});
+  if(!pending.length)return;
+  hostBox.innerHTML='<h4 style="margin:0 0 12px;color:#fff;">📋 Pending Requests ('+pending.length+')</h4>';
+  pending.forEach(function(r){
+    var idx=p.requests.indexOf(r);
+    var row=document.createElement('div');
+    row.style.cssText='display:flex;gap:12px;align-items:flex-start;padding:12px;background:rgba(255,255,255,.05);border-radius:10px;margin-bottom:8px;';
+    var avatar=document.createElement('div');
+    avatar.className='avatar';
+    avatar.style.width='48px;height:48px;font-size:20px;background:linear-gradient(135deg,#f43f5e,#fb7185);flex-shrink:0;';
+    avatar.textContent=(r.nick||'?').charAt(0).toUpperCase();
+    var lab=document.createElement('div');
+    lab.style.flex='1;min-width:0;';
+    lab.innerHTML='<div style="font-weight:600;color:#fff;">'+(r.nick||'Someone')+'</div>'
+      +'<div class="small muted">'+(r.role==='local'?'🇭🇰 Local Host':'✈️ Traveller')+(r.verified?' · Verified':'')+'</div>'
+      +'<div class="small muted">'+new Date(r.createdAt).toLocaleTimeString()+'</div>'
+      +(r.message?'<div class="small" style="margin-top:4px;color:#ffe4e6;">“'+r.message+'”</div>':'')
+      +((r.vibe||[]).map(function(v){return '<div class="small" style="margin-top:4px;color:#ffe4e6;">💬 “'+(v.text||'')+'”</div>';}).join(''));
+    var actions=document.createElement('div');
+    actions.style.cssText='display:flex;flex-direction:column;gap:8px;flex-shrink:0;';
+    var ok=document.createElement('button');ok.className='primary';ok.style.padding='10px 16px;width:100%;';ok.textContent='Approve';
+    ok.onclick=(function(i){return function(){approveHookRequest(p.id,i);};})(idx);
+    var no=document.createElement('button');no.className='secondary';no.style.padding='10px 16px;width:100%;';no.textContent='Decline';
+    no.onclick=(function(i){return function(){declineHookRequest(p.id,i);};})(idx);
+    actions.appendChild(ok);actions.appendChild(no);
+    row.appendChild(avatar);row.appendChild(lab);row.appendChild(actions);
+    hostBox.appendChild(row);
+  });
+}
+function cancelMyRequest(){
+  try{
+    var p=findPin(_openPinId);if(!p)return;
+    var myId=myUid();var me=hookNick();
+    (p.requests||[]).forEach(function(r,idx){
+      if((myId&&r.uid===myId)||r.nick===me){p.requests.splice(idx,1);}
+    });
+    storePin(p);openPinDetail(p.id);toast('Request cancelled.');
+  }catch(e){}
+}
+function clearMyDeclined(){
+  try{
+    var p=findPin(_openPinId);if(!p)return;
+    var myId=myUid();var me=hookNick();
+    (p.requests||[]).forEach(function(r,idx){
+      if((myId&&r.uid===myId)||r.nick===me){p.requests.splice(idx,1);}
+    });
+    storePin(p);openPinDetail(p.id);
+  }catch(e){}
+}
 function acceptPinSidequest(){requestPinConnect();}
 function requestPinConnect(){
   try{
@@ -1906,24 +1973,7 @@ function requestPinConnect(){
     (p.requests||(p.requests=[])).push(newReq);
     storePin(p);
     openPinDetail(p.id);toast('Request sent — waiting for host approval.');
-    renderHostRequestDrawer(p);
   }catch(e){toast('Could not send request.');}
-}
-function acceptHookRequest(idx){
-  try{
-    var p=findPin(_openPinId);if(!p||!p.pending||!p.pending[idx])return;
-    var req=p.pending[idx];
-    if(p.status==='pair'||(p.members||[]).length>=2){
-      // 3rd joiner: needs EVERY existing member to accept → group modal
-      openGroupModal(p.id,idx);return;
-    }
-    p.members.push({nick:req.nick,role:req.role,verified:req.verified});
-    p.pending.splice(idx,1);
-    p.status=(p.members.length>=2)?'pair':'open';
-    storePin(p);openPinDetail(p.id);renderMapPins();
-    toast('Connected — 1-on-1 hangout on.');
-    try{openChatDrawer(p.id);}catch(e){}
-  }catch(e){}
 }
 function declineHookRequest(pinId,idx){
   try{
@@ -1931,8 +1981,7 @@ function declineHookRequest(pinId,idx){
     try{if(!canManagePin(p)){toast('Only the host can decline.');return;}}catch(e){return;}
     var req=p.requests[idx];
     if(req.status!=='pending') return;
-    req.status='declined';
-    req.updatedAt=Date.now();
+    req.status='declined';req.updatedAt=Date.now();
     storePin(p);openPinDetail(p.id);renderMapPins();toast('Request declined.');
   }catch(e){}
 }
@@ -1942,93 +1991,26 @@ function approveHookRequest(pinId,idx){
     try{if(!canManagePin(p)){toast('Only the host can approve.');return;}}catch(e){return;}
     var req=p.requests[idx];
     if(req.status!=='pending') return;
-    // Check capacity
     var cap=Math.min(4,Math.max(2,parseInt(p.capacity,10)||3));
     if((p.members||[]).length>=cap){
       toast('This hook is full ('+cap+' spots).');return;
     }
-    // Approve the request
     req.status='approved';
     req.updatedAt=Date.now();
-    // Add to members
     p.members.push({nick:req.nick,role:req.role,verified:req.verified,uid:req.uid||null});
-    // Reveal exact location to approved member
     req.locationRevealed=true;
-    // Decrement available spots
     p.spotsAvailable=(p.spotsAvailable!==undefined?p.spotsAvailable:cap)-(p.members||[]).length;
-    // If full, expire remaining pending requests
     if(p.spotsAvailable<=0){
       p.requests.forEach(function(r){
         if(r.status==='pending' && r.id!==req.id){
-          r.status='expired';
-          r.updatedAt=Date.now();
-          r.expiredReason='full';
+          r.status='expired';r.updatedAt=Date.now();r.expiredReason='full';
         }
       });
     }
-    storePin(p);
-    openPinDetail(p.id);
-    renderMapPins();
-    toast('Approved! Exact location revealed to '+req.nick);
-    // Notify the approved user (in real app: push notification)
-    try{ if(window.EtieCloud&&window.EtieCloud.pushSharedRequest) window.EtieCloud.pushSharedRequest(p.id); }catch(e){}
+    storePin(p);openPinDetail(p.id);renderMapPins();
+    toast('Approved! '+req.nick+' can now join the chat.');
+    try{if(window.EtieCloud&&window.EtieCloud.pushSharedRequest)window.EtieCloud.pushSharedRequest(p.id);}catch(e){}
   }catch(e){toast('Could not approve.');}
-}
-function renderHostRequestDrawer(p){
-  try{
-    var drawer=document.getElementById('hostRequestDrawer');
-    if(!drawer){
-      var pd=document.getElementById('pinDrawer');
-      if(pd){
-        drawer=document.createElement('div');
-        drawer.id='hostRequestDrawer';
-        drawer.style.cssText='margin-top:16px;padding-top:16px;border-top:1px solid rgba(255,255,255,.1);';
-        pd.appendChild(drawer);
-      } else return;
-    }
-    var pending=(p.requests||[]).filter(function(r){return r.status==='pending';});
-    var expiredFull=(p.requests||[]).filter(function(r){return r.status==='expired' && r.expiredReason==='full';});
-    var approved=(p.requests||[]).filter(function(r){return r.status==='approved';});
-    var html='';
-    if(pending.length){
-      html+='<h4 style="margin:0 0 12px;color:#fff;">📋 Pending Requests ('+pending.length+')</h4>';
-      pending.forEach(function(r){
-        var idx=p.requests.indexOf(r);
-        html+='<div style="display:flex;gap:12px;align-items:center;padding:12px;background:rgba(255,255,255,.05);border-radius:10px;margin-bottom:8px;">'
-          +'<div class="avatar" style="width:48px;height:48px;font-size:20px;background:linear-gradient(135deg,#f43f5e,#fb7185);">'+(r.nick||'?').charAt(0).toUpperCase()+'</div>'
-          +'<div style="flex:1;">'
-          +'<div style="font-weight:600;color:#fff;">'+(r.nick||'Someone')+'</div>'
-          +'<div class="small muted">'+(r.role==='local'?'🇭🇰 Local Host':'✈️ Traveller')+(r.verified?' · Verified':'')+'</div>'
-          +'<div class="small muted">'+new Date(r.createdAt).toLocaleTimeString()+'</div>'
-          +(r.message?'<div class="small" style="margin-top:4px;color:#ffe4e6;">“'+r.message+'”</div>':'')
-          +((r.vibe||[]).map(function(v){return '<div class="small" style="margin-top:4px;color:#ffe4e6;">💬 “'+(v.text||'')+'”</div>';}).join(''))
-          +'</div>'
-          +'<div style="display:flex;gap:8px;">'
-          +'<button class="primary" style="padding:10px 16px;" onclick="approveHookRequest(\''+p.id+'\','+idx+')">Approve</button>'
-          +'<button class="secondary" style="padding:10px 16px;" onclick="declineHookRequest(\''+p.id+'\','+idx+')">Decline</button>'
-          +'</div>'
-          +'</div>';
-      });
-    }
-    if(approved.length){
-      html+='<h4 style="margin:16px 0 8px;color:#fff;">✅ Approved ('+approved.length+')</h4>';
-      approved.forEach(function(r){
-        html+='<div style="padding:12px;background:rgba(34,197,94,.15);border-radius:10px;margin-bottom:8px;border:1px solid rgba(34,197,94,.3);">'
-          +'<div style="font-weight:600;color:#22c55e;">'+(r.nick||'Someone')+' — Approved</div>'
-          +'<div class="small muted">Location revealed at '+new Date(r.updatedAt).toLocaleTimeString()+'</div>'
-          +'</div>';
-      });
-    }
-    if(expiredFull.length){
-      html+='<h4 style="margin:16px 0 8px;color:#fff;">⚠️ Hook Filled — '+expiredFull.length+' requests expired</h4>';
-      html+='<div style="padding:16px;background:rgba(251,113,133,.15);border-radius:10px;border:1px solid rgba(251,113,133,.3);text-align:center;">'
-        +'<div style="font-weight:600;color:#fb7185;margin-bottom:8px;">This hook just filled up!</div>'
-        +'<div class="small muted" style="margin-bottom:12px;">Want to host the next one?</div>'
-        +'<button class="primary" style="padding:12px 24px;" onclick="hostNextHook(\''+p.id+'\')">Host Next Hook</button>'
-        +'</div>';
-    }
-    drawer.innerHTML=html;
-  }catch(e){}
 }
 function hostNextHook(pinId){
   try{
@@ -2113,55 +2095,6 @@ function deletePinSidequest(){
     ETIE.mapPins=(ETIE.mapPins||[]).filter(function(x){return x&&x.id!==_openPinId;});
     try{if(window.EtieCloud&&window.EtieCloud.deletePin&&p)window.EtieCloud.deletePin(p);}catch(e){}
     saveState();closePinDetail();renderMapPins();toast('Pin deleted.');
-  }catch(e){}
-}
-// ---- Mutual Consensus Group Expansion: 3rd joiner needs ALL members to accept ----
-var _groupCtx={pinId:null,reqIdx:0};
-function openGroupModal(pinId,reqIdx){
-  try{
-    var p=findPin(pinId);if(!p||!p.pending||!p.pending[reqIdx])return;
-    _groupCtx={pinId:pinId,reqIdx:reqIdx};
-    var req=p.pending[reqIdx];
-    var who=document.getElementById('groupJoiner');if(who)who.textContent=(req.nick||'Someone')+' wants to join your hangout. Accept & expand group?';
-    renderGroupApprovals();
-    var o=document.getElementById('groupModal');if(o)o.classList.remove('hidden');
-  }catch(e){}
-}
-function closeGroupModal(){try{var o=document.getElementById('groupModal');if(o)o.classList.add('hidden');}catch(e){}}
-function renderGroupApprovals(){
-  try{
-    var p=findPin(_groupCtx.pinId);if(!p)return;
-    var req=p.pending[_groupCtx.reqIdx];if(!req)return;
-    var box=document.getElementById('groupMembers');if(!box)return;
-    box.innerHTML='';
-    (p.members||[]).forEach(function(m){
-      var ok=(req.approvals||[]).indexOf(m.nick)!==-1;
-      var row=document.createElement('div');row.style.cssText='display:flex;gap:8px;align-items:center;margin-top:8px;';
-      var lab=document.createElement('span');lab.className='small';lab.style.flex='1';
-      lab.textContent=(m.role==='local'?'🇭🇰 ':'✈️ ')+m.nick+(ok?' — accepted ✅':'');
-      var b=document.createElement('button');b.className=ok?'secondary':'primary';b.style.padding='8px 12px';b.textContent=ok?'Accepted':'Accept';
-      b.onclick=(function(nick){return function(){approveGroupJoin(nick);};})(m.nick);
-      row.appendChild(lab);row.appendChild(b);box.appendChild(row);
-    });
-  }catch(e){}
-}
-function approveGroupJoin(memberNick){
-  try{
-    var p=findPin(_groupCtx.pinId);if(!p)return;
-    var req=p.pending[_groupCtx.reqIdx];if(!req)return;
-    req.approvals=req.approvals||[];
-    if(req.approvals.indexOf(memberNick)===-1)req.approvals.push(memberNick);
-    var allOk=(p.members||[]).every(function(m){return req.approvals.indexOf(m.nick)!==-1;});
-    if(allOk){
-      var cap2=Math.min(4,Math.max(2,parseInt(p.capacity,10)||3));
-      if((p.members||[]).length>=Math.min(cap2,3)){toast('This group is full ('+cap2+' spots).');return;}
-      p.members.push({nick:req.nick,role:req.role,verified:req.verified});
-      p.pending.splice(_groupCtx.reqIdx,1);
-      p.status='trio';
-      storePin(p);closeGroupModal();renderMapPins();openPinDetail(p.id);
-      toast('Everyone accepted — group expanded to 3.');
-      try{openChatDrawer(p.id);}catch(e){}
-    }else{storePin(p);renderGroupApprovals();toast('Waiting on the other member…');}
   }catch(e){}
 }
 // ---- Hook group chat drawer (Supabase etie_hook_messages realtime, local fallback) ----

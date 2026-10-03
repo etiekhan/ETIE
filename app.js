@@ -1704,7 +1704,7 @@ function saveDropHook(){
   try{
     if(!_dropPoint){toast('Tap the map first to place your pin.');return;}
     var title=((document.getElementById('hookTitle')||{}).value||'').trim().slice(0,60);
-    var loc=((document.getElementById('hookLocation')||{}).value||'').trim();
+    var loc=((document.getElementById('hookLocation')||{}).value||'').trim().replace(/^\s*near\s+/i,'');
     var details=((document.getElementById('hookText')||{}).value||'').trim().slice(0,140);
     if(!title){toast('Give it a title first.');return;}
     if(!loc){toast('Name the pin location first.');return;}
@@ -1819,7 +1819,11 @@ function openPinDetail(id){
     checkAndExpireRequests(p);
     _openPinId=id;
     var me=hookNick();
-    var isMember=(p.members||[]).some(function(m){return m.nick===me;});
+    var myId=null;try{myId=myUid();}catch(e){}
+    // host = author by user id (nicknames are not unique — never use them for permissions)
+    var isHost=!!(myId&&p.authorId&&myId===p.authorId);
+    var isMember=(p.members||[]).some(function(m){return m.uid?m.uid===myId:m.nick===me;});
+    if(isHost)isMember=true;
     var isPending=(p.pending||[]).some(function(r){return r.nick===me;})||(p.requests||[]).some(function(r){return r.nick===me&&r.status==='pending';});
     var hasApproved=hasApprovedRequest(p,me);
     var nn=document.getElementById('pinNick');if(nn)nn.textContent=p.name||'Someone';
@@ -1831,7 +1835,7 @@ function openPinDetail(id){
     var rb=document.getElementById('pinRoleBadge');if(rb){var pr=(p.role==='local')?'local':'traveller';rb.textContent=pr==='local'?'🇭🇰 Local Host':'✈️ Traveller';rb.classList.toggle('city-host',pr==='local');}
     var ptt=document.getElementById('pinTitle');if(ptt)ptt.textContent=p.title||p.location||'Hook';
     var lc=document.getElementById('pinLoc');
-    if(lc)lc.textContent=mapCatEmoji(p.category)+' Near '+(p.location||'Hong Kong');
+    if(lc){var locTxt=String(p.location||'Hong Kong').replace(/^\s*near\s+/i,'');lc.textContent=mapCatEmoji(p.category)+' Near '+locTxt;}
     var pb=document.getElementById('pinBio');if(pb){var bb=p.members&&p.members[0]&&p.members[0].bio;pb.textContent=bb||'';pb.style.display=bb?'':'none';}
     var gb=document.getElementById('pinGroupBadge');if(gb)gb.textContent=groupBadgeText(p);
     var sb=document.getElementById('pinSyncBadge');if(sb)paintSyncBadge(sb,p);
@@ -1839,18 +1843,18 @@ function openPinDetail(id){
     if(mem){mem.innerHTML='';(p.members||[]).forEach(function(m){var s=document.createElement('span');s.className='chip';s.textContent=(m.role==='local'?'🇭🇰 ':'✈️ ')+m.nick;mem.appendChild(s);});}
     var req=document.getElementById('pinRequestBtn');
     if(req){
-      req.style.display=(!isMember&&!isPending&&(p.members||[]).length<3&&!isPinExpired(p))?'':'none';
-      req.textContent='Request to Connect';
+      if(isHost){req.style.display='none';} // hosts never request their own hook
+      else if(isPending){req.style.display='';req.textContent='Request Sent';req.disabled=true;}
+      else{req.style.display=(!isMember&&(p.members||[]).length<3&&!isPinExpired(p))?'':'none';req.textContent='Request to Connect';req.disabled=false;}
     }
     var wait=document.getElementById('pinPendingNote');
     if(wait)wait.style.display=isPending?'':'none';
     try{renderPinVibe(p,me);}catch(e){}
-    // host controls: author sees incoming requests
+    // host controls: only the author (by id) sees incoming requests
     var hostBox=document.getElementById('pinHostBox');
-    var mine=isMember&&(p.members||[])[0]&&(p.members||[])[0].nick===me;
     if(hostBox){
       hostBox.innerHTML='';
-      if(mine&&(p.requests||[]).length){
+      if(isHost&&(p.requests||[]).length){
         p.requests.forEach(function(r,idx){
           if(r.status!=='pending') return;
           var row=document.createElement('div');row.style.cssText='display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;padding:8px;background:rgba(255,255,255,.05);border-radius:8px;';
@@ -1868,11 +1872,11 @@ function openPinDetail(id){
       }
     }
     // Host Request Drawer for pending applicants (full detail view)
-    if(mine){
+    if(isHost){
       renderHostRequestDrawer(p);
     }
     var del=document.getElementById('pinDeleteBtn');
-    if(del)del.style.display=mine?'':'none';
+    if(del)del.style.display=isHost?'':'none';
     try{fillMemoryStrip('pinMemories',p.authorId||null);}catch(e){}
     try{fillSpotsStrip('pinSpots',p.authorId||null);}catch(e){}
     var d=document.getElementById('pinDrawer');if(d)d.classList.remove('hidden');
@@ -1884,6 +1888,7 @@ function requestPinConnect(){
   try{
     if(needProfile('connect'))return;
     var p=findPin(_openPinId);if(!p)return;
+    try{if(myUid()&&p.authorId&&myUid()===p.authorId){toast('This is your hook — guests request to join you.');return;}}catch(e){}
     var me={nick:hookNick(),role:(_hookDraft.role)||'traveller',verified:hookVerified(),ts:Date.now()};
     try{me.role=(ETIE.activeRole==='local')?'local':'traveller';}catch(e){}
     if((p.members||[]).some(function(m){return m.nick===me.nick;})){toast('You are already in this hangout.');return;}
@@ -1893,7 +1898,7 @@ function requestPinConnect(){
     if((p.members||[]).length>=Math.min(cap,3)){toast('This group is full ('+cap+' spots).');return;}
     var nowTs=Date.now();
     var reqId=(p.requests||[]).length>0?(p.requests[p.requests.length-1].id||null):null;
-    var newReq={id:reqId||uuidv4(),nick:me.nick,role:me.role,verified:me.verified,ts:me.ts,status:'pending',message:'',messageCount:0,vibe:[],createdAt:nowTs,updatedAt:nowTs};
+    var newReq={id:reqId||uuidv4(),uid:(function(){try{return myUid();}catch(e){return null;}})(),nick:me.nick,role:me.role,verified:me.verified,ts:me.ts,status:'pending',message:'',messageCount:0,vibe:[],createdAt:nowTs,updatedAt:nowTs};
     (p.requests||(p.requests=[])).push(newReq);
     storePin(p);
     openPinDetail(p.id);toast('Request sent — waiting for host approval.');
@@ -1919,6 +1924,7 @@ function acceptHookRequest(idx){
 function declineHookRequest(pinId,idx){
   try{
     var p=findPin(pinId);if(!p||!p.requests||!p.requests[idx])return;
+    try{if(!(myUid()&&p.authorId&&myUid()===p.authorId)){toast('Only the host can decline.');return;}}catch(e){return;}
     var req=p.requests[idx];
     if(req.status!=='pending') return;
     req.status='declined';
@@ -1929,6 +1935,7 @@ function declineHookRequest(pinId,idx){
 function approveHookRequest(pinId,idx){
   try{
     var p=findPin(pinId);if(!p||!p.requests||!p.requests[idx])return;
+    try{if(!(myUid()&&p.authorId&&myUid()===p.authorId)){toast('Only the host can approve.');return;}}catch(e){return;}
     var req=p.requests[idx];
     if(req.status!=='pending') return;
     // Check capacity
@@ -1940,7 +1947,7 @@ function approveHookRequest(pinId,idx){
     req.status='approved';
     req.updatedAt=Date.now();
     // Add to members
-    p.members.push({nick:req.nick,role:req.role,verified:req.verified});
+    p.members.push({nick:req.nick,role:req.role,verified:req.verified,uid:req.uid||null});
     // Reveal exact location to approved member
     req.locationRevealed=true;
     // Decrement available spots
@@ -2088,6 +2095,7 @@ function deletePinSidequest(){
   try{
     if(!_openPinId)return;
     var p=findPin(_openPinId);
+    try{if(!(myUid()&&p&&p.authorId&&myUid()===p.authorId)){toast('Only the host can delete this pin.');return;}}catch(e){return;}
     ETIE.mapPins=(ETIE.mapPins||[]).filter(function(x){return x&&x.id!==_openPinId;});
     try{if(window.EtieCloud&&window.EtieCloud.deletePin&&p)window.EtieCloud.deletePin(p);}catch(e){}
     saveState();closePinDetail();renderMapPins();toast('Pin deleted.');

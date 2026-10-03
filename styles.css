@@ -574,10 +574,10 @@ html,body{height:100%;width:100%;margin:0;padding:0;overflow:hidden;background:#
 
 /* ===== Mobile stacking pass: single header bar, stacked bottom actions, docked globe, top-edge empty state ===== */
 /* 1. Single fixed top bar: logo left, links center, profile right */
-.glass-nav{position:fixed;top:0;left:0;right:0;z-index:1100;display:flex;flex-direction:row;align-items:center;flex-wrap:nowrap;gap:8px;padding:10px 14px;background:rgba(14,14,18,.82);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid rgba(255,255,255,.1);}
-.glass-nav .logo-inline{flex:0 0 auto;}
-.glass-nav .nav-links{flex:1;display:flex;align-items:center;justify-content:center;gap:2px;min-width:0;}
-.glass-nav .auth-float{position:static;flex:0 0 auto;margin-left:auto;}
+.glass-nav{position:fixed;top:0;left:0;right:0;z-index:1100;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;padding:10px 14px;background:rgba(14,14,18,.82);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid rgba(255,255,255,.1);}
+.glass-nav .logo-inline{flex:0 0 auto;justify-self:start;}
+.glass-nav .nav-links{display:flex;align-items:center;justify-content:center;justify-self:center;gap:2px;min-width:0;}
+.glass-nav .auth-float{position:static;justify-self:end;}
 /* dropdown anchors to the header bar and floats above the filter row */
 .glass-nav .avatar-dropdown{z-index:1150;}
 /* 2. Filter pills live in their own row beneath the header bar */

@@ -245,6 +245,12 @@ header .secondary{background:rgba(255,255,255,.96)!important;color:#171717!impor
 .pin-drawer-expired .group-badge{filter:grayscale(1);}
 .pin-drawer-expired .pin-avatar{filter:grayscale(1);}
 .pin-drawer-expired .role-badge{filter:grayscale(1);opacity:0.6;}
+/* Pin Lifecycle Badges */
+.lifecycle-badge{display:inline-block;padding:8px 16px;border-radius:999px;font-size:12px;font-weight:800;white-space:nowrap;}
+.lifecycle-active{background:rgba(34,197,94,.2);border:1px solid rgba(34,197,94,.5);color:#86efac;}
+.lifecycle-requests-closed{background:rgba(251,146,60,.2);border:1px solid rgba(251,146,60,.5);color:#fdba74;}
+.lifecycle-ended{background:rgba(239,68,68,.2);border:1px solid rgba(239,68,68,.5);color:#fca5a5;}
+.lifecycle-vanished{background:rgba(100,116,139,.2);border:1px solid rgba(100,116,139,.5);color:#94a3b8;}
 /* balanced wrapping for all text bubbles — no awkward blanks or orphans */
 .chip,.bubble,.pin-hook,.map-empty,.toast,.role-badge,.group-badge,.status,.list-item strong,.metric strong{text-wrap:pretty;overflow-wrap:break-word;}
 .chip{white-space:normal;}

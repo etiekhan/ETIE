@@ -1158,6 +1158,24 @@ function fillMemoryStrip(boxId,userId){
     });
   }catch(e){}
 }
+function addToMemoryLog(nick,pin){
+  // Called when a pin auto-archives — adds a memory entry for each member
+  try{
+    if(!window.EtieCloud||!window.EtieCloud.getSession)return;
+    var session=window.EtieCloud.getSession();
+    if(!session||!session.user)return;
+    var userId=session.user.id;
+    var mem={image_url:pin.photos?pin.photos[0]:null,caption:pin.title||pin.location||'Hangout',hook_id:pin.id,location:pin.location,taken_at:new Date().toISOString(),participants:(pin.members||[]).map(function(m){return m.nick;})};
+    window.EtieCloud.fetchProfile(userId,function(row){
+      try{
+        var mems=row&&Array.isArray(row.memories)?row.memories:[];
+        mems.unshift(mem);
+        if(mems.length>50)mems=mems.slice(0,50);
+        window.EtieCloud.getClient().from('etie_profiles').update({memories:mems}).eq('user_id',userId).then(function(){}).catch(function(){});
+      }catch(e){}
+    });
+  }catch(e){}
+}
 function googleAvatar(){
   try{
     var c=window.EtieCloud&&window.EtieCloud.getClient?window.EtieCloud.getClient():null;
@@ -1379,7 +1397,13 @@ function visibleMapPins(){
   if(MAP_FILTER!=='All')all=all.filter(function(p){return p.category===MAP_FILTER;});
   if(MAP_ROLE!=='All')all=all.filter(function(p){return ((p.derivedRole||p.role)==='local'?'local':'traveller')===MAP_ROLE;});
   var nowTs=Date.now();
-  all=all.filter(function(p){try{return !(p.expires_at&&new Date(p.expires_at).getTime()<nowTs);}catch(e){return true;}});
+  // Hide pins that have vanished (past hangoutEndAt + 2hr buffer)
+  all=all.filter(function(p){
+    try{
+      if(p.pinVanishAt && new Date(p.pinVanishAt).getTime() < nowTs) return false;
+      return true;
+    }catch(e){return true;}
+  });
   return all;
 }
 function initHKMap(){
@@ -1776,8 +1800,17 @@ function saveDropHook(){
     var win=windowExpires(_hookDraft.window||'now',nowTs);
     var cap=Math.min(4,Math.max(2,_hookDraft.capacity||3));
     var hook=details||title;
+    var startsAt=win.s, endsAt=win.e;
+    // Lifecycle timestamps
+    var requestCutoffAt=startsAt; // requests close when hangout starts
+    var hangoutEndAt=endsAt;      // hangout ends
+    var pinVanishAt=endsAt ? endsAt + 2*60*60*1000 : null; // vanish 2h after hangout ends
     var pin={id:'pin-'+nowTs,kind:'hook',title:title,category:_hookDraft.category,role:_hookDraft.role,derivedRole:(function(){try{return ETIE.derivedRole||_hookDraft.role;}catch(e){return _hookDraft.role;}})(),authorId:(function(){try{return myUid();}catch(e){return null;}})(),
-      starts_at:new Date(win.s).toISOString(),ends_at:new Date(win.e).toISOString(),expires_at:new Date(win.e).toISOString(),capacity:cap,spotsAvailable:cap,
+      starts_at:new Date(startsAt).toISOString(),ends_at:new Date(endsAt).toISOString(),expires_at:new Date(endsAt).toISOString(),
+      requestCutoffAt:requestCutoffAt ? new Date(requestCutoffAt).toISOString() : null,
+      hangoutEndAt:hangoutEndAt ? new Date(hangoutEndAt).toISOString() : null,
+      pinVanishAt:pinVanishAt ? new Date(pinVanishAt).toISOString() : null,
+      capacity:cap,spotsAvailable:cap,
       name:nm,verified:vf,location:loc,lat:_dropPoint.lat,lng:_dropPoint.lng,hook:hook,photos:(_hookDraft.photos||[]).map(function(p){return p.dataUrl;}),
       members:[{nick:nm,role:_hookDraft.role,verified:vf,bio:((ETIE.traveller&&ETIE.traveller.bio)||'').slice(0,140)}],pending:[],requests:[],status:'active',
       ts:Date.now(),origin:'local',cloudId:null,syncState:(function(){try{return (window.EtieCloud&&window.EtieCloud.getSession&&window.EtieCloud.getSession())?'syncing':'local';}catch(e){return 'local';}})()};
@@ -1864,16 +1897,28 @@ function sweepExpiredPins(){
     (ETIE.mapPins||[]).forEach(function(raw){
       try{
         if(!raw||raw.kind==='guide'||raw.lat==null)return;
-        var ex=raw.expires_at?new Date(raw.expires_at).getTime():0;
-        if(ex&&ex<now&&raw.status==='active'){
-          raw.status='pending_memory_log';changed=true;
-          if(raw.name===me&&!_expiryToasted[raw.id]){_expiryToasted[raw.id]=1;setTimeout((function(t){return function(){toast('🔥 “'+t+'” ended — log the memory!');};})((raw.title||raw.location||'Your hook')),1500);}
+        var vanishAt=raw.pinVanishAt ? new Date(raw.pinVanishAt).getTime() : (raw.expires_at ? new Date(raw.expires_at).getTime() + 2*60*60*1000 : 0);
+        // Pin vanishes from map after hangoutEndAt + 2hr buffer
+        if(vanishAt && vanishAt < now && raw.status!=='archived'){
+          raw.status='archived';changed=true;
+          // Auto-archive to memory log for all members
+          (raw.members||[]).forEach(function(m){
+            try{addToMemoryLog(m.nick||m.uid, raw);}catch(e){}
+          });
+          if(raw.name===me&&!_expiryToasted[raw.id]){_expiryToasted[raw.id]=1;setTimeout((function(t){return function(){toast('🔥 “'+t+'” ended — it\'s now in your Memory Log.');};})((raw.title||raw.location||'Your hook')),1500);}
+        } else {
+          var ex=raw.expires_at?new Date(raw.expires_at).getTime():0;
+          if(ex&&ex<now&&raw.status==='active'){
+            raw.status='pending_memory_log';changed=true;
+            if(raw.name===me&&!_expiryToasted[raw.id]){_expiryToasted[raw.id]=1;setTimeout((function(t){return function(){toast('🔥 “'+t+'” ended — log the memory!');};})((raw.title||raw.location||'Your hook')),1500);}
+          }
         }
         // Check and expire pending requests
         if(checkAndExpireRequests(raw)) changed=true;
       }catch(e){}
     });
-    if(changed){saveState();try{(ETIE.mapPins||[]).forEach(function(raw){try{if(raw&&raw.status==='pending_memory_log')persistPinCloud(raw);}catch(e){}});}catch(e){}}
+    if(changed){saveState();try{(ETIE.mapPins||[]).forEach(function(raw){try{if(raw&&(raw.status==='pending_memory_log'||raw.status==='archived'))persistPinCloud(raw);}catch(e){}});}catch(e){}}
+    renderMapPins(); // Refresh map to hide vanished pins
   }catch(e){}
 }
 function openPinDetail(id){
@@ -1903,6 +1948,17 @@ function openPinDetail(id){
     if(lc){var locTxt=String(p.location||'Hong Kong').replace(/^\s*near\s+/i,'');lc.textContent=mapCatEmoji(p.category)+' Near '+locTxt;}
     var pb=document.getElementById('pinBio');if(pb){var bb=p.members&&p.members[0]&&p.members[0].bio;pb.textContent=bb||'';pb.style.display=bb?'':'none';}
     var gb=document.getElementById('pinGroupBadge');if(gb)gb.textContent=groupBadgeText(p);
+    // Lifecycle badge
+    var lbadge=document.getElementById('pinLifecycleBadge');
+    if(!lbadge){
+      lbadge=document.createElement('div');
+      lbadge.id='pinLifecycleBadge';
+      lbadge.style.cssText='margin-top:8px;padding:8px 12px;border-radius:999px;font-size:12px;font-weight:700;text-align:center;';
+      var gc=document.getElementById('pinGroupBadge');
+      if(gc&&gc.parentNode)gc.parentNode.insertBefore(lbadge,gc.nextSibling);
+    }
+    lbadge.className='lifecycle-badge '+getPinLifecycleClass(p);
+    lbadge.textContent=getPinLifecycleLabel(p);
     var sb=document.getElementById('pinSyncBadge');if(sb)paintSyncBadge(sb,p);
     var mem=document.getElementById('pinMembers');
     if(mem){mem.innerHTML='';(p.members||[]).forEach(function(m){var s=document.createElement('span');s.className='chip';s.textContent=(m.role==='local'?'🇭🇰 ':'✈️ ')+m.nick;mem.appendChild(s);});}
@@ -1921,6 +1977,33 @@ function openPinDetail(id){
 }
 function closePinDetail(){try{_openPinId=null;var d=document.getElementById('pinDrawer');if(d)d.classList.add('hidden');}catch(e){}}
 
+// ===== PIN LIFECYCLE STATE =====
+function getPinLifecycleState(p){
+  // Returns: 'active' | 'requests_closed' | 'ended' | 'vanished'
+  var now=Date.now();
+  var vanishAt=p.pinVanishAt ? new Date(p.pinVanishAt).getTime() : null;
+  var hangoutEndAt=p.hangoutEndAt ? new Date(p.hangoutEndAt).getTime() : (p.expires_at ? new Date(p.expires_at).getTime() : null);
+  var requestCutoffAt=p.requestCutoffAt ? new Date(p.requestCutoffAt).getTime() : (hangoutEndAt || null);
+  if(vanishAt && now >= vanishAt) return 'vanished';
+  if(hangoutEndAt && now >= hangoutEndAt) return 'ended';
+  if(requestCutoffAt && now >= requestCutoffAt) return 'requests_closed';
+  return 'active';
+}
+function getPinLifecycleLabel(p){
+  var state=getPinLifecycleState(p);
+  if(state==='active') return '🟢 Active & Accepting';
+  if(state==='requests_closed') return '🔒 Requests Closed';
+  if(state==='ended') return '🏁 Hangout Ended — Tap to Log Memory';
+  return '👻 Archived';
+}
+function getPinLifecycleClass(p){
+  var state=getPinLifecycleState(p);
+  if(state==='active') return 'lifecycle-active';
+  if(state==='requests_closed') return 'lifecycle-requests-closed';
+  if(state==='ended') return 'lifecycle-ended';
+  return 'lifecycle-vanished';
+}
+
 // ===== GUEST REQUEST STATUS TAB =====
 function renderGuestRequestTab(p, myReq, reqStatus, isMember, isHost){
   // hide old pending note
@@ -1928,8 +2011,14 @@ function renderGuestRequestTab(p, myReq, reqStatus, isMember, isHost){
   // hide old request button (we rebuild below)
   var req=document.getElementById('pinRequestBtn');if(req)req.style.display='none';
 
-  // no request yet, not a member, not host → show Request to Connect
-  if(!myReq && !isMember && !isHost && !isPinExpired(p)){
+  var lifecycle=getPinLifecycleState(p);
+  // Don't allow new requests if requests are closed, hangout ended, or pin vanished
+  if(lifecycle!=='active'){
+    if(req)req.style.display='none';
+  }
+
+  // no request yet, not a member, not host → show Request to Connect (only if active)
+  if(!myReq && !isMember && !isHost && lifecycle==='active'){
     if(req){req.style.display='';req.textContent='Request to Connect';req.disabled=false;req.onclick=requestPinConnect;}
     return;
   }
@@ -2022,6 +2111,9 @@ function requestPinConnect(){
     if(needProfile('connect'))return;
     var p=findPin(_openPinId);if(!p)return;
     try{if(myUid()&&p.authorId&&myUid()===p.authorId){toast('This is your hook — guests request to join you.');return;}}catch(e){}
+    // Block new requests if requests are closed, hangout ended, or pin vanished
+    var lifecycle=getPinLifecycleState(p);
+    if(lifecycle!=='active'){toast('Requests for this hook have closed.');return;}
     var me={nick:hookNick(),role:(_hookDraft.role)||'traveller',verified:hookVerified(),ts:Date.now()};
     try{me.role=(ETIE.activeRole==='local')?'local':'traveller';}catch(e){}
     if((p.members||[]).some(function(m){return m.nick===me.nick;})){toast('You are already in this hangout.');return;}
@@ -2295,19 +2387,21 @@ function renderHookChatList(){
     var box=document.getElementById('hookChatList');if(!box)return;
     box.innerHTML='';
     var me=hookNick();
-    var mine=allMapPins().filter(function(p){return (p.members||[]).some(function(m){return m.nick===me;});});
+    // Show all pins user is a member of (including vanished/archived) so chat stays accessible
+    var mine=(ETIE.mapPins||[]).filter(function(p){return p&&(p.members||[]).some(function(m){return m.nick===me;});});
     if(!mine.length){var e=document.createElement('div');e.className='muted small';e.textContent='No hook chats yet — connect on a pin to start one.';box.appendChild(e);return;}
     mine.forEach(function(p){
       try{
         var last=(p.chat||[])[(p.chat||[]).length-1];
         var row=document.createElement('div');row.className='list-item';row.style.cursor='pointer';
+        var state=getPinLifecycleState(p);
+        var lifecycleLabel=state==='vanished'?' 👻' : (state==='ended'?' 🏁' : (state==='requests_closed'?' 🔒' : ''));
         row.innerHTML='<div><strong></strong><br><span class="muted"></span></div><span class="status"></span>';
-        row.querySelector('strong').textContent=mapCatEmoji(p.category)+' '+(p.title||p.location||'Hook');
+        row.querySelector('strong').textContent=mapCatEmoji(p.category)+' '+(p.title||p.location||'Hook')+lifecycleLabel;
         row.querySelector('span.muted').textContent=last?((last.nick||'')+': '+(last.text||'').slice(0,60)):'Tap to open chat';
         row.querySelector('span.status').textContent=groupBadgeText(p);
         (function(pin){
-          if(isPinExpired(pin)){row.onclick=function(){showScreen('map');openPinDetail(pin.id);};}
-          else{row.onclick=function(){showScreen('map');openChatDrawer(pin.id);};}
+          row.onclick=function(){showScreen('map');openChatDrawer(pin.id);};
         })(p);
         box.appendChild(row);
       }catch(e){}
@@ -3017,4 +3111,6 @@ document.addEventListener('DOMContentLoaded',function(){
     if(window.EtieCloud && window.EtieCloud.subscribeReviews) window.EtieCloud.subscribeReviews();
     if(window.EtieCloud && window.EtieCloud.subscribeReports) window.EtieCloud.subscribeReports();
   }, 2000);
+  // Periodic lifecycle sweep (every 60s) to auto-archive vanished pins
+  setInterval(function(){try{sweepExpiredPins();}catch(e){}}, 60000);
 });

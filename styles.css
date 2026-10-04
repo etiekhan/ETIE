@@ -251,6 +251,28 @@ header .secondary{background:rgba(255,255,255,.96)!important;color:#171717!impor
 .lifecycle-requests-closed{background:rgba(251,146,60,.2);border:1px solid rgba(251,146,60,.5);color:#fdba74;}
 .lifecycle-ended{background:rgba(239,68,68,.2);border:1px solid rgba(239,68,68,.5);color:#fca5a5;}
 .lifecycle-vanished{background:rgba(100,116,139,.2);border:1px solid rgba(100,116,139,.5);color:#94a3b8;}
+/* ===== Memory Map Markers & Clusters ===== */
+.memory-marker{transition:transform 0.15s ease;}
+.memory-marker:hover{transform:scale(1.15);z-index:1000;}
+.memory-marker img{transition:transform 0.2s ease;}
+.memory-marker:hover img{transform:scale(1.05);}
+/* Memory Cluster Styles */
+.memory-cluster{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#f43f5e,#fb7185);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:14px;box-shadow:0 4px 16px rgba(244,63,94,.5);border:3px solid #fff;}
+.memory-cluster-small{width:40px;height:40px;font-size:14px;}
+.memory-cluster-medium{width:50px;height:50px;font-size:16px;}
+.memory-cluster-large{width:60px;height:60px;font-size:18px;box-shadow:0 6px 24px rgba(244,63,94,.7);}
+/* Memory Card Modal */
+#memoryCardModal .chat-popup{background:rgba(18,18,20,.98);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.12);border-radius:20px;}
+#memoryCardDualPhoto img{width:100%;height:100%;object-fit:cover;}
+.memory-card-dual{display:flex;height:100%;}
+.memory-card-dual img{flex:1;object-fit:cover;}
+.quest-badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:800;background:rgba(244,63,94,.2);border:1px solid rgba(244,63,94,.5);color:#fb7185;}
+/* Profile Segments */
+.profile-segments .seg-btn.active{background:rgba(244,63,94,.2)!important;border-color:rgba(244,63,94,.5)!important;color:#fff!important;}
+.profile-segment{transition:opacity 0.2s ease;}
+/* Memory Map Full */
+#memoryMapFull{transition:opacity 0.3s ease;}
+.memory-map-head strong{font-size:16px;}
 /* balanced wrapping for all text bubbles — no awkward blanks or orphans */
 .chip,.bubble,.pin-hook,.map-empty,.toast,.role-badge,.group-badge,.status,.list-item strong,.metric strong{text-wrap:pretty;overflow-wrap:break-word;}
 .chip{white-space:normal;}

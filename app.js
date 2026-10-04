@@ -682,20 +682,30 @@ function closeProfileDrawer(){
 function showProfileDrawerTab(tab){
   try{
     var prof=document.getElementById('profileDrawerView');
+    var mem=document.getElementById('memoryMapDrawerView');
     var pass=document.getElementById('passportDrawerView');
     var t1=document.getElementById('tabDrawerProfile');
-    var t2=document.getElementById('tabDrawerPassport');
+    var t2=document.getElementById('tabDrawerMemories');
+    var t3=document.getElementById('tabDrawerPassport');
+    // Hide all
+    if(prof)prof.classList.remove('active');
+    if(mem)mem.classList.remove('active');
+    if(pass)pass.classList.remove('active');
+    if(t1)t1.classList.remove('active');
+    if(t2)t2.classList.remove('active');
+    if(t3)t3.classList.remove('active');
     if(tab==='passport'){
-      if(prof)prof.classList.remove('active');
-      if(pass)pass.classList.add('active');
-      if(t1)t1.classList.remove('active');
-      if(t2)t2.classList.add('active');
+      var pass=document.getElementById('passportDrawerView'); if(pass)pass.classList.add('active');
+      var t3=document.getElementById('tabDrawerPassport'); if(t3)t3.classList.add('active');
       renderPassportDrawer();
+    }else if(tab==='memories'){
+      var mem=document.getElementById('memoryMapDrawerView'); if(mem)mem.classList.add('active');
+      var t2=document.getElementById('tabDrawerMemories'); if(t2)t2.classList.add('active');
+      renderMemoryMapFull();
     }else{
-      if(prof)prof.classList.add('active');
-      if(pass)pass.classList.remove('active');
-      if(t1)t1.classList.add('active');
-      if(t2)t2.classList.remove('active');
+      var prof=document.getElementById('profileDrawerView'); if(prof)prof.classList.add('active');
+      var t1=document.getElementById('tabDrawerProfile'); if(t1)t1.classList.add('active');
+      showProfileSegment('grid'); // default to grid
     }
   }catch(e){}
 }
@@ -723,6 +733,127 @@ function renderProfileDrawer(){
     renderDrawerPassions();
     renderDrawerFeaturedMemories();
   }catch(e){}
+}
+// ===== Profile Segment Toggle (Map / Grid) =====
+function showProfileSegment(seg){
+  try{
+    var map=document.getElementById('profileSegmentMap');
+    var grid=document.getElementById('profileSegmentGrid');
+    var btnMap=document.getElementById('segProfileMap');
+    var btnGrid=document.getElementById('segProfileGrid');
+    if(!map||!grid)return;
+    if(seg==='map'){
+      if(map)map.style.display='block';
+      if(grid)grid.style.display='none';
+      if(btnMap){btnMap.classList.add('active');btnMap.style.color='#fff';btnMap.style.background='rgba(244,63,94,.2)';btnMap.style.borderColor='rgba(244,63,94,.5)';}
+      if(btnGrid){btnGrid.classList.remove('active');btnGrid.style.color='rgba(255,255,255,.7)';btnGrid.style.background='rgba(255,255,255,.08)';btnGrid.style.borderColor='rgba(255,255,255,.16)';}
+      renderProfileMemoryMap();
+    }else{
+      if(map)map.style.display='none';
+      if(grid)grid.style.display='block';
+      if(btnGrid){btnGrid.classList.add('active');btnGrid.style.color='#fff';btnGrid.style.background='rgba(244,63,94,.2)';btnGrid.style.borderColor='rgba(244,63,94,.5)';}
+      if(btnMap){btnMap.classList.remove('active');btnMap.style.color='rgba(255,255,255,.7)';btnMap.style.background='rgba(255,255,255,.08)';btnMap.style.borderColor='rgba(255,255,255,.16)';}
+    }
+  }catch(e){}
+}
+// ===== Profile Memory Map (Map segment in Profile tab) =====
+var _profileMemoryMap=null;
+function renderProfileMemoryMap(){
+  try{
+    var container=document.getElementById('memoryMap');
+    if(!container)return;
+    if(_profileMemoryMap){try{_profileMemoryMap.remove();}catch(e){}_profileMemoryMap=null;}
+    container.innerHTML='';
+    if(!window.L){container.innerHTML='<div class="muted" style="padding:20px;text-align:center;">Map loading…</div>';return;}
+    _profileMemoryMap=L.map('memoryMap',{zoomControl:false,attributionControl:false,dragging:true,touchZoom:true,scrollWheelZoom:true,doubleClickZoom:true,boxZoom:false,keyboard:false,tap:true});
+    _profileMemoryMap.setView(HK_CENTER,11);
+    L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png?api_key=cc9c3230-65b0-44c0-8361-2c86413b0744',{maxZoom:18,attribution:''}).addTo(_profileMemoryMap);
+    if(window.L.Control.Locate){_profileMemoryMap.addControl(L.control.locate({locateOptions:{enableHighAccuracy:true,maxZoom:15},drawCircle:false,drawMarker:false,showPopup:false,strings:{title:'My location'}}));}
+    fetchAndRenderMemoryMarkers(_profileMemoryMap);
+  }catch(e){console.error('renderProfileMemoryMap',e);}
+}
+// ===== Full Memory Map (Memories tab) =====
+var _memoryMapFull=null;
+function renderMemoryMapFull(){
+  try{
+    var container=document.getElementById('memoryMapFull');
+    if(!container)return;
+    if(_memoryMapFull){try{_memoryMapFull.remove();}catch(e){}_memoryMapFull=null;}
+    container.innerHTML='';
+    if(!window.L){container.innerHTML='<div class="muted" style="padding:20px;text-align:center;">Map loading…</div>';return;}
+    _memoryMapFull=L.map('memoryMapFull',{zoomControl:false,attributionControl:false,dragging:true,touchZoom:true,scrollWheelZoom:true,doubleClickZoom:true,boxZoom:false,keyboard:false,tap:true});
+    _memoryMapFull.setView(HK_CENTER,11);
+    L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png?api_key=cc9c3230-65b0-44c0-8361-2c86413b0744',{maxZoom:18,attribution:''}).addTo(_memoryMapFull);
+    if(window.L.Control.Locate){_memoryMapFull.addControl(L.control.locate({locateOptions:{enableHighAccuracy:true,maxZoom:15},drawCircle:false,drawMarker:false,showPopup:false,strings:{title:'My location'}}));}
+    fetchAndRenderMemoryMarkers(_memoryMapFull, function(count){
+      var el=document.getElementById('memoryMapCount');
+      if(el)el.textContent=count+' memory'+(count===1?'':'s')+' mapped';
+    });
+  }catch(e){console.error('renderMemoryMapFull',e);}
+}
+// ===== Fetch hangout logs and render photo markers with clustering =====
+function fetchAndRenderMemoryMarkers(mapInstance,onDone){
+  try{
+    if(!window.EtieCloud||!window.EtieCloud.fetchUserLogs){mapInstance.off();return;}
+    var myId=null;try{myId=myUid();}catch(e){}
+    if(!myId)return;
+    window.EtieCloud.fetchUserLogs(myId,function(logs){
+      try{
+        var count=0;
+        if(!logs||!logs.length){
+          if(onDone)onDone(0);
+          return;
+        }
+        // Filter logs that have photos and location
+        var photoLogs=logs.filter(function(l){
+          return l && l.lat!=null && l.lng!=null && l.photo_url;
+        });
+        if(!photoLogs.length){
+          if(onDone)onDone(0);
+          return;
+        }
+        count=photoLogs.length;
+        // Create marker cluster group
+        var markers=L.markerClusterGroup({
+          iconCreateFunction:function(cluster){
+            var c=cluster.getChildCount();
+            var size=c<10?'small':(c<100?'medium':'large');
+            return L.divIcon({
+              html:'<div class="memory-cluster memory-cluster-'+size+'"><span>'+c+'</span></div>',
+              className:'',
+              iconSize:L.point(40,40),
+              iconAnchor:L.point(20,20)
+            });
+          },
+          spiderfyOnMaxZoom:true,
+          showCoverageOnHover:false,
+          zoomToBoundsOnClick:true,
+          maxClusterRadius:50
+        });
+        photoLogs.forEach(function(log){
+          var photo=log.photo_url;
+          var thumb=photo; // use full photo as thumb for now
+          var lat=log.lat, lng=log.lng;
+          var title=log.title||log.location||'Hangout';
+          var taken=log.taken_at ? new Date(log.taken_at).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}) : '';
+          var questBadge=log.questCompleted ? ' ⚡' : '';
+          var html='<div class="memory-marker" style="width:56px;height:56px;border-radius:12px;overflow:hidden;background:#000;border:3px solid #fff;box-shadow:0 4px 16px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;">'
+            +'<img src="'+thumb+'" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">'
+            +'</div>';
+          var icon=L.divIcon({className:'',html:html,iconSize:[56,56],iconAnchor:[28,28]});
+          var mk=L.marker([lat,lng],{icon:icon,title:title});
+          mk.on('click',function(){
+            openMemoryCard(log);
+          });
+          markers.addLayer(mk);
+        });
+        mapInstance.addLayer(markers);
+        // Fit bounds to show all markers
+        try{var group=new L.featureGroup(photoLogs.map(function(l){return L.marker([l.lat,l.lng]);}));mapInstance.fitBounds(group.getBounds().pad(0.1));}catch(e){}
+        if(onDone)onDone(count);
+      }catch(e){console.error('fetchAndRenderMemoryMarkers',e);if(onDone)onDone(0);}
+    });
+  }catch(e){console.error('fetchAndRenderMemoryMarkers outer',e);if(onDone)onDone(0);}
 }
 function renderPassportDrawer(){
   try{
@@ -2637,6 +2768,52 @@ function openQuestDrawer(){
 }
 function closeQuestDrawer(){
   try{var o=document.getElementById('questDrawer');if(o)o.classList.add('hidden');}catch(e){}
+}
+// ===== Memory Card Modal =====
+function openMemoryCard(log){
+  try{
+    var m=document.getElementById('memoryCardModal');
+    if(!m)return;
+    m.classList.remove('hidden');
+    // Dual photo display (for now single photo, split view)
+    var dual=document.getElementById('memoryCardDualPhoto');
+    if(dual && log.photo_url){
+      dual.innerHTML='<img src="'+log.photo_url+'" style="width:100%;height:100%;object-fit:cover;">';
+    }
+    var title=document.getElementById('memoryCardTitle');
+    if(title)title.textContent=log.title||log.location||'Hangout Memory';
+    var meta=document.getElementById('memoryCardMeta');
+    if(meta){
+      var taken=log.taken_at ? new Date(log.taken_at).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}) : '';
+      var loc=log.location||'';
+      meta.textContent=(taken||'')+(loc?' · '+loc:'');
+    }
+    var cos=document.getElementById('memoryCardCosigners');
+    if(cos && log.cosigners && log.cosigners.length){
+      cos.textContent='Co-signed by: '+log.cosigners.map(function(c){return c.nick||c;}).join(', ');
+    }
+    var quest=document.getElementById('memoryCardQuest');
+    var qtitle=document.getElementById('memoryCardQuestTitle');
+    var qbadge=document.getElementById('memoryCardQuestBadge');
+    if(log.questCompleted && log.questTitle){
+      if(quest)quest.style.display='block';
+      if(qtitle)qtitle.textContent=log.questTitle;
+      if(qbadge){qbadge.textContent='⚡ Quest Completed';qbadge.style.display='inline-block';}
+    }else{
+      if(quest)quest.style.display='none';
+      if(qbadge)qbadge.style.display='none';
+    }
+    var cosigners=document.getElementById('memoryCardCosigners');
+    if(cosigners && log.cosigners && log.cosigners.length){
+      cosigners.textContent='Co-signed by: '+log.cosigners.map(function(c){return c.nick||c;}).join(', ');
+      cosigners.style.display='block';
+    }else if(cosigners){
+      cosigners.style.display='none';
+    }
+  }catch(e){}
+}
+function closeMemoryCard(){
+  try{var m=document.getElementById('memoryCardModal');if(m)m.classList.add('hidden');}catch(e){}
 }
 function acceptCuratedQuest(){
   try{

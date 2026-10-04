@@ -297,21 +297,41 @@
     <div class="profile-drawer-body">
       <!-- Profile View -->
       <div id="profileDrawerView" class="profile-drawer-view active">
-        <div class="lite-idrow">
-          <div class="lite-avatar" id="drawerAvatar"><span>+</span></div>
-          <div style="flex:1;min-width:0;">
-            <strong id="drawerName" style="font-size:19px;">—</strong> <span id="drawerVerified" class="small"></span>
-            <div><span id="drawerRole" class="role-badge">—</span></div>
-            <div class="muted small" id="drawerCity">—</div>
-          </div>
+        <!-- Profile Tab Segments: Map / Grid -->
+        <div class="profile-segments" style="display:flex;gap:4px;margin-bottom:16px;">
+          <button class="seg-btn active" id="segProfileMap" onclick="showProfileSegment('map')" style="flex:1;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:#fff;font-weight:700;font-size:13px;">🗺️ Map</button>
+          <button class="seg-btn" id="segProfileGrid" onclick="showProfileSegment('grid')" style="flex:1;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:rgba(255,255,255,.7);font-weight:700;font-size:13px;">⣿ Grid</button>
         </div>
-        <div class="field"><label>Vibes</label><div class="chips" id="drawerVibes"></div></div>
-        <div class="field"><label>Personal Hook</label><p class="pin-hook" id="drawerHook" style="font-size:16px;">—</p></div>
-        <div class="field"><label>Featured Memories <span class="small muted">(pin up to 3)</span></label><div id="drawerFeaturedMemories" class="featured-grid"></div></div>
-        <div class="field"><label>Favourite memories & hangouts (up to 3)</label><div id="drawerMemories" class="mem-grid"></div></div>
-        <div class="field"><label>Passion badges</label><div class="chips" id="drawerPassions"></div></div>
-        <div class="field" id="drawerSpotsWrap"><label id="drawerSpotsTitle">Local spots</label><div id="drawerSpots" class="spot-grid"></div></div>
-        <div style="display:flex;gap:8px;margin-top:12px;"><button class="secondary" onclick="editProfile()">Edit Profile</button></div>
+        <!-- Profile Segment: Map (Memory Map) -->
+        <div id="profileSegmentMap" class="profile-segment" style="display:none;">
+          <div id="memoryMap" style="height:320px;border-radius:12px;background:#0b0b0e;"></div>
+        </div>
+        <!-- Profile Segment: Grid (current profile content) -->
+        <div id="profileSegmentGrid" class="profile-segment" style="display:block;">
+          <div class="lite-idrow">
+            <div class="lite-avatar" id="drawerAvatar"><span>+</span></div>
+            <div style="flex:1;min-width:0;">
+              <strong id="drawerName" style="font-size:19px;">—</strong> <span id="drawerVerified" class="small"></span>
+              <div><span id="drawerRole" class="role-badge">—</span></div>
+              <div class="muted small" id="drawerCity">—</div>
+            </div>
+          </div>
+          <div class="field"><label>Vibes</label><div class="chips" id="drawerVibes"></div></div>
+          <div class="field"><label>Personal Hook</label><p class="pin-hook" id="drawerHook" style="font-size:16px;">—</p></div>
+          <div class="field"><label>Featured Memories <span class="small muted">(pin up to 3)</span></label><div id="drawerFeaturedMemories" class="featured-grid"></div></div>
+          <div class="field"><label>Favourite memories & hangouts (up to 3)</label><div id="drawerMemories" class="mem-grid"></div></div>
+          <div class="field"><label>Passion badges</label><div class="chips" id="drawerPassions"></div></div>
+          <div class="field" id="drawerSpotsWrap"><label id="drawerSpotsTitle">Local spots</label><div id="drawerSpots" class="spot-grid"></div></div>
+          <div style="display:flex;gap:8px;margin-top:12px;"><button class="secondary" onclick="editProfile()">Edit Profile</button></div>
+        </div>
+      </div>
+      <!-- Memory Map View (full map for hangout memories) -->
+      <div id="memoryMapDrawerView" class="profile-drawer-view" style="display:none;">
+        <div class="memory-map-head" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <strong>🗺️ Memory Map</strong>
+          <span class="muted small" id="memoryMapCount">—</span>
+        </div>
+        <div id="memoryMapFull" style="height:380px;border-radius:12px;background:#0b0b0e;"></div>
       </div>
       <!-- Passport View -->
       <div id="passportDrawerView" class="profile-drawer-view" style="display:none;">
@@ -323,12 +343,37 @@
       <!-- Tabs -->
       <div class="profile-tabs" style="display:flex;gap:4px;margin-top:16px;">
         <button class="tab-btn active" id="tabDrawerProfile" onclick="showProfileDrawerTab('profile')">👤 Profile</button>
+        <button class="tab-btn" id="tabDrawerMemories" onclick="showProfileDrawerTab('memories')">🗺️ Memories</button>
         <button class="tab-btn" id="tabDrawerPassport" onclick="showProfileDrawerTab('passport')">🛂 Passport</button>
+      </div>
+    </div>
+</div>
+  </div>
+</div>
+<!-- Memory Card Modal (for photo pin clicks) -->
+<div class="chat-overlay hidden" id="memoryCardModal" onclick="if(event.target===this)closeMemoryCard()">
+  <div class="chat-popup glass-modal" role="dialog" aria-modal="true" aria-label="Hangout Memory" style="width:min(520px,calc(100vw - 24px));max-height:90vh;">
+    <div class="chat-popup-head"><div><strong>🖼️ Hangout Memory</strong></div><button class="secondary" onclick="closeMemoryCard()" aria-label="Close" style="padding:8px 12px;">✕</button></div>
+    <div class="chat-popup-body" style="padding:0;background:transparent;overflow:hidden;">
+      <div id="memoryCardDualPhoto" style="display:flex;height:220px;background:#000;overflow:hidden;"></div>
+      <div style="padding:16px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+          <strong id="memoryCardTitle" style="font-size:18px;">—</strong>
+          <span id="memoryCardQuestBadge" class="quest-badge" style="display:none;"></span>
+        </div>
+        <div class="muted small" id="memoryCardMeta">—</div>
+        <div class="muted small" id="memoryCardCosigners" style="margin-top:4px;"></div>
+        <div id="memoryCardQuest" style="display:none;margin-top:12px;padding:12px;background:rgba(244,63,94,.15);border:1px solid rgba(244,63,94,.3);border-radius:10px;">
+          <div class="quest-week-label" style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,.5);margin-bottom:4px;">Quest</div>
+          <div id="memoryCardQuestTitle" style="font-weight:700;color:#fff;"></div>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+          <button class="secondary" onclick="closeMemoryCard()">Close</button>
+        </div>
       </div>
     </div>
   </div>
 </div>
-      </div>
       <div id="questCamHint" class="muted small" style="margin-top:8px;text-align:center;"></div>
       <div style="display:flex;gap:8px;justify-content:center;margin-top:12px;">
         <button class="secondary" id="questRetakeBtn" onclick="retakeQuestPhoto()" style="display:none;">Retake</button>
@@ -414,7 +459,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="supabase-config.js?v=69"></script>
-  <script src="app.js?v=85"></script>
+  <script src="app.js?v=86"></script>
   <script src="supabase-sync.js?v=73"></script>
 </body>
 </html>

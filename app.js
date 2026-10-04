@@ -204,7 +204,8 @@ function saveState() { try { localStorage.setItem(ETIE_KEY, JSON.stringify(ETIE)
 // --- HK hook helpers (district/vibe maps + modifiers) ---
 // Flag helpers
 function flagEmoji(code){if(!code)return '';return String.fromCodePoint(...code.toUpperCase().split('').map(c=>127397+c.charCodeAt(0)));}
-function flagForCountry(countryCode){var map={'PT':'🇵🇹','ES':'🇪🇸','FR':'🇫🇷','IT':'🇮🇹','JP':'🇯🇵','TH':'🇹🇭','US':'🇺🇸','AU':'🇦🇺','HK':'🇭🇰','SG':'🇸🇬'};return map[countryCode]||flagEmoji(countryCode)||'🌍';}
+function flagForCountry(countryCode){var map={'PT':'🇵🇹','ES':'🇪🇸','FR':'🇫🇷','IT':'🇮🇹','JP':'🇯🇵','TH':'🇹🇭','US':'🇺🇸','AU':'🇦🇺','HK':'🇭🇰','SG':'🇸🇬','GB':'🇬🇧','DE':'🇩🇪','CA':'🇨🇦'};return map[countryCode]||flagEmoji(countryCode)||'🌍';}
+function getRegionFlag(p){return flagForCountry(p.region||'HK');}
 
 function toast(msg){var t=document.getElementById('toast');if(!t){alert(msg);return;}t.textContent=msg;t.style.display='block';clearTimeout(t._h);t._h=setTimeout(function(){t.style.display='none';},2200);}
 function gateState(){
@@ -1239,8 +1240,8 @@ function restoreAll(){
 // Pins render ONLY from live hooks: Supabase etie_pins (origin 'cloud') + local testing state.
 // No seed/demo/guide-presence pins. Empty map shows the first-pin banner.
 var MAP_CATS=[{id:'All',emoji:'🗺️'},{id:'Food',emoji:'🥟'},{id:'Nightlife',emoji:'🍺'},{id:'Photo',label:'Photo Walk',emoji:'📸'},{id:'Sports',emoji:'⚽'},{id:'Cafe',emoji:'☕'}];
-var MAP_INTENTS=[{id:'All',label:'All Pins',emoji:'🗺️'},{id:'traveller',label:'✈️ Visiting Now'},{id:'local',label:'🇭🇰 Hosted by Locals'}];
-var MAP_VIBES=[{id:'Sports',emoji:'⚽'},{id:'Nightlife',emoji:'🍺'},{id:'Cafe',label:'Cafes',emoji:'☕'},{id:'Photo',label:'Photo Walks',emoji:'📸'}];
+var MAP_INTENTS=[{id:'All',label:'All Pins',emoji:'🗺️'},{id:'traveller',label:'✈️ Visiting Now'},{id:'local',label:'🏠 Hosted by Locals'}];
+var MAP_VIBES=[{id:'project mbappe, lebron or sth',emoji:'⚽'},{id:'letterboxd date',emoji:'🍿'},{id:'are you a fellow alcoholic?',emoji:'🍺'},{id:'time for a cuppa tea / coffee!',emoji:'☕'},{id:'walking around the city sharing headphones tgt',emoji:'🎧'},{id:'dubious quests and giggles',emoji:'⚡'},{id:'something else on your mind?',emoji:'💡'}];
 var MAP_DISTRICT_LATLNG={'Central / Soho':[22.2819,114.1577],'Lan Kwai Fong':[22.2810,114.1550],'Sheung Wan':[22.2867,114.1520],'Tsim Sha Tsui':[22.2980,114.1722],'Mong Kok':[22.3193,114.1694],'Sham Shui Po':[22.3307,114.1625]};
 var HK_CENTER=[22.2819,114.1581],HK_ZOOM=13;
 var MAP_FILTER='All',MAP_ROLE='All';
@@ -1812,7 +1813,7 @@ function saveDropHook(){
       pinVanishAt:pinVanishAt ? new Date(pinVanishAt).toISOString() : null,
       capacity:cap,spotsAvailable:cap,
       name:nm,verified:vf,location:loc,lat:_dropPoint.lat,lng:_dropPoint.lng,hook:hook,photos:(_hookDraft.photos||[]).map(function(p){return p.dataUrl;}),
-      members:[{nick:nm,role:_hookDraft.role,verified:vf,bio:((ETIE.traveller&&ETIE.traveller.bio)||'').slice(0,140)}],pending:[],requests:[],status:'active',
+      region:_hookDraft.region||'HK',members:[{nick:nm,role:_hookDraft.role,verified:vf,bio:((ETIE.traveller&&ETIE.traveller.bio)||'').slice(0,140)}],pending:[],requests:[],status:'active',
       ts:Date.now(),origin:'local',cloudId:null,syncState:(function(){try{return (window.EtieCloud&&window.EtieCloud.getSession&&window.EtieCloud.getSession())?'syncing':'local';}catch(e){return 'local';}})()};
     if(_hookDraft.window==='custom'){
       var cs=document.getElementById('customDate')?.value;
@@ -1821,6 +1822,9 @@ function saveDropHook(){
       if(cs && cst) pin.customStart=cs+'T'+cst;
       if(cs && cet) pin.customEnd=cs+'T'+cet;
     }
+    // Region for dynamic flag
+    var reg=document.getElementById('hookRegion');
+    if(reg) pin.region=reg.value;
     if(!ETIE.mapPins)ETIE.mapPins=[];
     ETIE.mapPins.push(pin);
     saveState();persistPinCloud(pin);
@@ -1942,7 +1946,7 @@ function openPinDetail(id){
     var lb=document.getElementById('pinLogBtn');if(lb)lb.style.display=isMember?'':'none';
     try{renderPinLogs(p.id);}catch(e){}
     var vb=document.getElementById('pinVerified');if(vb){vb.textContent=p.verified?'✅ Verified':'';vb.style.display=p.verified?'':'none';}
-    var rb=document.getElementById('pinRoleBadge');if(rb){var pr=(p.role==='local')?'local':'traveller';rb.textContent=pr==='local'?'🇭🇰 Local Host':'✈️ Traveller';rb.classList.toggle('city-host',pr==='local');}
+    var rb=document.getElementById('pinRoleBadge');if(rb){var pr=(p.role==='local')?'local':'traveller';rb.textContent=(pr==='local'?getRegionFlag(p)+' ':'✈️ ')+(pr==='local'?'Local Host':'Traveller');rb.classList.toggle('city-host',pr==='local');}
     var ptt=document.getElementById('pinTitle');if(ptt)ptt.textContent=p.title||p.location||'Hook';
     var lc=document.getElementById('pinLoc');
     if(lc){var locTxt=String(p.location||'Hong Kong').replace(/^\s*near\s+/i,'');lc.textContent=mapCatEmoji(p.category)+' Near '+locTxt;}
@@ -1961,7 +1965,7 @@ function openPinDetail(id){
     lbadge.textContent=getPinLifecycleLabel(p);
     var sb=document.getElementById('pinSyncBadge');if(sb)paintSyncBadge(sb,p);
     var mem=document.getElementById('pinMembers');
-    if(mem){mem.innerHTML='';(p.members||[]).forEach(function(m){var s=document.createElement('span');s.className='chip';s.textContent=(m.role==='local'?'🇭🇰 ':'✈️ ')+m.nick;mem.appendChild(s);});}
+    if(mem){mem.innerHTML='';(p.members||[]).forEach(function(m){var s=document.createElement('span');s.className='chip';var flag=(m.role==='local')?(m.region?flagForCountry(m.region):getRegionFlag(p)):'✈️ ';s.textContent=flag+m.nick;mem.appendChild(s);});}
     // GUEST VIEW: request status tab
     renderGuestRequestTab(p, myReq, reqStatus, isMember, isHost);
     // HOST VIEW: pending requests with Approve/Decline

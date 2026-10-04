@@ -1466,8 +1466,9 @@ function renderMapPins(){
       try{
         var ll=pinLatLng(p);
         var fresh=(Date.now()-(p.ts||0))<3600*1000?' sq-pin-fresh':'';
+        var expired=isPinExpired(p)?' sq-pin-expired':'';
         var prole=((p.derivedRole||p.role)==='local')?'local':'traveller';
-        var icon=L.divIcon({className:'',html:'<div class="sq-pin sq-pin-'+prole+fresh+'">'+mapCatEmoji(p.category)+'</div>',iconSize:[36,36],iconAnchor:[18,18]});
+        var icon=L.divIcon({className:'',html:'<div class="sq-pin sq-pin-'+prole+fresh+expired+'">'+mapCatEmoji(p.category)+'</div>',iconSize:[36,36],iconAnchor:[18,18]});
         var mk=L.marker(pinLatLng(p),{icon:icon,title:(p.name||'Hook')+' · '+p.category});
         mk.on('click',(function(id){return function(){openPinDetail(id);};})(p.id));
         _mapLayer.addLayer(mk);
@@ -1483,8 +1484,9 @@ function renderMapPins(){
         var offsetLng=center[1]+(radius/111000)*Math.sin(angle)/Math.cos(center[0]*Math.PI/180);
         try{
           var fresh=(Date.now()-(p.ts||0))<3600*1000?' sq-pin-fresh':'';
+          var expired=isPinExpired(p)?' sq-pin-expired':'';
           var prole=((p.derivedRole||p.role)==='local')?'local':'traveller';
-          var icon=L.divIcon({className:'',html:'<div class="sq-pin sq-pin-'+prole+fresh+'">'+mapCatEmoji(p.category)+'</div>',iconSize:[36,36],iconAnchor:[18,18]});
+          var icon=L.divIcon({className:'',html:'<div class="sq-pin sq-pin-'+prole+fresh+expired+'">'+mapCatEmoji(p.category)+'</div>',iconSize:[36,36],iconAnchor:[18,18]});
           var mk=L.marker([offsetLat,offsetLng],{icon:icon,title:(p.name||'Hook')+' · '+p.category});
           mk.on('click',(function(id){return function(){openPinDetail(id);};})(p.id));
           _mapLayer.addLayer(mk);
@@ -1534,6 +1536,47 @@ function selectHookWindow(el,v){
     if(drawer)drawer.classList.remove('hidden');
   }catch(e){_hookDraft.window='custom';}
 }
+function selectHookDuration(el){
+  try{
+    if(!el)return;
+    var c=document.getElementById('hookDurationPills');
+    if(c)Array.prototype.forEach.call(c.querySelectorAll('.chip'),function(x){x.classList.remove('active');});
+    el.classList.add('active');
+    var dur=el.getAttribute('data-duration');
+    _hookDraft.duration=dur;
+    var endRow=document.getElementById('customEndTimeRow');
+    var endInput=document.getElementById('customEndTime');
+    if(dur==='none'){
+      if(endRow)endRow.style.display='none';
+      if(endInput){endInput.value='';endInput.removeAttribute('readonly');endInput.placeholder='No expiry — pin stays until you log it';}
+    }else{
+      if(endRow)endRow.style.display='';
+      if(endInput){endInput.setAttribute('readonly','true');}
+      updateEndTimeFromDuration();
+    }
+  }catch(e){}
+}
+function updateEndTimeFromDuration(){
+  try{
+    var dateStr=document.getElementById('customDate')?.value;
+    var startStr=document.getElementById('customStartTime')?.value;
+    var dur=_hookDraft.duration||'3h';
+    var endInput=document.getElementById('customEndTime');
+    if(!dateStr || !startStr || !endInput || dur==='none') return;
+    var start=new Date(dateStr+'T'+startStr).getTime();
+    var ms=parseDurationMs(dur);
+    var end=new Date(start+ms);
+    var hh=String(end.getHours()).padStart(2,'0');
+    var mm=String(end.getMinutes()).padStart(2,'0');
+    endInput.value=hh+':'+mm;
+  }catch(e){}
+}
+function parseDurationMs(dur){
+  var m=dur.match(/^(\d+)([hd])$/);
+  if(!m) return 3*3600*1000;
+  var n=parseInt(m[1],10);
+  return m[2]==='h'?n*3600*1000:n*24*3600*1000;
+}
 function hookCap(d){
   try{
     _hookDraft.capacity=Math.min(4,Math.max(2,(_hookDraft.capacity||3)+d));
@@ -1554,6 +1597,19 @@ function renderHookRoleLine(){
 }
 function windowExpires(w,nowTs){
   try{
+    if(_hookDraft && _hookDraft.duration && _hookDraft.duration!=='none'){
+      var dateStr=document.getElementById('customDate')?.value;
+      var startStr=document.getElementById('customStartTime')?.value;
+      if(dateStr && startStr){
+        var start=new Date(dateStr+'T'+startStr).getTime();
+        var ms=parseDurationMs(_hookDraft.duration);
+        var end=start+ms;
+        return {s:start,e:end};
+      }
+    }
+    if(_hookDraft && _hookDraft.duration==='none'){
+      return {s:nowTs,e:null}; // no expiry
+    }
     var dateStr=document.getElementById('customDate')?.value;
     var startStr=document.getElementById('customStartTime')?.value;
     var endStr=document.getElementById('customEndTime')?.value;
@@ -1603,6 +1659,12 @@ function openDropHook(){
     var cst=document.getElementById('customStartTime'); if(cst) cst.value=_p2(_now.getHours())+':'+_p2(_now.getMinutes());
     var cet=document.getElementById('customEndTime'); if(cet) cet.value='';
     var pv=document.getElementById('hookPhotoPreview'); if(pv) pv.innerHTML='';
+    _hookDraft.duration='3h';
+    selectHookDuration(document.querySelector('#hookDurationPills [data-duration="3h"]'));
+    var cd=document.getElementById('customDate');
+    var cst=document.getElementById('customStartTime');
+    if(cd)cd.onchange=updateEndTimeFromDuration;
+    if(cst)cst.onchange=updateEndTimeFromDuration;
     // default coords: last map tap, else live map center
     if(!_dropPoint){
       try{if(_map)_dropPoint={lat:_map.getCenter().lat,lng:_map.getCenter().lng};}catch(e){}
@@ -1854,7 +1916,7 @@ function openPinDetail(id){
     if(claim)claim.style.display=(!isHost&&isEtieAdmin())?'':'none';
     try{fillMemoryStrip('pinMemories',p.authorId||null);}catch(e){}
     try{fillSpotsStrip('pinSpots',p.authorId||null);}catch(e){}
-    var d=document.getElementById('pinDrawer');if(d)d.classList.remove('hidden');
+    var d=document.getElementById('pinDrawer');if(d){d.classList.remove('hidden');d.classList.toggle('pin-drawer-expired',isPinExpired(p));}
   }catch(e){}
 }
 function closePinDetail(){try{_openPinId=null;var d=document.getElementById('pinDrawer');if(d)d.classList.add('hidden');}catch(e){}}

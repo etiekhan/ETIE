@@ -237,6 +237,14 @@ header .secondary{background:rgba(255,255,255,.96)!important;color:#171717!impor
 .group-badge{border-color:#b6ff2e;color:#d9ffb0;background:rgba(182,255,46,.1);box-shadow:0 0 10px rgba(182,255,46,.3);}
 .map-empty{border-color:#4de1ff;box-shadow:0 0 18px rgba(77,225,255,.35);}
 .pin-avatar{background:linear-gradient(135deg,#ff2fb3,#7c3aed);box-shadow:0 0 14px rgba(255,47,179,.5);}
+/* Expired pin styles — grayscale to show it's time to log */
+.sq-pin-expired{filter:grayscale(1) opacity(0.6);transition:filter 0.3s ease;}
+.sq-pin-expired:hover{filter:grayscale(1) opacity(0.8);}
+.pin-drawer-expired{border-color:rgba(255,255,255,.2)!important;background:rgba(20,20,25,.8);}
+.pin-drawer-expired .pin-title{color:rgba(255,255,255,.5);}
+.pin-drawer-expired .group-badge{filter:grayscale(1);}
+.pin-drawer-expired .pin-avatar{filter:grayscale(1);}
+.pin-drawer-expired .role-badge{filter:grayscale(1);opacity:0.6;}
 /* balanced wrapping for all text bubbles — no awkward blanks or orphans */
 .chip,.bubble,.pin-hook,.map-empty,.toast,.role-badge,.group-badge,.status,.list-item strong,.metric strong{text-wrap:pretty;overflow-wrap:break-word;}
 .chip{white-space:normal;}

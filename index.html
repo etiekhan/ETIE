@@ -154,8 +154,20 @@
           <button class="chip active" onclick="selectHookWindow(this,'custom')">📅 Custom Date & Time</button>
         </div>
         <div id="customTimeDrawer" class="custom-time-drawer" style="margin-top:12px;padding:16px;background:rgba(255,255,255,.05);border-radius:12px;border:1px solid rgba(255,255,255,.1);">
-          <div class="row"><div class="field"><label>Date</label><input id="customDate" type="date"></div><div class="field"><label>Start Time</label><input id="customStartTime" type="time"></div></div>
-          <div class="field"><label>End Time (optional)</label><input id="customEndTime" type="time" placeholder="e.g. 23:00"></div>
+          <div class="field"><label>Duration</label>
+            <div class="chips" id="hookDurationPills" style="margin-bottom:12px;">
+              <button class="chip active" data-duration="1h" onclick="selectHookDuration(this)">1 hour</button>
+              <button class="chip" data-duration="3h" onclick="selectHookDuration(this)">3 hours</button>
+              <button class="chip" data-duration="6h" onclick="selectHookDuration(this)">6 hours</button>
+              <button class="chip" data-duration="12h" onclick="selectHookDuration(this)">12 hours</button>
+              <button class="chip" data-duration="1d" onclick="selectHookDuration(this)">1 day</button>
+              <button class="chip" data-duration="3d" onclick="selectHookDuration(this)">3 days</button>
+              <button class="chip" data-duration="7d" onclick="selectHookDuration(this)">7 days</button>
+              <button class="chip" data-duration="none" onclick="selectHookDuration(this)">🔕 No expiry (log manually)</button>
+            </div>
+          </div>
+          <div class="row"><div class="field"><label>Start Date</label><input id="customDate" type="date"></div><div class="field"><label>Start Time</label><input id="customStartTime" type="time"></div></div>
+          <div class="field" id="customEndTimeRow"><label>End Time (auto-filled by duration)</label><input id="customEndTime" type="time" placeholder="Auto-calculated" readonly></div>
         </div>
       </div>
       <div class="field"><label>Category</label><div class="chips" id="hookInterestPills"><button class="chip" onclick="selectHookCategory(this,'Food')">🥟 Food</button><button class="chip" onclick="selectHookCategory(this,'Nightlife')">🍺 Nightlife</button><button class="chip" onclick="selectHookCategory(this,'Photo')">📸 Photo Walk</button><button class="chip" onclick="selectHookCategory(this,'Sports')">⚽ Sports</button><button class="chip" onclick="selectHookCategory(this,'Cafe')">☕ Cafe</button></div></div>
@@ -401,7 +413,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="supabase-config.js?v=69"></script>
-  <script src="app.js?v=82"></script>
+  <script src="app.js?v=83"></script>
   <script src="supabase-sync.js?v=73"></script>
 </body>
 </html>

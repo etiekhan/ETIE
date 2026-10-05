@@ -220,7 +220,7 @@
         updated_at: new Date().toISOString()
       };
       var extra={
-        nationality: p.nationality || 'PT',
+        nationality: p.nationality || 'HK',
         traveller_nationality: (typeof ETIE!=='undefined'&&ETIE.traveller&&ETIE.traveller.nationality)||'HK',
         district: p.district || 'Central / Soho',
         tier: p.tier || 'Rookie',

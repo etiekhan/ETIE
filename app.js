@@ -1955,6 +1955,11 @@ function saveDropHook(){
     var win=windowExpires(_hookDraft.window||'now',nowTs);
     var cap=Math.min(4,Math.max(2,_hookDraft.capacity||3));
     var hook=details||title;
+    // guarantee a filterable category even if no chip was tapped ('general'/'Food' match nothing)
+    try{
+      var _okCat=(typeof MAP_VIBES!=='undefined')&&MAP_VIBES.some(function(v){return v.id===_hookDraft.category;});
+      if(!_okCat)_hookDraft.category='something else on your mind?';
+    }catch(e){try{_hookDraft.category='something else on your mind?';}catch(_){}}
     var startsAt=win.s, endsAt=win.e;
     // Lifecycle timestamps. isoOrNull prevents new Date(null) -> 1970-01-01, which
     // made "No expiry" hooks invisible to every other device (vanish time in the past).

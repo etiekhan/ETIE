@@ -2061,7 +2061,7 @@ function sweepExpiredPins(){
     (ETIE.mapPins||[]).forEach(function(raw){
       try{
         if(!raw||raw.kind==='guide'||raw.lat==null)return;
-        var vanishAt=raw.pinVanishAt ? new Date(raw.pinVanishAt).getTime() : (raw.expires_at ? new Date(raw.expires_at).getTime() + 2*60*60*1000 : 0);
+        var vanishAt=(function(){var t=validTs(raw.pinVanishAt);if(t!==null)return t;var e=validTs(raw.expires_at);return e===null?0:e+2*60*60*1000;})();
         // Pin vanishes from map after hangoutEndAt + 2hr buffer
         if(vanishAt && vanishAt < now && raw.status!=='archived'){
           raw.status='archived';changed=true;
@@ -2071,7 +2071,7 @@ function sweepExpiredPins(){
           });
           if(raw.name===me&&!_expiryToasted[raw.id]){_expiryToasted[raw.id]=1;setTimeout((function(t){return function(){toast('🔥 “'+t+'” ended — it\'s now in your Memory Log.');};})((raw.title||raw.location||'Your hook')),1500);}
         } else {
-          var ex=raw.expires_at?new Date(raw.expires_at).getTime():0;
+          var ex=validTs(raw.expires_at)||0;
           if(ex&&ex<now&&raw.status==='active'){
             raw.status='pending_memory_log';changed=true;
             if(raw.name===me&&!_expiryToasted[raw.id]){_expiryToasted[raw.id]=1;setTimeout((function(t){return function(){toast('🔥 “'+t+'” ended — log the memory!');};})((raw.title||raw.location||'Your hook')),1500);}

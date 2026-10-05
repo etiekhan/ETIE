@@ -694,12 +694,19 @@ destination: (typeof ETIE!=='undefined' && ETIE.trip && ETIE.trip.destination)||
   function pinTable(){return 'hooks';}
   function pinRowToPin(r){
     try{
-      return {id:String(r.id),kind:'hook',category:r.category||'Food',role:(r.role==='local'?'local':'traveller'),
+      // derive lifecycle fields from stored timestamps so every device agrees,
+      // even though the hooks table has no dedicated columns for them
+      var starts=r.starts_at||null, ends=r.ends_at||r.expires_at||null;
+      var vanish=null;
+      if(ends)vanish=new Date(new Date(ends).getTime()+2*60*60*1000).toISOString();
+      return {id:String(r.id),kind:'hook',category:r.category||'something else on your mind?',role:(r.role==='local'?'local':'traveller'),
         derivedRole:r.derived_role||r.role||'traveller',title:String(r.title||r.location||'Hook').slice(0,60),
-        capacity:Math.min(4,Math.max(2,parseInt(r.capacity,10)||3)),expires_at:r.expires_at||r.ends_at||null,
+        capacity:Math.min(4,Math.max(2,parseInt(r.capacity,10)||3)),expires_at:r.expires_at||ends||null,
         name:r.nickname||'Someone',verified:!!r.verified,location:r.location||'Hong Kong',
         lat:r.lat,lng:r.lng,hook:String(r.activity_hook||r.content||r.hook||'').slice(0,140),
-        starts_at:r.starts_at||null,ends_at:r.ends_at||null,
+        starts_at:starts,ends_at:ends,
+        requestCutoffAt:starts,hangoutEndAt:ends,pinVanishAt:vanish,
+        region:r.region||'HK',photos:r.photos||[],
         members:r.members||[{nick:r.nickname||'Someone',role:(r.role==='local'?'local':'traveller'),verified:!!r.verified}],
         pending:r.pending||[],requests:r.requests||[],spotsAvailable:r.spots_available,status:r.status||'open',ts:(r.updated_at?new Date(r.updated_at).getTime():Date.now()),
         origin:'cloud',cloudId:String(r.id),authorId:r.user_id||null};
@@ -711,6 +718,7 @@ destination: (typeof ETIE!=='undefined' && ETIE.trip && ETIE.trip.destination)||
       nickname:p.name||'Someone',verified:!!p.verified,role:p.role||'traveller',derived_role:dr,category:p.category||'Food',
       location:p.location||'Hong Kong',lat:p.lat,lng:p.lng,content:String(p.hook||'').slice(0,140),activity_hook:String(p.hook||'').slice(0,140),
       title:String(p.title||p.location||'Hook').slice(0,60),capacity:Math.min(4,Math.max(2,parseInt(p.capacity,10)||3)),expires_at:p.expires_at||p.ends_at||null,
+      region:p.region||'HK',photos:p.photos||[],
       members:p.members||[],pending:p.pending||[],requests:p.requests||[],spots_available:p.spotsAvailable,status:p.status||'open',starts_at:p.starts_at||null,ends_at:p.ends_at||null,updated_at:new Date().toISOString()};
   }
   function pullPins(){

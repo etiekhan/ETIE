@@ -1370,7 +1370,7 @@ function restoreAll(){
 // ---- Friend in Every City — map-first hooks (Leaflet, Hong Kong) ----
 // Pins render ONLY from live hooks: Supabase etie_pins (origin 'cloud') + local testing state.
 // No seed/demo/guide-presence pins. Empty map shows the first-pin banner.
-var MAP_CATS=[{id:'All',emoji:'🗺️'},{id:'Food',emoji:'🥟'},{id:'Nightlife',emoji:'🍺'},{id:'Photo',label:'Photo Walk',emoji:'📸'},{id:'Sports',emoji:'⚽'},{id:'Cafe',emoji:'☕'}];
+var MAP_CATS=[{id:'project mbappe, lebron or sth',emoji:'⚽'},{id:'letterboxd date',emoji:'🍿'},{id:'are you a fellow alcoholic?',emoji:'🍺'},{id:'time for a cuppa tea / coffee!',emoji:'☕'},{id:'walking around the city sharing headphones tgt',emoji:'🎧'},{id:'dubious quests and giggles',emoji:'⚡'},{id:'something else on your mind?',emoji:'💡'},{id:'Food',emoji:'🥟'},{id:'Nightlife',emoji:'🍺'},{id:'Photo',emoji:'📸'},{id:'Sports',emoji:'⚽'},{id:'Cafe',emoji:'☕'}];
 var MAP_INTENTS=[{id:'All',label:'All Pins',emoji:'🗺️'},{id:'traveller',label:'✈️ Visiting Now'},{id:'local',label:'🏠 Hosted by Locals'}];
 var MAP_VIBES=[{id:'project mbappe, lebron or sth',emoji:'⚽'},{id:'letterboxd date',emoji:'🍿'},{id:'are you a fellow alcoholic?',emoji:'🍺'},{id:'time for a cuppa tea / coffee!',emoji:'☕'},{id:'walking around the city sharing headphones tgt',emoji:'🎧'},{id:'dubious quests and giggles',emoji:'⚡'},{id:'something else on your mind?',emoji:'💡'}];
 var MAP_DISTRICT_LATLNG={'Central / Soho':[22.2819,114.1577],'Lan Kwai Fong':[22.2810,114.1550],'Sheung Wan':[22.2867,114.1520],'Tsim Sha Tsui':[22.2980,114.1722],'Mong Kok':[22.3193,114.1694],'Sham Shui Po':[22.3307,114.1625]};
@@ -1492,23 +1492,36 @@ function locateUser(){
   }catch(e){}
 }
 function normHookPin(p){
-  // normalize legacy user pins into the hook shape; drop anything without real coords
+  // normalize legacy user pins into the hook shape; drop anything without real coords.
+  // CRITICAL: start from a copy of the original so nothing is silently dropped —
+  // a whitelist here previously discarded chat, requests, lifecycle and region fields.
   if(!p||p.lat==null||p.lng==null)return null;
-  var cat=p.category||p.interest||'Food';
-  var known=['Food','Nightlife','Photo','Sports','Cafe'];
-  if(known.indexOf(cat)===-1)cat='Food';
+  var n={};
+  for(var k in p){if(Object.prototype.hasOwnProperty.call(p,k))n[k]=p[k];}
   var role=(p.role==='local')?'local':'traveller';
-  return {
-    id:String(p.id),kind:'hook',title:String(p.title||p.location||'Hook').slice(0,60),category:cat,role:role,derivedRole:p.derivedRole||role,authorId:p.authorId||null,
-    capacity:Math.min(4,Math.max(2,parseInt(p.capacity,10)||3)),expires_at:p.expires_at||p.ends_at||null,
-    starts_at:p.starts_at||null,ends_at:p.ends_at||null,
-    name:p.name||'Someone',verified:!!p.verified,
-    location:p.location||nearestDistrictLabel(p.lat,p.lng),
-    lat:p.lat,lng:p.lng,hook:String(p.hook||'').slice(0,140),
-    members:p.members||[{nick:(p.name||'Someone'),role:role,verified:!!p.verified}],
-    pending:p.pending||[],status:p.status||'open',
-    ts:p.ts||Date.now(),origin:p.origin||'local',cloudId:p.cloudId||null
-  };
+  n.id=String(p.id);
+  n.kind='hook';
+  n.title=String(p.title||p.location||'Hook').slice(0,60);
+  n.category=p.category||p.interest||'something else on your mind?';
+  n.role=role;
+  n.derivedRole=p.derivedRole||role;
+  n.authorId=p.authorId||null;
+  n.capacity=Math.min(4,Math.max(2,parseInt(p.capacity,10)||3));
+  n.expires_at=p.expires_at||p.ends_at||null;
+  n.name=p.name||'Someone';
+  n.verified=!!p.verified;
+  n.location=p.location||nearestDistrictLabel(p.lat,p.lng);
+  n.lat=p.lat;n.lng=p.lng;
+  n.hook=String(p.hook||'').slice(0,140);
+  n.members=p.members||[{nick:(p.name||'Someone'),role:role,verified:!!p.verified}];
+  n.pending=p.pending||[];
+  n.requests=p.requests||[];   // join requests must survive normalization
+  n.chat=p.chat||[];           // group chat history must survive normalization
+  n.status=p.status||'open';
+  n.ts=p.ts||Date.now();
+  n.origin=p.origin||'local';
+  n.cloudId=p.cloudId||null;
+  return n;
 }
 function allMapPins(){
   var out=[];
@@ -2118,7 +2131,7 @@ function getPinLifecycleState(p){
   var now=Date.now();
   var vanishAt=p.pinVanishAt ? new Date(p.pinVanishAt).getTime() : null;
   var hangoutEndAt=p.hangoutEndAt ? new Date(p.hangoutEndAt).getTime() : (p.expires_at ? new Date(p.expires_at).getTime() : null);
-  var requestCutoffAt=p.requestCutoffAt ? new Date(p.requestCutoffAt).getTime() : (hangoutEndAt || null);
+  var requestCutoffAt=p.requestCutoffAt?new Date(p.requestCutoffAt).getTime():(p.starts_at?new Date(p.starts_at).getTime():(hangoutEndAt||null));
   if(vanishAt && now >= vanishAt) return 'vanished';
   if(hangoutEndAt && now >= hangoutEndAt) return 'ended';
   if(requestCutoffAt && now >= requestCutoffAt) return 'requests_closed';

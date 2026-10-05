@@ -1356,6 +1356,16 @@ function handleLitePhoto(input){
 var ETIE_MATCH_INDEX=0;
 
 function myUid(){ try{ var s=window.EtieCloud&&window.EtieCloud.getSession&&window.EtieCloud.getSession(); return (s&&s.user&&s.user.id)||null; }catch(e){ return null; } }
+// Guard against bogus timestamps: new Date(null) yields 1970-01-01, which would make
+// "no expiry" hooks look long-expired. Anything before 2000-01-01 is treated as unset.
+function validTs(v){
+  if(v===null||v===undefined||v==='')return null;
+  var t=(typeof v==='number')?v:new Date(v).getTime();
+  if(!t||isNaN(t))return null;
+  if(t<946684800000)return null; // 2000-01-01
+  return t;
+}
+function isoOrNull(ms){ var t=validTs(ms); return t===null?null:new Date(t).toISOString(); }
 // Incoming request addressed to me (live local): requests are keyed by local id, so my own id as key = inbox
 // Chat/request key honouring side: locals read their inbox, travellers read the match
 // Chat popup (mini overlay) — was called from HTML but never defined, so traveller chat never opened
@@ -1545,7 +1555,7 @@ function visibleMapPins(){
   // Hide pins that have vanished (past hangoutEndAt + 2hr buffer)
   all=all.filter(function(p){
     try{
-      if(p.pinVanishAt && new Date(p.pinVanishAt).getTime() < nowTs) return false;
+      if(validTs(p.pinVanishAt)!==null && validTs(p.pinVanishAt)<nowTs) return false;
       return true;
     }catch(e){return true;}
   });
@@ -1946,15 +1956,16 @@ function saveDropHook(){
     var cap=Math.min(4,Math.max(2,_hookDraft.capacity||3));
     var hook=details||title;
     var startsAt=win.s, endsAt=win.e;
-    // Lifecycle timestamps
-    var requestCutoffAt=startsAt; // requests close when hangout starts
-    var hangoutEndAt=endsAt;      // hangout ends
-    var pinVanishAt=endsAt ? endsAt + 2*60*60*1000 : null; // vanish 2h after hangout ends
+    // Lifecycle timestamps. isoOrNull prevents new Date(null) -> 1970-01-01, which
+    // made "No expiry" hooks invisible to every other device (vanish time in the past).
+    var requestCutoffAt=startsAt;
+    var hangoutEndAt=endsAt;
+    var pinVanishAt=endsAt ? endsAt + 2*60*60*1000 : null;
     var pin={id:'pin-'+nowTs,kind:'hook',title:title,category:_hookDraft.category,role:_hookDraft.role,derivedRole:(function(){try{return ETIE.derivedRole||_hookDraft.role;}catch(e){return _hookDraft.role;}})(),authorId:(function(){try{return myUid();}catch(e){return null;}})(),
-      starts_at:new Date(startsAt).toISOString(),ends_at:new Date(endsAt).toISOString(),expires_at:new Date(endsAt).toISOString(),
-      requestCutoffAt:requestCutoffAt ? new Date(requestCutoffAt).toISOString() : null,
-      hangoutEndAt:hangoutEndAt ? new Date(hangoutEndAt).toISOString() : null,
-      pinVanishAt:pinVanishAt ? new Date(pinVanishAt).toISOString() : null,
+      starts_at:isoOrNull(startsAt),ends_at:isoOrNull(endsAt),expires_at:isoOrNull(endsAt),
+      requestCutoffAt:isoOrNull(requestCutoffAt),
+      hangoutEndAt:isoOrNull(hangoutEndAt),
+      pinVanishAt:isoOrNull(pinVanishAt),
       capacity:cap,spotsAvailable:cap,
       name:nm,verified:vf,location:loc,lat:_dropPoint.lat,lng:_dropPoint.lng,hook:hook,photos:(_hookDraft.photos||[]).map(function(p){return p.dataUrl;}),
       region:_hookDraft.region||'HK',members:[{nick:nm,role:_hookDraft.role,verified:vf,bio:((ETIE.traveller&&ETIE.traveller.bio)||'').slice(0,140)}],pending:[],requests:[],status:'active',
@@ -1989,7 +2000,7 @@ function storePin(p){
     ETIE.mapPins=arr;saveState();persistPinCloud(p);
   }catch(e){}
 }
-function isPinExpired(p){try{return !!(p.expires_at&&new Date(p.expires_at).getTime()<Date.now());}catch(e){return false;}}
+function isPinExpired(p){try{var t=validTs(p.expires_at);return t===null?false:t<Date.now();}catch(e){return false;}}
 function hasApprovedRequest(p,nick){
   try{
     return (p.requests||[]).some(function(r){
@@ -2129,12 +2140,15 @@ function closePinDetail(){try{_openPinId=null;var d=document.getElementById('pin
 function getPinLifecycleState(p){
   // Returns: 'active' | 'requests_closed' | 'ended' | 'vanished'
   var now=Date.now();
-  var vanishAt=p.pinVanishAt ? new Date(p.pinVanishAt).getTime() : null;
-  var hangoutEndAt=p.hangoutEndAt ? new Date(p.hangoutEndAt).getTime() : (p.expires_at ? new Date(p.expires_at).getTime() : null);
-  var requestCutoffAt=p.requestCutoffAt?new Date(p.requestCutoffAt).getTime():(p.starts_at?new Date(p.starts_at).getTime():(hangoutEndAt||null));
-  if(vanishAt && now >= vanishAt) return 'vanished';
-  if(hangoutEndAt && now >= hangoutEndAt) return 'ended';
-  if(requestCutoffAt && now >= requestCutoffAt) return 'requests_closed';
+  var vanishAt=validTs(p.pinVanishAt);
+  var hangoutEndAt=validTs(p.hangoutEndAt);
+  if(hangoutEndAt===null)hangoutEndAt=validTs(p.expires_at);
+  var requestCutoffAt=validTs(p.requestCutoffAt);
+  if(requestCutoffAt===null)requestCutoffAt=validTs(p.starts_at);
+  if(requestCutoffAt===null)requestCutoffAt=hangoutEndAt;
+  if(vanishAt!==null && now>=vanishAt) return 'vanished';
+  if(hangoutEndAt!==null && now>=hangoutEndAt) return 'ended';
+  if(requestCutoffAt!==null && now>=requestCutoffAt) return 'requests_closed';
   return 'active';
 }
 function getPinLifecycleLabel(p){

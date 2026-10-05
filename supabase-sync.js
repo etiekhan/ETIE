@@ -696,12 +696,16 @@ destination: (typeof ETIE!=='undefined' && ETIE.trip && ETIE.trip.destination)||
     try{
       // derive lifecycle fields from stored timestamps so every device agrees,
       // even though the hooks table has no dedicated columns for them
-      var starts=r.starts_at||null, ends=r.ends_at||r.expires_at||null;
-      var vanish=null;
-      if(ends)vanish=new Date(new Date(ends).getTime()+2*60*60*1000).toISOString();
+      // reject bogus timestamps (new Date(null) -> 1970) so "no expiry" hooks stay visible
+      var _ok=function(v){if(!v)return null;var t=new Date(v).getTime();if(!t||isNaN(t)||t<946684800000)return null;return t;};
+      var startsT=_ok(r.starts_at), endsT=_ok(r.ends_at);
+      if(endsT===null)endsT=_ok(r.expires_at);
+      var starts=startsT===null?null:new Date(startsT).toISOString();
+      var ends=endsT===null?null:new Date(endsT).toISOString();
+      var vanish=endsT===null?null:new Date(endsT+2*60*60*1000).toISOString();
       return {id:String(r.id),kind:'hook',category:r.category||'something else on your mind?',role:(r.role==='local'?'local':'traveller'),
         derivedRole:r.derived_role||r.role||'traveller',title:String(r.title||r.location||'Hook').slice(0,60),
-        capacity:Math.min(4,Math.max(2,parseInt(r.capacity,10)||3)),expires_at:r.expires_at||ends||null,
+        capacity:Math.min(4,Math.max(2,parseInt(r.capacity,10)||3)),expires_at:ends,
         name:r.nickname||'Someone',verified:!!r.verified,location:r.location||'Hong Kong',
         lat:r.lat,lng:r.lng,hook:String(r.activity_hook||r.content||r.hook||'').slice(0,140),
         starts_at:starts,ends_at:ends,

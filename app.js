@@ -1846,9 +1846,10 @@ function openDropHook(){
     }catch(e){}
     var _now=new Date();
     var _p2=function(n){return (n<10?'0':'')+n;};
-    var _today=_now.getFullYear()+'-'+_p2(_now.getMonth()+1)+'-'+_p2(_now.getDate());
+    var _start=new Date(_now.getTime()+60*60*1000); // default start 1h out so fresh pins open Accepting
+    var _today=_start.getFullYear()+'-'+_p2(_start.getMonth()+1)+'-'+_p2(_start.getDate());
     var cd=document.getElementById('customDate'); if(cd) cd.value=_today;
-    var cst=document.getElementById('customStartTime'); if(cst) cst.value=_p2(_now.getHours())+':'+_p2(_now.getMinutes());
+    var cst=document.getElementById('customStartTime'); if(cst) cst.value=_p2(_start.getHours())+':'+_p2(_start.getMinutes());
     var cet=document.getElementById('customEndTime'); if(cet) cet.value='';
     var pv=document.getElementById('hookPhotoPreview'); if(pv) pv.innerHTML='';
     _hookDraft.duration='3h';
@@ -2070,6 +2071,7 @@ function groupBadgeText(p){
   var n=(p.members||[]).length,cap='';
   try{var c=parseInt(p.capacity,10);if(c>=2&&c<=4){var open=Math.max(0,c-n);cap=' · '+open+(open===1?' spot open':' spots open');}}catch(e){}
   if(isPinExpired(p))return 'Ended — log it';
+  try{if(getPinLifecycleState(p)==='requests_closed')return '🔒 Requests closed'+cap;}catch(e){}
   if(p.status==='trio'||n>=3)return '3 Connected'+cap;
   if(p.status==='pair'||n===2)return '1-on-1 Meetup'+cap;
   return 'Open hook · be the first'+cap;
@@ -2198,6 +2200,12 @@ function renderGuestRequestTab(p, myReq, reqStatus, isMember, isHost){
   // hide old request button (we rebuild below)
   var req=document.getElementById('pinRequestBtn');if(req)req.style.display='none';
 
+  // hosts never need guest-status UI (no "You're in" box, no duplicate chat button)
+  if(isHost){
+    var _sb=document.getElementById('pinRequestStatus');if(_sb)_sb.style.display='none';
+    return;
+  }
+
   var lifecycle=getPinLifecycleState(p);
   // Don't allow new requests if requests are closed, hangout ended, or pin vanished
   if(lifecycle!=='active'){
@@ -2234,6 +2242,7 @@ function renderGuestRequestTab(p, myReq, reqStatus, isMember, isHost){
     label='—';cls='';
   }
   statusBox.className='pin-request-status '+cls;
+  statusBox.style.display='';
   statusBox.innerHTML='<div style="font-weight:600;color:#fff;margin-bottom:4px;">'+label+'</div>'+actionHtml;
 }
 

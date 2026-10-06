@@ -2155,7 +2155,8 @@ function openPinDetail(id){
     var del=document.getElementById('pinDeleteBtn');
     if(del)del.style.display=isHost?'':'none';
     var claim=document.getElementById('pinClaimBtn');
-    if(claim)claim.style.display=(!isHost&&isEtieAdmin())?'':'none';
+    // escape hatch only: orphan pins with no recorded author. Creator is host, always.
+    if(claim)claim.style.display=(!isHost&&!p.authorId&&isEtieAdmin())?'':'none';
     try{fillMemoryStrip('pinMemories',p.authorId||null);}catch(e){}
     try{fillSpotsStrip('pinSpots',p.authorId||null);}catch(e){}
     var d=document.getElementById('pinDrawer');if(d){d.classList.remove('hidden');d.classList.toggle('pin-drawer-expired',isPinExpired(p));}

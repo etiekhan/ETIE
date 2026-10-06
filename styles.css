@@ -367,7 +367,7 @@ html,body{height:100%;width:100%;margin:0;padding:0;overflow:hidden;background:#
 .chat-drawer-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.1);}
 .chat-drawer-head strong{color:#fff;}
 .chat-drawer-head .muted{color:rgba(255,255,255,.6);}
-.chat-drawer-list{overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;min-height:140px;}
+.chat-drawer-list{flex:1;min-height:0;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;-webkit-overflow-scrolling:touch;}
 .hchat{max-width:85%;padding:9px 12px;border-radius:14px;background:rgba(255,255,255,.1);font-size:14px;line-height:1.45;overflow-wrap:break-word;text-wrap:pretty;}
 .hchat .who{display:block;font-size:11px;opacity:.65;margin-bottom:2px;}
 .hchat.me{align-self:flex-end;background:#f43f5e;color:#fff;}

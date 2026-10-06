@@ -812,6 +812,7 @@ destination: (typeof ETIE!=='undefined' && ETIE.trip && ETIE.trip.destination)||
       client.from(pinTable()).delete().eq('id',String(id)).then(function(){}).catch(function(){});
     }catch(e){}
   }
+  var pinPollTimer=null;
   function subscribePins(){
     try{
       if(!client||!session||pinChannel)return; // hard wall: no realtime until login
@@ -819,7 +820,18 @@ destination: (typeof ETIE!=='undefined' && ETIE.trip && ETIE.trip.destination)||
         .on('postgres_changes',{event:'*',schema:'public',table:pinTable()},function(){
           try{clearTimeout(pinPullTimer);}catch(e){}
           pinPullTimer=setTimeout(function(){try{pullPins();}catch(e){}},1200);
-        }).subscribe();
+        }).subscribe(function(st){
+          try{
+            if(st==='SUBSCRIBED'){console.info('Etie pins realtime subscribed');}
+            else{console.warn('Etie pins realtime state:',st,'— falling back to poll');try{pullPins();}catch(e){}}
+          }catch(e){}
+        });
+      // safety net: 30s poll so pins appear/vanish even if realtime events stall
+      if(!pinPollTimer){
+        pinPollTimer=setInterval(function(){
+          try{if(document.hidden)return;pullPins();}catch(e){}
+        },30000);
+      }
     }catch(e){}
   }
   // ---- Hook group chat: messages table filtered by hook_id (run supabase-schema-hook-chat.sql once) ----

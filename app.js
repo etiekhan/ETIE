@@ -3345,8 +3345,8 @@ document.addEventListener('DOMContentLoaded',function(){
   document.addEventListener('click',function(e){try{var m=document.getElementById('avatarMenu');if(m&&e.target&&!m.contains(e.target))closeAvatarMenu();}catch(err){}});
   // re-sync header whenever the tab regains focus (session may have landed elsewhere)
   try{
-    document.addEventListener('visibilitychange',function(){if(!document.hidden){try{updateAuthHeader();renderHeaderProfile();}catch(e){}}});
-    window.addEventListener('focus',function(){try{updateAuthHeader();renderHeaderProfile();}catch(e){}});
+    document.addEventListener('visibilitychange',function(){if(!document.hidden){try{updateAuthHeader();renderHeaderProfile();}catch(e){}try{if(window.EtieCloud&&window.EtieCloud.pullPins)window.EtieCloud.pullPins();}catch(e){}}});
+    window.addEventListener('focus',function(){try{updateAuthHeader();renderHeaderProfile();}catch(e){}try{if(window.EtieCloud&&window.EtieCloud.pullPins)window.EtieCloud.pullPins();}catch(e){}});
   }catch(e){}
   // Subscribe to reviews/reports when cloud is on
   setTimeout(function(){

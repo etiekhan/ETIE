@@ -1982,7 +1982,7 @@ function saveDropHook(){
     var startsAt=win.s, endsAt=win.e;
     // Lifecycle timestamps. isoOrNull prevents new Date(null) -> 1970-01-01, which
     // made "No expiry" hooks invisible to every other device (vanish time in the past).
-    var requestCutoffAt=startsAt;
+    var requestCutoffAt=endsAt; // requests stay open while spots remain, up to hangout end
     var hangoutEndAt=endsAt;
     var pinVanishAt=endsAt ? endsAt + 2*60*60*1000 : null;
     var pin={id:'pin-'+nowTs,kind:'hook',title:title,category:_hookDraft.category,role:_hookDraft.role,derivedRole:(function(){try{return ETIE.derivedRole||_hookDraft.role;}catch(e){return _hookDraft.role;}})(),authorId:(function(){try{return myUid();}catch(e){return null;}})(),
@@ -2172,8 +2172,7 @@ function getPinLifecycleState(p){
   var hangoutEndAt=validTs(p.hangoutEndAt);
   if(hangoutEndAt===null)hangoutEndAt=validTs(p.expires_at);
   var requestCutoffAt=validTs(p.requestCutoffAt);
-  if(requestCutoffAt===null)requestCutoffAt=validTs(p.starts_at);
-  if(requestCutoffAt===null)requestCutoffAt=hangoutEndAt;
+  if(requestCutoffAt===null)requestCutoffAt=hangoutEndAt; // open till hangout end while spots remain
   if(vanishAt!==null && now>=vanishAt) return 'vanished';
   if(hangoutEndAt!==null && now>=hangoutEndAt) return 'ended';
   if(requestCutoffAt!==null && now>=requestCutoffAt) return 'requests_closed';

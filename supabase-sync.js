@@ -713,7 +713,7 @@ destination: (typeof ETIE!=='undefined' && ETIE.trip && ETIE.trip.destination)||
         name:r.nickname||'Someone',verified:!!r.verified,location:r.location||'Hong Kong',
         lat:r.lat,lng:r.lng,hook:String(r.activity_hook||r.content||r.hook||'').slice(0,140),
         starts_at:starts,ends_at:ends,
-        requestCutoffAt:starts,hangoutEndAt:ends,pinVanishAt:vanish,
+        requestCutoffAt:ends,hangoutEndAt:ends,pinVanishAt:vanish,
         region:r.region||'HK',photos:r.photos||[],
         members:r.members||[{nick:r.nickname||'Someone',role:(r.role==='local'?'local':'traveller'),verified:!!r.verified}],
         pending:r.pending||[],requests:r.requests||[],spotsAvailable:r.spots_available,status:r.status||'open',ts:(r.updated_at?new Date(r.updated_at).getTime():Date.now()),

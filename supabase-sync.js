@@ -739,11 +739,12 @@ destination: (typeof ETIE!=='undefined' && ETIE.trip && ETIE.trip.destination)||
           if(typeof ETIE==='undefined')return;
           var local=(ETIE.mapPins||[]).filter(function(p){return p&&p.origin!=='cloud';});
           var openReqN=-1;
+          var pinsChanged=false;
           try{if(typeof _openPinId!=='undefined'&&_openPinId&&typeof findPin==='function'){var _op=findPin(_openPinId);openReqN=_op?((_op.requests||[]).filter(function(r){return r.status==='pending';}).length):-1;}}catch(e){}
           cloud.forEach(function(c){
             var di=-1;
             for(var i=0;i<local.length;i++){var l=local[i];if(l&&(l.cloudId===c.cloudId||l.id===c.id)){di=i;break;}}
-            if(di<0){local.push(c);return;}
+            if(di<0){local.push(c);pinsChanged=true;return;}
             // own pins: cloud wins so guest mutations (requests, vibes) arrive.
             // A host's own edits always push successfully, so cloud is authoritative —
             // unless this copy has unsent changes (failed push), which retry will deliver.
@@ -758,11 +759,14 @@ destination: (typeof ETIE!=='undefined' && ETIE.trip && ETIE.trip.destination)||
             if(!unsent&&(own||ct>lt)){
               // cloud rows carry no chat (separate table) — keep local history across the replace
               try{if(l2.chat&&l2.chat.length&&!(c.chat&&c.chat.length))c.chat=l2.chat;}catch(e){}
-              local[di]=c;
+              local[di]=c;pinsChanged=true;
             }
             // guest copies with unsent changes keep local until they upload
           });
           ETIE.mapPins=local;
+          // persist only when the merge changed something, so reloads show
+          // last-known pins instantly (otherwise cloud pins vanish until pull)
+          try{if(pinsChanged&&typeof saveState==='function')saveState();}catch(e){}
           try{if(typeof renderMapPins==='function')renderMapPins();}catch(e){}
           try{
             if(openReqN>=0&&typeof findPin==='function'&&typeof openPinDetail==='function'&&typeof _openPinId!=='undefined'&&_openPinId){

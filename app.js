@@ -1583,7 +1583,7 @@ function initHKMap(){
     try{L.control.zoom({position:'bottomright'}).addTo(_map);}catch(e){}
     L.tileLayer('https://tiles.stadiamaps.com/tiles/stamen_toner/{z}/{x}/{y}{r}.png?api_key=cc9c3230-65b0-44c0-8361-2c86413b0744',{maxZoom:20,attribution:'&copy; <a href="https://stadiamaps.com/">Stadia Maps</a> &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}).addTo(_map);
     _map.on('click',onMapTap);
-    renderMapFilter();try{if(gateState()==='open')renderMapPins();}catch(e){}
+    renderMapFilter();try{renderMapPins();}catch(e){} // render regardless of gate — wall covers map anyway
   }catch(e){}
 }
 var _pickMode=null; // legacy map-tap mode flag (kept for compat)
@@ -2104,8 +2104,8 @@ function sweepExpiredPins(){
       }catch(e){}
     });
     if(changed){saveState();try{(ETIE.mapPins||[]).forEach(function(raw){try{if(raw&&(raw.status==='pending_memory_log'||raw.status==='archived'))persistPinCloud(raw);}catch(e){}});}catch(e){}}
-    renderMapPins(); // Refresh map to hide vanished pins
-  }catch(e){}
+    return changed;
+  }catch(e){return false;}
 }
 function openPinDetail(id){
   try{
@@ -3382,6 +3382,8 @@ function sendHookMessage(){
 document.addEventListener('DOMContentLoaded',function(){
   restoreAll();
   try{ initHKMap(); renderMapFilter(); renderMapPins(); }catch(e){}
+  // belt-and-braces: re-render once late so slow tiles/session can't leave an empty map
+  try{setTimeout(function(){try{initHKMap();renderMapPins();}catch(e){}},2500);}catch(e){}
   try{ renderDerivedBadge(); locateUser(); }catch(e){}
   try{ refreshGate(); }catch(e){}
   try{ processPhotoOutbox(); }catch(e){}
@@ -3399,5 +3401,5 @@ document.addEventListener('DOMContentLoaded',function(){
     if(window.EtieCloud && window.EtieCloud.subscribeReports) window.EtieCloud.subscribeReports();
   }, 2000);
   // Periodic lifecycle sweep (every 60s) to auto-archive vanished pins
-  setInterval(function(){try{sweepExpiredPins();}catch(e){}}, 60000);
+  setInterval(function(){try{if(sweepExpiredPins())renderMapPins();}catch(e){}}, 60000);
 });

@@ -755,7 +755,11 @@ destination: (typeof ETIE!=='undefined' && ETIE.trip && ETIE.trip.destination)||
             var lt=0,ct=0;
             try{lt=new Date(l2.updated_at||l2.ts||0).getTime()||0;}catch(e){}
             try{ct=new Date(c.ts||0).getTime()||0;}catch(e){}
-            if(!unsent&&(own||ct>lt))local[di]=c;
+            if(!unsent&&(own||ct>lt)){
+              // cloud rows carry no chat (separate table) — keep local history across the replace
+              try{if(l2.chat&&l2.chat.length&&!(c.chat&&c.chat.length))c.chat=l2.chat;}catch(e){}
+              local[di]=c;
+            }
             // guest copies with unsent changes keep local until they upload
           });
           ETIE.mapPins=local;
@@ -872,6 +876,12 @@ destination: (typeof ETIE!=='undefined' && ETIE.trip && ETIE.trip.destination)||
         client.from(hookMsgTable()).select('*').eq('hook_id',key).order('created_at',{ascending:true}).limit(100).then(function(r){
           try{
             if(r&&(r.error||!r.data))return;
+            if(typeof addChatRow==='function'){
+              var changed=false;
+              (r.data||[]).forEach(function(row){try{if(addChatRow(key,row))changed=true;}catch(e){}});
+              if(changed){try{if(typeof renderHookChat==='function')renderHookChat();}catch(e){}}
+              return;
+            }
             var all=(typeof ETIE==='undefined')?null:ETIE;
             (r.data||[]).forEach(function(row){
               try{

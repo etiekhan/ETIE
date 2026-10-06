@@ -2466,11 +2466,7 @@ function openChatDrawer(pinId){
         var chatKey=String((p.cloudId||p.id));
         _chatUnsub=window.EtieCloud.subscribeHookChat(chatKey,function(row){
           try{
-            var pp=findPin(pinId);if(!pp)return;
-            var rts=0;try{rts=new Date(row.created_at).getTime();}catch(e){}
-            var arr=pp.chat||(pp.chat=[]);
-            var dup=arr.some(function(m){return m&&m.text===row.text&&m.nick===(row.sender_nick||'Someone')&&Math.abs((m.ts||0)-rts)<8000;});
-            if(!dup){arr.push({nick:row.sender_nick||'Someone',role:row.sender_role||'traveller',text:row.text||'',ts:rts||Date.now()});saveState();}
+            addChatRow(chatKey,row);
             if(_chatPinId===pinId)renderHookChat();
           }catch(e){}
         });
@@ -2479,13 +2475,59 @@ function openChatDrawer(pinId){
   }catch(e){}
 }
 function closeChatDrawer(){try{_chatPinId=null;try{if(_chatUnsub)_chatUnsub();}catch(e){}_chatUnsub=null;var d=document.getElementById('chatDrawer');if(d)d.classList.add('hidden');}catch(e){}}
+// ---- Chat state lives on the ETIE.mapPins ORIGINALS, never on findPin() copies ----
+// findPin() returns a fresh normalized object, so mutating its .chat silently
+// discards the message. These helpers always operate on the live array.
+function pinChatArr(key,create){
+  try{
+    var arr=ETIE.mapPins||[];
+    for(var i=0;i<arr.length;i++){
+      var p=arr[i];
+      if(p&&(String(p.cloudId||p.id)===String(key)||String(p.id)===String(key))){
+        if(!p.chat&&create)p.chat=[];
+        return p.chat||null;
+      }
+    }
+  }catch(e){}
+  return null;
+}
+function addChatRow(key,row){
+  // returns true if the visible chat changed. Dedups by server id; upgrades an
+  // optimistic local echo (same nick+text, close ts) instead of duplicating it.
+  try{
+    var arr=pinChatArr(key,true);if(!arr)return false;
+    var rts=0;try{rts=new Date(row.created_at).getTime();}catch(e){}
+    if(!rts)rts=row.ts||Date.now();
+    var nick=row.sender_nick||row.nick||'Someone';
+    var text=row.text||'';
+    var id=row.id||null;
+    var i,changed=false;
+    if(id){
+      for(i=0;i<arr.length;i++){if(arr[i]&&arr[i].id===id)return false;}
+    }
+    for(i=0;i<arr.length;i++){
+      var m=arr[i];
+      if(m&&(!m.id||String(m.id).indexOf('loc-')===0)&&m.nick===nick&&m.text===text&&Math.abs((m.ts||0)-rts)<15000){
+        m.id=id||m.id;m.ts=rts;changed=true;break;
+      }
+    }
+    if(!changed){
+      arr.push({id:id||('loc-'+Date.now()+'-'+Math.floor(Math.random()*1e6)),nick:nick,role:row.sender_role||row.role||'traveller',text:text,ts:rts});
+      if(arr.length>100)arr.splice(0,arr.length-100);
+      changed=true;
+    }
+    if(changed){try{saveState();}catch(e){}}
+    return changed;
+  }catch(e){return false;}
+}
 function renderHookChat(){
   try{
     var p=findPin(_chatPinId);if(!p)return;
     var box=document.getElementById('chatMsgList');if(!box)return;
     box.innerHTML='';
     var me=hookNick();
-    (p.chat||[]).forEach(function(m){
+    var msgs=(p.chat||[]).slice().sort(function(a,b){return (a.ts||0)-(b.ts||0);});
+    msgs.forEach(function(m){
       try{
         var d=document.createElement('div');
         var mine=m&&m.nick===me;
@@ -3328,9 +3370,12 @@ function sendHookMessage(){
     var text=(inp.value||'').trim();if(!text)return;
     var p=findPin(_chatPinId);if(!p){toast('Hook not found.');return;}
     var role='traveller';try{role=(ETIE.activeRole==='local')?'local':'traveller';}catch(e){}
-    var msg={nick:hookNick(),role:role,text:text,ts:Date.now()};
-    if(!p.chat)p.chat=[];
-    p.chat.push(msg);saveState();inp.value='';renderHookChat();
+    var msg={id:('loc-'+Date.now()+'-'+Math.floor(Math.random()*1e6)),nick:hookNick(),role:role,text:text,ts:Date.now()};
+    try{
+      var key=String(p.cloudId||p.id);
+      addChatRow(key,{id:msg.id,nick:msg.nick,role:msg.role,text:msg.text,ts:msg.ts});
+    }catch(e){}
+    inp.value='';renderHookChat();
     try{if(window.EtieCloud&&window.EtieCloud.pushHookMessage)window.EtieCloud.pushHookMessage(p,msg);}catch(e){}
   }catch(e){}
 }

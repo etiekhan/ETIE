@@ -1395,7 +1395,7 @@ function restoreAll(){
 var MAP_CATS=[{id:'project mbappe, lebron or sth',emoji:'⚽'},{id:'letterboxd date',emoji:'🍿'},{id:'are you a fellow alcoholic?',emoji:'🍺'},{id:'time for a cuppa tea / coffee!',emoji:'☕'},{id:'walking around the city sharing headphones tgt',emoji:'🎧'},{id:'dubious quests and giggles',emoji:'⚡'},{id:'something else on your mind?',emoji:'💡'},{id:'Food',emoji:'🥟'},{id:'Nightlife',emoji:'🍺'},{id:'Photo',emoji:'📸'},{id:'Sports',emoji:'⚽'},{id:'Cafe',emoji:'☕'}];
 var MAP_INTENTS=[{id:'All',label:'All Pins',emoji:'🗺️'},{id:'traveller',label:'✈️ Visiting Now'},{id:'local',label:'🏠 Hosted by Locals'}];
 var MAP_VIBES=[{id:'project mbappe, lebron or sth',emoji:'⚽'},{id:'letterboxd date',emoji:'🍿'},{id:'are you a fellow alcoholic?',emoji:'🍺'},{id:'time for a cuppa tea / coffee!',emoji:'☕'},{id:'walking around the city sharing headphones tgt',emoji:'🎧'},{id:'dubious quests and giggles',emoji:'⚡'},{id:'something else on your mind?',emoji:'💡'}];
-var MAP_DISTRICT_LATLNG={'Central / Soho':[22.2819,114.1577],'Lan Kwai Fong':[22.2810,114.1550],'Sheung Wan':[22.2867,114.1520],'Tsim Sha Tsui':[22.2980,114.1722],'Mong Kok':[22.3193,114.1694],'Sham Shui Po':[22.3307,114.1625]};
+var MAP_DISTRICT_LATLNG={'Central and Western':[22.2840,114.1520],'Wan Chai':[22.2770,114.1730],'Eastern':[22.2730,114.2220],'Southern':[22.2380,114.1650],'Yau Tsim Mong':[22.3100,114.1700],'Sham Shui Po':[22.3307,114.1625],'Kowloon City':[22.3280,114.1900],'Wong Tai Sin':[22.3420,114.1980],'Kwun Tong':[22.3080,114.2280],'Tsuen Wan':[22.3700,114.1150],'Tuen Mun':[22.3900,113.9750],'Yuen Long':[22.4450,114.0300],'North':[22.4950,114.1450],'Tai Po':[22.4500,114.1650],'Sha Tin':[22.3850,114.1950],'Sai Kung':[22.3800,114.2700],'Islands':[22.2900,113.9500],'Kwai Tsing':[22.3550,114.1150]};
 var HK_CENTER=[22.2819,114.1581],HK_ZOOM=13;
 var MAP_FILTER='All',MAP_ROLE='All';
 var _map=null,_mapLayer=null,_openPinId=null;
@@ -1404,11 +1404,11 @@ var _dropMarker=null;
 var _hookDraft={category:'Food',role:'traveller'};
 function mapCatEmoji(cat){for(var i=0;i<MAP_CATS.length;i++)if(MAP_CATS[i].id===cat||MAP_CATS[i].label===cat)return MAP_CATS[i].emoji;return '📍';}
 function nearestDistrictLabel(lat,lng){
-  var best='Central / Soho',bd=1e9;
+  var best='Central and Western',bd=1e18;
   try{
     for(var k in MAP_DISTRICT_LATLNG){
       var c=MAP_DISTRICT_LATLNG[k];
-      var d=(c[0]-lat)*(c[0]-lat)+(c[1]-lng)*(c[1]-lng);
+      var d=haversineKm(lat,lng,c[0],c[1]);
       if(d<bd){bd=d;best=k;}
     }
   }catch(e){}
@@ -1586,15 +1586,7 @@ function initHKMap(){
     renderMapFilter();try{if(gateState()==='open')renderMapPins();}catch(e){}
   }catch(e){}
 }
-var _pickMode=null; // null | 'trav1' | 'hook'
-function pickOnMap(mode){
-  try{
-    _pickMode='hook';
-    closeDropHook();
-    showScreen('map');
-    toast('Tap the map to place your hook pin.');
-  }catch(e){}
-}
+var _pickMode=null; // legacy map-tap mode flag (kept for compat)
 function onMapTap(e){
   try{
     _dropPoint={lat:e.latlng.lat,lng:e.latlng.lng};
@@ -1692,7 +1684,7 @@ function renderMapPins(){
     try{renderAreaSidebar();}catch(e){}
   }catch(e){}
 }
-function selectHookCategory(el,v){try{var c=document.getElementById('hookInterestPills');if(c)Array.prototype.forEach.call(c.querySelectorAll('.chip'),function(x){x.classList.remove('active');});if(el)el.classList.add('active');_hookDraft.category=v;}catch(e){_hookDraft.category=v;}}
+function selectHookCategory(el,v){try{var c=document.getElementById('hookInterestPills');if(c)Array.prototype.forEach.call(c.querySelectorAll('.chip'),function(x){x.classList.remove('active');});if(el)el.classList.add('active');_hookDraft.category=v;_hookDraft.categoryTouched=true;}catch(e){try{_hookDraft.category=v;_hookDraft.categoryTouched=true;}catch(_){}}}
 function setHookRole(v){
   try{
     _hookDraft.role=(v==='local')?'local':'traveller';
@@ -1703,16 +1695,16 @@ function setHookRole(v){
   }catch(e){}
 }
 var HOOK_PRESETS=[
-  {cat:'Nightlife',emoji:'💃',label:'dance? or even better... salsa?',title:'Salsa & Bachata night — down for a dance?'},
-  {cat:'Food',emoji:'🥟',label:'foodie time?',title:'Foodie run — hunting for hidden local gems'},
-  {cat:'Nightlife',emoji:'🍸',label:'drinks in soho?',title:'Casual drinks & speakeasy in Soho'},
-  {cat:'Photo',emoji:'🎬',label:'letterboxd? sounds like movie movie',title:'Movie night for film heads'}
+  {cat:'dubious quests and giggles',emoji:'💃',label:'dance? or even better... salsa?',title:'Salsa & Bachata night — down for a dance?'},
+  {cat:'time for a cuppa tea / coffee!',emoji:'🥟',label:'foodie time?',title:'Foodie run — hunting for hidden local gems'},
+  {cat:'are you a fellow alcoholic?',emoji:'🍸',label:'drinks in soho?',title:'Casual drinks & speakeasy in Soho'},
+  {cat:'letterboxd date',emoji:'🎬',label:'letterboxd? sounds like movie movie',title:'Movie night for film heads'}
 ];
 function applyHookPreset(i){
   try{
     var p=HOOK_PRESETS[i];if(!p)return;
-    _hookDraft.category=p.cat;
-    try{var c=document.getElementById('hookInterestPills');if(c)Array.prototype.forEach.call(c.querySelectorAll('.chip'),function(x){var t=(x.textContent||'').toLowerCase();x.classList.toggle('active',t.indexOf(p.cat.toLowerCase())!==-1||(p.cat==='Photo'&&t.indexOf('photo')!==-1));});}catch(e){}
+    _hookDraft.category=p.cat;_hookDraft.categoryTouched=true;
+    try{var c=document.getElementById('hookInterestPills');if(c)Array.prototype.forEach.call(c.querySelectorAll('.chip'),function(x){var oc=x.getAttribute('onclick')||'';x.classList.toggle('active',oc.indexOf("'"+p.cat+"'")!==-1);});}catch(e){}
     var ht0=document.getElementById('hookTitle');if(ht0)ht0.value=p.title.slice(0,60);
     hookCountTick();
   }catch(e){}
@@ -1838,7 +1830,7 @@ function openDropHook(){
     if(needProfile('drop a hook'))return;
     var startRole='traveller';
     try{startRole=(ETIE.derivedRole||ETIE.activeRole)==='local'?'local':'traveller';}catch(e){}
-    _hookDraft={category:'general',role:startRole,window:'custom',capacity:3,customStart:null,customEnd:null,photos:[]};
+    _hookDraft={category:'general',categoryTouched:false,role:startRole,window:'custom',capacity:3,customStart:null,customEnd:null,photos:[]};
     var _lh={};try{_lh=ETIE.lastHook||{};}catch(e){}
     var ht0=document.getElementById('hookTitle');if(ht0)ht0.value=_lh.title||'';
     _hookDraft.capacity=3;hookCap((Math.min(4,Math.max(2,parseInt(_lh.capacity,10)||3)))-3);renderHookRoleLine();
@@ -1850,6 +1842,7 @@ function openDropHook(){
         x.classList.toggle('active',!!(_lh.category&&oc.indexOf("'"+_lh.category+"'")!==-1));
       });
       if(_lh.category)_hookDraft.category=_lh.category;
+      if(_lh.category)_hookDraft.categoryTouched=true;
     }catch(e){}
     var _now=new Date();
     var _p2=function(n){return (n<10?'0':'')+n;};
@@ -1869,18 +1862,14 @@ function openDropHook(){
     var cst=document.getElementById('customStartTime');
     if(cd)cd.onchange=updateEndTimeFromDuration;
     if(cst)cst.onchange=updateEndTimeFromDuration;
-    // default coords: last map tap, else live map center
-    if(!_dropPoint){
-      try{if(_map)_dropPoint={lat:_map.getCenter().lat,lng:_map.getCenter().lng};}catch(e){}
-      if(!_dropPoint)_dropPoint={lat:HK_CENTER[0],lng:HK_CENTER[1]};
-    }
+    // no tap yet → no coords, no guess; Drop Pin stays blocked until the user taps
     var o=document.getElementById('dropHookModal');if(o){o.classList.remove('hidden');try{var _mb=o.querySelector('.chat-popup-body');if(_mb)_mb.scrollTop=0;}catch(e){}}
     var li=document.getElementById('hookLocation');
-    if(li){li.value=window._pendingDropGuess||('Near '+nearestDistrictLabel(_dropPoint.lat,_dropPoint.lng));window._pendingDropGuess=null;}
+    if(li){li.value=window._pendingDropGuess||(_dropPoint?('Near '+nearestDistrictLabel(_dropPoint.lat,_dropPoint.lng)):'');window._pendingDropGuess=null;}
     var ht=document.getElementById('hookText');if(ht){ht.value=(_lh&&_lh.hook)||'';var ph='';try{ph=(ETIE.traveller&&ETIE.traveller.bio)||'';}catch(e){}ht.placeholder=ph||"e.g. Grabbing late-night claypot rice in Sham Shui Po—who's down to join?";}
     hookCountTick();setHookRole(_hookDraft.role);
     if(_dropMarker){try{_map.removeLayer(_dropMarker);}catch(e){}_dropMarker=null;}
-    try{_dropMarker=L.marker([_dropPoint.lat,_dropPoint.lng],{title:'Your pin location'}).addTo(_map);}catch(e){}
+    if(_dropPoint){try{_dropMarker=L.marker([_dropPoint.lat,_dropPoint.lng],{title:'Your pin location'}).addTo(_map);}catch(e){}}
   }catch(e){}
 }
 function closeDropHook(){try{var o=document.getElementById('dropHookModal');if(o)o.classList.add('hidden');}catch(e){}}
@@ -1974,6 +1963,10 @@ function saveDropHook(){
     var loc=((document.getElementById('hookLocation')||{}).value||'').trim().replace(/^\s*near\s+/i,'');
     var details=((document.getElementById('hookText')||{}).value||'').trim().slice(0,140);
     if(!title){toast('Give it a title first.');return;}
+    var _dStr=((document.getElementById('customDate')||{}).value||'').trim();
+    var _sStr=((document.getElementById('customStartTime')||{}).value||'').trim();
+    if(!_dStr||!_sStr){toast('Pick a date and start time first.');return;}
+    if(!_hookDraft.categoryTouched){toast('Pick a category first.');return;}
     if(!loc){toast('Name the pin location first.');return;}
     var nm=hookNick(),vf=hookVerified();
     var nowTs=Date.now();

@@ -1316,8 +1316,20 @@ function googleAvatar(){
     return (m&&(m.avatar_url||m.picture))||null;
   }catch(e){return null;}
 }
-function saveLiteProfile(){
+var _cityListDone=false;
+function fillCityList(){
+  // searchable major-city suggestions for Home city (free text still allowed)
   try{
+    if(_cityListDone)return;_cityListDone=true;
+    var dl=document.getElementById('cityList');if(!dl)return;
+    var seen={},html='';
+    var add=function(name){if(!name||seen[name])return;seen[name]=1;html+='<option value="'+String(name).replace(/"/g,'')+'">';};
+    add('Hong Kong');
+    (window.ETIE_CITIES||[]).forEach(function(c){if(c&&c.city)add(c.city);});
+    dl.innerHTML=html;
+  }catch(e){}
+}
+function saveLiteProfile(){  try{
     var ni=document.getElementById('liteNick'), bi=document.getElementById('liteBio'), ci=document.getElementById('liteCity');
     var nick=ni?ni.value.trim().slice(0,24):'';
     ETIE.traveller.nickname=nick; ETIE.local.displayName=nick;
@@ -1827,10 +1839,18 @@ function openDropHook(){
     var startRole='traveller';
     try{startRole=(ETIE.derivedRole||ETIE.activeRole)==='local'?'local':'traveller';}catch(e){}
     _hookDraft={category:'general',role:startRole,window:'custom',capacity:3,customStart:null,customEnd:null,photos:[]};
-    var ht0=document.getElementById('hookTitle');if(ht0)ht0.value='';
-    hookCap(0);renderHookRoleLine();
+    var _lh={};try{_lh=ETIE.lastHook||{};}catch(e){}
+    var ht0=document.getElementById('hookTitle');if(ht0)ht0.value=_lh.title||'';
+    _hookDraft.capacity=3;hookCap((Math.min(4,Math.max(2,parseInt(_lh.capacity,10)||3)))-3);renderHookRoleLine();
     renderHookPresets();
-    try{var pc=document.getElementById('hookInterestPills');if(pc)Array.prototype.forEach.call(pc.querySelectorAll('.chip'),function(x){x.classList.remove('active');});}catch(e){}
+    try{
+      var pc=document.getElementById('hookInterestPills');
+      if(pc)Array.prototype.forEach.call(pc.querySelectorAll('.chip'),function(x){
+        var oc=x.getAttribute('onclick')||'';
+        x.classList.toggle('active',!!(_lh.category&&oc.indexOf("'"+_lh.category+"'")!==-1));
+      });
+      if(_lh.category)_hookDraft.category=_lh.category;
+    }catch(e){}
     var _now=new Date();
     var _p2=function(n){return (n<10?'0':'')+n;};
     var _today=_now.getFullYear()+'-'+_p2(_now.getMonth()+1)+'-'+_p2(_now.getDate());
@@ -1839,7 +1859,12 @@ function openDropHook(){
     var cet=document.getElementById('customEndTime'); if(cet) cet.value='';
     var pv=document.getElementById('hookPhotoPreview'); if(pv) pv.innerHTML='';
     _hookDraft.duration='3h';
-    selectHookDuration(document.querySelector('#hookDurationPills [data-duration="3h"]'));
+    try{
+      var _dp=document.querySelector('#hookDurationPills [data-duration="'+((_lh&&_lh.duration)||'3h')+'"]');
+      if(!_dp)_dp=document.querySelector('#hookDurationPills [data-duration="3h"]');
+      selectHookDuration(_dp);
+    }catch(e){selectHookDuration(document.querySelector('#hookDurationPills [data-duration="3h"]'));}
+    try{var _hr=document.getElementById('hookRegion');if(_hr&&_lh&&_lh.region)_hr.value=_lh.region;}catch(e){}
     var cd=document.getElementById('customDate');
     var cst=document.getElementById('customStartTime');
     if(cd)cd.onchange=updateEndTimeFromDuration;
@@ -1852,7 +1877,7 @@ function openDropHook(){
     var o=document.getElementById('dropHookModal');if(o){o.classList.remove('hidden');try{var _mb=o.querySelector('.chat-popup-body');if(_mb)_mb.scrollTop=0;}catch(e){}}
     var li=document.getElementById('hookLocation');
     if(li){li.value=window._pendingDropGuess||('Near '+nearestDistrictLabel(_dropPoint.lat,_dropPoint.lng));window._pendingDropGuess=null;}
-    var ht=document.getElementById('hookText');if(ht){ht.value='';var ph='';try{ph=(ETIE.traveller&&ETIE.traveller.bio)||'';}catch(e){}ht.placeholder=ph||"e.g. Grabbing late-night claypot rice in Sham Shui Po—who's down to join?";}
+    var ht=document.getElementById('hookText');if(ht){ht.value=(_lh&&_lh.hook)||'';var ph='';try{ph=(ETIE.traveller&&ETIE.traveller.bio)||'';}catch(e){}ht.placeholder=ph||"e.g. Grabbing late-night claypot rice in Sham Shui Po—who's down to join?";}
     hookCountTick();setHookRole(_hookDraft.role);
     if(_dropMarker){try{_map.removeLayer(_dropMarker);}catch(e){}_dropMarker=null;}
     try{_dropMarker=L.marker([_dropPoint.lat,_dropPoint.lng],{title:'Your pin location'}).addTo(_map);}catch(e){}
@@ -1986,6 +2011,8 @@ function saveDropHook(){
     var reg=document.getElementById('hookRegion');
     if(reg) pin.region=reg.value;
     if(!ETIE.mapPins)ETIE.mapPins=[];
+    // remember this drop so the next sheet opens prefilled (photos excluded on purpose)
+    try{ETIE.lastHook={title:title,hook:hook,category:_hookDraft.category,capacity:cap,duration:(_hookDraft.duration||'3h'),region:((document.getElementById('hookRegion')||{}).value||'HK')};}catch(e){}
     ETIE.mapPins.push(pin);
     saveState();persistPinCloud(pin);
     _dropPoint=null;

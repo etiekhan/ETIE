@@ -146,6 +146,10 @@
     try{ if(typeof etieDefaults==='function') ETIE=etieDefaults(); }catch(e){}
     try{ if(typeof restoreAll==='function') restoreAll(); }catch(e){}
     try{ if(typeof updateAuthHeader==='function')updateAuthHeader(); if(typeof renderHeaderProfile==='function')renderHeaderProfile(); if(typeof updateProfileVisibility==='function')updateProfileVisibility(); }catch(e){}
+    // guarantee the gate screen: close everything, back to map, show sign-in wall
+    try{ if(typeof closeAllModals==='function')closeAllModals(); }catch(e){}
+    try{ if(typeof showScreen==='function')showScreen('map'); }catch(e){}
+    try{ if(typeof refreshGate==='function')refreshGate(); }catch(e){}
   }
   // ---- Phase 2: single-user backup (etie_states) ----
   function push(){

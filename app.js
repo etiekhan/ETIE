@@ -2703,6 +2703,28 @@ function renderAreaSidebar(){
     if(h)h.textContent=keys.length?keys.length+' area'+(keys.length===1?'':'s'):'';
   }catch(e){}
 }
+function leaveHookChat(pinId){
+  // leave an ended hangout: removes you from members and clears local chat.
+  // Syncs (members is a real column), so it sticks on every device.
+  try{
+    if(!confirm('Leave this hangout? Its chat will be cleared for you.'))return;
+    var arr=ETIE.mapPins||[],me=hookNick(),myId=null;
+    try{myId=myUid();}catch(e){}
+    for(var i=0;i<arr.length;i++){
+      var p=arr[i];
+      if(!p||(p.id!==pinId&&p.cloudId!==pinId))continue;
+      p.members=(p.members||[]).filter(function(m){var mine=m.uid?(m.uid===myId):(m.nick===me);return !mine;});
+      p.requests=(p.requests||[]).filter(function(r){var mine=r.uid?(r.uid===myId):(r.nick===me);return !mine;});
+      p.chat=[];
+      storePin(p);
+      break;
+    }
+    try{if(window._openPinId===pinId)closePinDetail();}catch(e){}
+    try{if(window._chatPinId===pinId)closeChatDrawer();}catch(e){}
+    saveState();renderHookChatList();renderMapPins();
+    toast('Left the hangout.');
+  }catch(e){}
+}
 function renderHookChatList(){
   try{
     var box=document.getElementById('hookChatList');if(!box)return;
@@ -2723,6 +2745,15 @@ function renderHookChatList(){
         row.querySelector('span.status').textContent=groupBadgeText(p);
         (function(pin){
           row.onclick=function(){showScreen('map');openChatDrawer(pin.id);};
+          // expired hangouts get their own delete: leave the hangout (members + chat cleared)
+          try{
+            var st=getPinLifecycleState(pin);
+            if(st==='ended'||st==='vanished'){
+              var lv=document.createElement('button');lv.className='secondary';lv.style.padding='8px 12px';lv.style.flexShrink='0';lv.textContent='Leave';
+              lv.onclick=function(ev){try{if(ev&&ev.stopPropagation)ev.stopPropagation();}catch(e){}leaveHookChat(pin.id);};
+              row.appendChild(lv);
+            }
+          }catch(e){}
         })(p);
         box.appendChild(row);
       }catch(e){}

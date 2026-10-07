@@ -212,7 +212,7 @@
       var base={
         user_id: session.user.id,
         display_name: chosen,
-        city: p.city || ETIE.trip && ETIE.trip.destination || 'Hong Kong',
+        city: (function(){try{var cs=(typeof homeCities==='function'?homeCities():null)||[];if(cs.length)return cs.join(', ');}catch(e){}return p.city||'Hong Kong';})(),
         age: parseInt(p.age,10)||28,
         interests: p.interests||[],
         personality: p.personality||{},
@@ -922,6 +922,13 @@ destination: (typeof ETIE!=='undefined' && ETIE.trip && ETIE.trip.destination)||
               if(row.display_name&&!ETIE.traveller.nickname&&!ETIE.local.displayName){ETIE.traveller.nickname=row.display_name;ETIE.local.displayName=row.display_name;adopted=true;}
               if(row.photo_url&&row.photo_url.indexOf('http')===0&&!ETIE.traveller.photo){ETIE.traveller.photo=row.photo_url;ETIE.local.photo=row.photo_url;adopted=true;}
               if(row.personal_hook&&!ETIE.traveller.bio){ETIE.traveller.bio=row.personal_hook;adopted=true;}
+              try{
+                var _hc=String(row.city||'').split(',').map(function(s){return s.trim();}).filter(Boolean).slice(0,5);
+                if(_hc.length&&(!(ETIE.local.cities||[]).length)){ETIE.local.cities=_hc;ETIE.local.city=_hc[0];adopted=true;}
+              }catch(e){}
+              try{
+                if(Array.isArray(row.style_interests)&&row.style_interests.length&&!(ETIE.local.styleInterests||[]).length){ETIE.local.styleInterests=row.style_interests.slice(0,5);adopted=true;}
+              }catch(e){}
               if(row.city&&row.city!==ETIE.local.city&&(!ETIE.local.city||ETIE.local.city==='Hong Kong')){ETIE.local.city=row.city;adopted=true;}
               if(Array.isArray(row.memories)&&row.memories.length&&!(ETIE.traveller.memories||[]).length){ETIE.traveller.memories=row.memories.slice(0,3);adopted=true;}
               if(Array.isArray(row.featured_memories)&&row.featured_memories.length&&!(ETIE.traveller.featuredMemories||[]).length){ETIE.traveller.featuredMemories=row.featured_memories.slice(0,3);adopted=true;}

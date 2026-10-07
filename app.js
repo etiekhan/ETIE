@@ -27,7 +27,7 @@ function etieDefaults() {
     },
     local: {
       displayName: '',
-      city: 'Hong Kong', district: 'Central / Soho', age: '', nationality: 'HK',
+      city: 'Hong Kong', cities: ['Hong Kong'], district: 'Central / Soho', age: '', nationality: 'HK',
       verificationMethods: [],
       interests: [],
       sidequestModifiers: {},
@@ -481,12 +481,13 @@ function renderLiteProfile(){
     var nick=tr.nickname||ETIE.local.displayName||'';
     var ni=document.getElementById('liteNick'); if(ni&&document.activeElement!==ni)ni.value=nick;
     var bi=document.getElementById('liteBio'); if(bi&&document.activeElement!==bi)bi.value=tr.bio||'';
-    var ci=document.getElementById('liteCity'); if(ci&&document.activeElement!==ci)ci.value=ETIE.local.city||'Hong Kong';
+    var ci=document.getElementById('liteCity'); if(ci&&document.activeElement!==ci&&!ci.value)ci.placeholder='Type a city, Enter to add';
+    try{renderHomeCityChips();}catch(e){}
     var photo=tr.photo||ETIE.local.photo||googleAvatar();
     var av=document.getElementById('liteAvatar');
     if(av){if(photo)av.innerHTML='<img src="'+photo+'">';else av.innerHTML='<span>+</span>';}
     var rl=document.getElementById('liteRoleLine');
-    if(rl){var role=(ETIE.derivedRole||ETIE.activeRole||'traveller');rl.textContent=(role==='local'?'\uD83C\uDDED\uD83C\uDDF0 Local host':'\u2708\uFE0F Traveller')+' \u00B7 '+(ETIE.local.city||'Hong Kong');}
+    if(rl){var role=(ETIE.derivedRole||ETIE.activeRole||'traveller');rl.textContent=(role==='local'?'\uD83C\uDDED\uD83C\uDDF0 Local host':'\u2708\uFE0F Traveller')+' \u00B7 '+homeCitiesLabel();}
     var methods=tr.verificationMethods||[];
     var lv=document.getElementById('liteVerify');
     if(lv)Array.prototype.forEach.call(lv.querySelectorAll('.list-item'),function(row){
@@ -516,6 +517,7 @@ function renderLiteProfile(){
     var dv=document.getElementById('liteDoneView'); if(dv)dv.style.display=showDone?'':'none';
     if(showDone){try{renderDoneView();}catch(e){}}
     var rep=document.getElementById('liteRepBlock'); if(rep)rep.style.display=done?'':'none';
+    try{renderVibePicker('liteVibes');}catch(e){}
     try{renderHeaderProfile();}catch(e){}
   }catch(e){}
 }
@@ -598,6 +600,35 @@ function myHookVibes(){
     return out;
   }catch(e){return [];}
 }
+function toggleVibe(id){
+  // user-picked vibes (stored on local.styleInterests, synced to style_interests).
+  // Never derived — picking is explicit.
+  try{
+    if(!Array.isArray(ETIE.local.styleInterests))ETIE.local.styleInterests=[];
+    var i=ETIE.local.styleInterests.indexOf(id);
+    if(i===-1){
+      if(ETIE.local.styleInterests.length>=5){toast('Max 5 vibes.');return;}
+      ETIE.local.styleInterests.push(id);
+    }else ETIE.local.styleInterests.splice(i,1);
+    saveState();
+    renderVibePicker('liteVibes');renderVibePicker('doneVibes');renderVibePicker('drawerVibes');
+  }catch(e){}
+}
+function renderVibePicker(boxId){
+  try{
+    var box=document.getElementById(boxId);if(!box)return;
+    if(typeof MAP_VIBES==='undefined'||!MAP_VIBES.length)return;
+    box.innerHTML='';
+    var picked=[];try{picked=ETIE.local.styleInterests||[];}catch(e){}
+    MAP_VIBES.forEach(function(v){
+      var s=document.createElement('span');
+      s.className='chip'+(picked.indexOf(v.id)!==-1?' active':'');
+      s.textContent=(v.emoji?v.emoji+' ':'')+(v.label||v.id);
+      s.onclick=(function(id){return function(){toggleVibe(id);};})(v.id);
+      box.appendChild(s);
+    });
+  }catch(e){}
+}
 function renderDoneView(){
   try{
     var tr=ETIE.traveller||{};
@@ -610,12 +641,9 @@ function renderDoneView(){
     if(vb){var v=(tr.verificationMethods||[]).length>0;vb.textContent=v?'✅ Verified':'';vb.style.display=v?'':'none';}
     var rl=document.getElementById('doneRole');
     if(rl){var role=(ETIE.derivedRole||ETIE.activeRole||'traveller');rl.textContent=role==='local'?'🇭🇰 Local Host':'✈️ Traveller';rl.classList.toggle('city-host',role==='local');}
-    var ct=document.getElementById('doneCity'); if(ct)ct.textContent='🏠 '+(ETIE.local.city||'Hong Kong');
+    var ct=document.getElementById('doneCity'); if(ct)ct.textContent='🏠 '+homeCitiesLabel();
     var vs=document.getElementById('doneVibes');
-    if(vs){vs.innerHTML='';var vibes=myHookVibes();
-      if(!vibes.length){var e=document.createElement('span');e.className='muted small';e.textContent='No vibes yet — drop a hook.';vs.appendChild(e);}
-      vibes.forEach(function(v){var s=document.createElement('span');s.className='chip active';s.textContent=mapCatEmoji(v)+' '+v;vs.appendChild(s);});
-    }
+    if(vs){try{renderVibePicker('doneVibes');}catch(e){}}
     var hk=document.getElementById('doneHook'); if(hk)hk.textContent='“'+(tr.bio||'No personal hook yet.')+'”';
     renderMemories();renderSpots();renderPassions();
     renderFeaturedMemories();
@@ -721,12 +749,9 @@ function renderProfileDrawer(){
     if(vb){var v=(tr.verificationMethods||[]).length>0;vb.textContent=v?'✅ Verified':'';vb.style.display=v?'':'none';}
     var rl=document.getElementById('drawerRole');
     if(rl){var role=(ETIE.derivedRole||ETIE.activeRole||'traveller');rl.textContent=role==='local'?'🇭🇰 Local Host':'✈️ Traveller';rl.classList.toggle('city-host',role==='local');}
-    var ct=document.getElementById('drawerCity'); if(ct)ct.textContent='🏠 '+(ETIE.local.city||'Hong Kong');
+    var ct=document.getElementById('drawerCity'); if(ct)ct.textContent='🏠 '+homeCitiesLabel();
     var vs=document.getElementById('drawerVibes');
-    if(vs){vs.innerHTML='';var vibes=myHookVibes();
-      if(!vibes.length){var e=document.createElement('span');e.className='muted small';e.textContent='No vibes yet — drop a hook.';vs.appendChild(e);}
-      vibes.forEach(function(v){var s=document.createElement('span');s.className='chip active';s.textContent=mapCatEmoji(v)+' '+v;vs.appendChild(s);});
-    }
+    if(vs){try{renderVibePicker('drawerVibes');}catch(e){}}
     var hk=document.getElementById('drawerHook'); if(hk)hk.textContent='“'+(tr.bio||'No personal hook yet.')+'”';
     renderDrawerMemories();
     renderDrawerSpots();
@@ -1329,12 +1354,54 @@ function fillCityList(){
     dl.innerHTML=html;
   }catch(e){}
 }
+function homeCities(){
+  // multi home cities, newest first, max 5. Migrates the legacy single city string.
+  try{
+    if(Array.isArray(ETIE.local.cities)&&ETIE.local.cities.length)return ETIE.local.cities.filter(Boolean).slice(0,5);
+    if(ETIE.local.city)return [ETIE.local.city];
+  }catch(e){}
+  return ['Hong Kong'];
+}
+function homeCitiesLabel(){try{return homeCities().join(', ');}catch(e){return 'Hong Kong';}}
+function renderHomeCityChips(){
+  try{
+    var box=document.getElementById('homeCityChips');if(!box)return;
+    box.innerHTML='';
+    homeCities().forEach(function(name,idx){
+      var s=document.createElement('span');s.className='chip active';s.style.margin='0 6px 6px 0';
+      s.textContent=name+' ✕';s.title='Remove';
+      s.onclick=(function(i){return function(){removeHomeCity(i);};})(idx);
+      box.appendChild(s);
+    });
+  }catch(e){}
+}
+function addHomeCity(){
+  try{
+    var inp=document.getElementById('liteCity');if(!inp)return;
+    var name=(inp.value||'').trim().slice(0,60);if(!name)return;
+    var arr=homeCities();
+    var dup=arr.some(function(c){return c.toLowerCase()===name.toLowerCase();});
+    if(dup){inp.value='';return;}
+    arr.unshift(name);arr=arr.slice(0,5);
+    ETIE.local.cities=arr;ETIE.local.city=arr[0];
+    inp.value='';saveState();renderHomeCityChips();
+    try{if(ETIE.profileComplete&&!isProfileComplete())ETIE.profileComplete=false;}catch(e){}
+  }catch(e){}
+}
+function removeHomeCity(idx){
+  try{
+    var arr=homeCities();arr.splice(idx,1);
+    if(!arr.length)arr=['Hong Kong'];
+    ETIE.local.cities=arr;ETIE.local.city=arr[0];
+    saveState();renderHomeCityChips();
+  }catch(e){}
+}
 function saveLiteProfile(){  try{
-    var ni=document.getElementById('liteNick'), bi=document.getElementById('liteBio'), ci=document.getElementById('liteCity');
+    var ni=document.getElementById('liteNick'), bi=document.getElementById('liteBio');
     var nick=ni?ni.value.trim().slice(0,24):'';
     ETIE.traveller.nickname=nick; ETIE.local.displayName=nick;
     if(bi)ETIE.traveller.bio=bi.value.slice(0,140);
-    if(ci)ETIE.local.city=(ci.value.trim()||'Hong Kong').slice(0,60);
+    if(!Array.isArray(ETIE.local.cities)||!ETIE.local.cities.length){ETIE.local.cities=[(ETIE.local.city||'Hong Kong')];}
     if(ETIE.profileComplete&&!isProfileComplete())ETIE.profileComplete=false;
     saveState();
     try{renderHeaderProfile();}catch(e){}
@@ -1359,6 +1426,22 @@ function handleLitePhoto(input){
       try{
         ETIE.traveller.photo=e.target.result; ETIE.local.photo=e.target.result;
         saveState();renderLiteProfile();
+        // persist to cloud storage so it survives sign-out (base64 never leaves the device)
+        try{
+          if(window.EtieCloud&&window.EtieCloud.uploadPhoto){
+            window.EtieCloud.uploadPhoto(file,'avatar').then(function(url){
+              try{
+                if(url&&url.indexOf('http')===0){
+                  ETIE.traveller.photo=url; ETIE.local.photo=url;
+                  saveState();renderLiteProfile();
+                }
+              }catch(err){}
+            }).catch(function(err){
+              try{console.warn('Etie avatar upload failed:',err);}catch(_){}
+              toast('Photo kept on this device — cloud upload failed.');
+            });
+          }
+        }catch(err){}
       }catch(err){}
     };
     reader.readAsDataURL(file);
@@ -1482,7 +1565,7 @@ function areaLabel(lat,lng){
   try{
     if(haversineKm(lat,lng,HK_CENTER[0],HK_CENTER[1])<=60)return nearestDistrictLabel(lat,lng);
   }catch(e){}
-  try{return ETIE.local.city||'Around you';}catch(e){return 'Around you';}
+  try{return homeCities()[0]||'Around you';}catch(e){return 'Around you';}
 }
 function reverseLabel(lat,lng,cb){
   try{

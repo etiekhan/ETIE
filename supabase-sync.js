@@ -922,6 +922,7 @@ destination: (typeof ETIE!=='undefined' && ETIE.trip && ETIE.trip.destination)||
               if(row.display_name&&!ETIE.traveller.nickname&&!ETIE.local.displayName){ETIE.traveller.nickname=row.display_name;ETIE.local.displayName=row.display_name;adopted=true;}
               if(row.photo_url&&row.photo_url.indexOf('http')===0&&!ETIE.traveller.photo){ETIE.traveller.photo=row.photo_url;ETIE.local.photo=row.photo_url;adopted=true;}
               if(row.personal_hook&&!ETIE.traveller.bio){ETIE.traveller.bio=row.personal_hook;adopted=true;}
+              if(row.city&&row.city!==ETIE.local.city&&(!ETIE.local.city||ETIE.local.city==='Hong Kong')){ETIE.local.city=row.city;adopted=true;}
               if(Array.isArray(row.memories)&&row.memories.length&&!(ETIE.traveller.memories||[]).length){ETIE.traveller.memories=row.memories.slice(0,3);adopted=true;}
               if(Array.isArray(row.featured_memories)&&row.featured_memories.length&&!(ETIE.traveller.featuredMemories||[]).length){ETIE.traveller.featuredMemories=row.featured_memories.slice(0,3);adopted=true;}
               if(row.verification&&Array.isArray(row.verification.methods)&&row.verification.methods.length&&!(ETIE.traveller.verificationMethods||[]).length){ETIE.traveller.verificationMethods=row.verification.methods.slice();ETIE.local.verificationMethods=row.verification.methods.slice();adopted=true;}

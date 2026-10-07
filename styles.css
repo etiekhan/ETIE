@@ -587,7 +587,9 @@ html,body{height:100%;width:100%;margin:0;padding:0;overflow:hidden;background:#
 #dropHookModal{align-items:center;justify-content:center;}
 #dropHookModal .chat-popup{width:100%;max-width:640px;margin:0 auto;border-radius:20px;}
 
-/* Profile Tabs */
+/* dark-theme chips for pickers in modals/drawers (base .chip is light) */
+#hookInterestPills .chip,#hookWindowPills .chip,#hookDurationPills .chip,#doneVibes .chip,#drawerVibes .chip,#liteVibes .chip,#homeCityChips .chip{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.16);color:#ffe4e6;}
+#hookInterestPills .chip.active,#hookWindowPills .chip.active,#hookDurationPills .chip.active,#doneVibes .chip.active,#drawerVibes .chip.active,#liteVibes .chip.active,#homeCityChips .chip.active{background:rgba(244,63,94,.22);border-color:#f43f5e;color:#fff;box-shadow:0 0 12px rgba(244,63,94,.25);}
 
 /* Mobile adjustments */
 @media(max-width:480px){

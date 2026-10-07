@@ -517,7 +517,6 @@ function renderLiteProfile(){
     var dv=document.getElementById('liteDoneView'); if(dv)dv.style.display=showDone?'':'none';
     if(showDone){try{renderDoneView();}catch(e){}}
     var rep=document.getElementById('liteRepBlock'); if(rep)rep.style.display=done?'':'none';
-    try{renderVibePicker('liteVibes');}catch(e){}
     try{renderHeaderProfile();}catch(e){}
   }catch(e){}
 }
@@ -600,35 +599,6 @@ function myHookVibes(){
     return out;
   }catch(e){return [];}
 }
-function toggleVibe(id){
-  // user-picked vibes (stored on local.styleInterests, synced to style_interests).
-  // Never derived — picking is explicit.
-  try{
-    if(!Array.isArray(ETIE.local.styleInterests))ETIE.local.styleInterests=[];
-    var i=ETIE.local.styleInterests.indexOf(id);
-    if(i===-1){
-      if(ETIE.local.styleInterests.length>=5){toast('Max 5 vibes.');return;}
-      ETIE.local.styleInterests.push(id);
-    }else ETIE.local.styleInterests.splice(i,1);
-    saveState();
-    renderVibePicker('liteVibes');renderVibePicker('doneVibes');renderVibePicker('drawerVibes');
-  }catch(e){}
-}
-function renderVibePicker(boxId){
-  try{
-    var box=document.getElementById(boxId);if(!box)return;
-    if(typeof MAP_VIBES==='undefined'||!MAP_VIBES.length)return;
-    box.innerHTML='';
-    var picked=[];try{picked=ETIE.local.styleInterests||[];}catch(e){}
-    MAP_VIBES.forEach(function(v){
-      var s=document.createElement('span');
-      s.className='chip'+(picked.indexOf(v.id)!==-1?' active':'');
-      s.textContent=(v.emoji?v.emoji+' ':'')+(v.label||v.id);
-      s.onclick=(function(id){return function(){toggleVibe(id);};})(v.id);
-      box.appendChild(s);
-    });
-  }catch(e){}
-}
 function renderDoneView(){
   try{
     var tr=ETIE.traveller||{};
@@ -643,7 +613,7 @@ function renderDoneView(){
     if(rl){var role=(ETIE.derivedRole||ETIE.activeRole||'traveller');rl.textContent=role==='local'?'🇭🇰 Local Host':'✈️ Traveller';rl.classList.toggle('city-host',role==='local');}
     var ct=document.getElementById('doneCity'); if(ct)ct.textContent='🏠 '+homeCitiesLabel();
     var vs=document.getElementById('doneVibes');
-    if(vs){try{renderVibePicker('doneVibes');}catch(e){}}
+    if(vs){var _vp=vs.closest('.field');if(_vp)_vp.style.display='none';}
     var hk=document.getElementById('doneHook'); if(hk)hk.textContent='“'+(tr.bio||'No personal hook yet.')+'”';
     renderMemories();renderSpots();renderPassions();
     renderFeaturedMemories();
@@ -751,7 +721,7 @@ function renderProfileDrawer(){
     if(rl){var role=(ETIE.derivedRole||ETIE.activeRole||'traveller');rl.textContent=role==='local'?'🇭🇰 Local Host':'✈️ Traveller';rl.classList.toggle('city-host',role==='local');}
     var ct=document.getElementById('drawerCity'); if(ct)ct.textContent='🏠 '+homeCitiesLabel();
     var vs=document.getElementById('drawerVibes');
-    if(vs){try{renderVibePicker('drawerVibes');}catch(e){}}
+    if(vs){var _vp=vs.closest('.field');if(_vp)_vp.style.display='none';}
     var hk=document.getElementById('drawerHook'); if(hk)hk.textContent='“'+(tr.bio||'No personal hook yet.')+'”';
     renderDrawerMemories();
     renderDrawerSpots();

@@ -11,7 +11,7 @@ function etieDefaults() {
     trip: { destination: 'Hong Kong', dates: '', dateFrom: todayISO(), dateTo: '', country: 'HK', district: 'Central / Soho' },
     traveller: {
       nickname: '',
-      nationality: 'HK',
+      nationality: '',
       verificationMethods: [],
       interests: [],
       sidequestModifiers: {},
@@ -27,7 +27,7 @@ function etieDefaults() {
     },
     local: {
       displayName: '',
-      city: 'Hong Kong', cities: ['Hong Kong'], district: 'Central / Soho', age: '', nationality: 'HK',
+      city: 'Hong Kong', cities: ['Hong Kong'], district: 'Central / Soho', age: '', nationality: '',
       verificationMethods: [],
       interests: [],
       sidequestModifiers: {},
@@ -483,6 +483,7 @@ function renderLiteProfile(){
     var bi=document.getElementById('liteBio'); if(bi&&document.activeElement!==bi)bi.value=tr.bio||'';
     var ci=document.getElementById('liteCity'); if(ci&&document.activeElement!==ci&&!ci.value)ci.placeholder='Type a city, Enter to add';
     try{renderHomeCityChips();}catch(e){}
+    try{fillNationalityList();var _ns=document.getElementById('liteNationality');if(_ns)_ns.value=ETIE.local.nationality||ETIE.traveller.nationality||'';}catch(e){}
     var photo=tr.photo||ETIE.local.photo||googleAvatar();
     var av=document.getElementById('liteAvatar');
     if(av){if(photo)av.innerHTML='<img src="'+photo+'">';else av.innerHTML='<span>+</span>';}
@@ -611,7 +612,7 @@ function renderDoneView(){
     if(vb){var v=(tr.verificationMethods||[]).length>0;vb.textContent=v?'✅ Verified':'';vb.style.display=v?'':'none';}
     var rl=document.getElementById('doneRole');
     if(rl){var role=(ETIE.derivedRole||ETIE.activeRole||'traveller');rl.textContent=role==='local'?'🇭🇰 Local Host':'✈️ Traveller';rl.classList.toggle('city-host',role==='local');}
-    var ct=document.getElementById('doneCity'); if(ct)ct.textContent='🏠 '+homeCitiesLabel();
+    var ct=document.getElementById('doneCity'); if(ct){var _nl=nationalityLabel();ct.textContent='🏠 '+homeCitiesLabel()+(_nl?' · '+_nl:'');}
     var vs=document.getElementById('doneVibes');
     if(vs){var _vp=vs.closest('.field');if(_vp)_vp.style.display='none';}
     var hk=document.getElementById('doneHook'); if(hk)hk.textContent='“'+(tr.bio||'No personal hook yet.')+'”';
@@ -719,7 +720,7 @@ function renderProfileDrawer(){
     if(vb){var v=(tr.verificationMethods||[]).length>0;vb.textContent=v?'✅ Verified':'';vb.style.display=v?'':'none';}
     var rl=document.getElementById('drawerRole');
     if(rl){var role=(ETIE.derivedRole||ETIE.activeRole||'traveller');rl.textContent=role==='local'?'🇭🇰 Local Host':'✈️ Traveller';rl.classList.toggle('city-host',role==='local');}
-    var ct=document.getElementById('drawerCity'); if(ct)ct.textContent='🏠 '+homeCitiesLabel();
+    var ct=document.getElementById('drawerCity'); if(ct){var _nl=nationalityLabel();ct.textContent='🏠 '+homeCitiesLabel()+(_nl?' · '+_nl:'');}
     var vs=document.getElementById('drawerVibes');
     if(vs){var _vp=vs.closest('.field');if(_vp)_vp.style.display='none';}
     var hk=document.getElementById('drawerHook'); if(hk)hk.textContent='“'+(tr.bio||'No personal hook yet.')+'”';
@@ -1365,6 +1366,39 @@ function removeHomeCity(idx){
     ETIE.local.cities=arr;ETIE.local.city=arr[0];
     saveState();renderHomeCityChips();
   }catch(e){}
+}
+function saveNationality(){
+  // explicit user pick, kept separate from home cities (live in HK ≠ HK national)
+  try{
+    var s=document.getElementById('liteNationality');
+    var code=s?(s.value||''):''; 
+    ETIE.local.nationality=code;ETIE.traveller.nationality=code;
+    saveState();
+    try{renderHeaderProfile();}catch(e){}
+    try{refreshGate();}catch(e){}
+  }catch(e){}
+}
+function fillNationalityList(){
+  try{
+    var s=document.getElementById('liteNationality');if(!s)return;
+    if(s.options&&s.options.length>1)return; // already populated
+    (window.ETIE_COUNTRIES||[]).forEach(function(c){
+      if(!c||!c.code)return;
+      var o=document.createElement('option');o.value=c.code;o.textContent=c.name;
+      s.appendChild(o);
+    });
+    var cur='';try{cur=ETIE.local.nationality||ETIE.traveller.nationality||'';}catch(e){}
+    if(cur)s.value=cur;
+  }catch(e){}
+}
+function nationalityLabel(){
+  try{
+    var code=(ETIE.local.nationality||ETIE.traveller.nationality||'');
+    if(!code)return '';
+    var name=code;
+    (window.ETIE_COUNTRIES||[]).forEach(function(c){if(c&&c.code===code)name=c.name;});
+    return flagForCountry(code)+' '+name;
+  }catch(e){return '';}
 }
 function saveLiteProfile(){  try{
     var ni=document.getElementById('liteNick'), bi=document.getElementById('liteBio');

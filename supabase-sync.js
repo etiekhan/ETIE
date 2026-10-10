@@ -224,7 +224,7 @@
         updated_at: new Date().toISOString()
       };
       var extra={
-        nationality: p.nationality || 'HK',
+        nationality: p.nationality || '',
         traveller_nationality: (typeof ETIE!=='undefined'&&ETIE.traveller&&ETIE.traveller.nationality)||'HK',
         district: p.district || 'Central / Soho',
         tier: p.tier || 'Rookie',
@@ -609,7 +609,7 @@ destination: (typeof ETIE!=='undefined' && ETIE.trip && ETIE.trip.destination)||
         name: row.display_name || 'Guide',
         city: row.city || 'Hong Kong',
         district: row.district || row.city || 'Central / Soho',
-        nationality: row.nationality || 'HK',
+        nationality: row.nationality || '',
         age: row.age || 28,
         interests: row.interests || [],
         personality: row.personality || {social:5, spontaneous:5, curious:5},
@@ -925,6 +925,9 @@ destination: (typeof ETIE!=='undefined' && ETIE.trip && ETIE.trip.destination)||
               try{
                 var _hc=String(row.city||'').split(',').map(function(s){return s.trim();}).filter(Boolean).slice(0,5);
                 if(_hc.length&&(!(ETIE.local.cities||[]).length)){ETIE.local.cities=_hc;ETIE.local.city=_hc[0];adopted=true;}
+              }catch(e){}
+              try{
+                if(row.nationality&&!ETIE.local.nationality){ETIE.local.nationality=row.nationality;ETIE.traveller.nationality=row.nationality;adopted=true;}
               }catch(e){}
               try{
                 if(Array.isArray(row.style_interests)&&row.style_interests.length&&!(ETIE.local.styleInterests||[]).length){ETIE.local.styleInterests=row.style_interests.slice(0,5);adopted=true;}

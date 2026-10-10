@@ -206,6 +206,17 @@ function saveState() { try { localStorage.setItem(ETIE_KEY, JSON.stringify(ETIE)
 function flagEmoji(code){if(!code)return '';return String.fromCodePoint(...code.toUpperCase().split('').map(c=>127397+c.charCodeAt(0)));}
 function flagForCountry(countryCode){var map={'PT':'🇵🇹','ES':'🇪🇸','FR':'🇫🇷','IT':'🇮🇹','JP':'🇯🇵','TH':'🇹🇭','US':'🇺🇸','AU':'🇦🇺','HK':'🇭🇰','SG':'🇸🇬','GB':'🇬🇧','DE':'🇩🇪','CA':'🇨🇦'};return map[countryCode]||flagEmoji(countryCode)||'🌍';}
 function getRegionFlag(p){return flagForCountry(p.region||'HK');}
+function flagForCity(name){
+  // city or country name -> flag, '' when unknown (never guess)
+  try{
+    if(!name)return '';
+    var n=String(name).trim().toLowerCase();if(!n)return '';
+    var hit=null;
+    (window.ETIE_CITIES||[]).forEach(function(c){if(!hit&&c&&c.city&&String(c.city).toLowerCase()===n)hit=c.code;});
+    if(!hit)(window.ETIE_COUNTRIES||[]).forEach(function(c){if(!hit&&c&&c.name&&String(c.name).toLowerCase()===n)hit=c.code;});
+    return hit?flagForCountry(hit):'';
+  }catch(e){return '';}
+}
 
 function toast(msg){var t=document.getElementById('toast');if(!t){alert(msg);return;}t.textContent=msg;t.style.display='block';clearTimeout(t._h);t._h=setTimeout(function(){t.style.display='none';},2200);}
 function gateState(){
@@ -488,7 +499,7 @@ function renderLiteProfile(){
     var av=document.getElementById('liteAvatar');
     if(av){if(photo)av.innerHTML='<img src="'+photo+'">';else av.innerHTML='<span>+</span>';}
     var rl=document.getElementById('liteRoleLine');
-    if(rl){var role=(ETIE.derivedRole||ETIE.activeRole||'traveller');rl.textContent=(role==='local'?'\uD83C\uDDED\uD83C\uDDF0 Local host':'\u2708\uFE0F Traveller')+' \u00B7 '+homeCitiesLabel();}
+    if(rl){var role=(ETIE.derivedRole||ETIE.activeRole||'traveller');rl.textContent=(role==='local'?'\uD83C\uDDED\uD83C\uDDF0 Local host':'\u2708\uFE0F Traveller')+' \u00B7 '+homeCitiesLabelFlags();}
     var methods=tr.verificationMethods||[];
     var lv=document.getElementById('liteVerify');
     if(lv)Array.prototype.forEach.call(lv.querySelectorAll('.list-item'),function(row){
@@ -612,7 +623,7 @@ function renderDoneView(){
     if(vb){var v=(tr.verificationMethods||[]).length>0;vb.textContent=v?'✅ Verified':'';vb.style.display=v?'':'none';}
     var rl=document.getElementById('doneRole');
     if(rl){var role=(ETIE.derivedRole||ETIE.activeRole||'traveller');rl.textContent=role==='local'?'🇭🇰 Local Host':'✈️ Traveller';rl.classList.toggle('city-host',role==='local');}
-    var ct=document.getElementById('doneCity'); if(ct){var _nl=nationalityLabel();ct.textContent='🏠 '+homeCitiesLabel()+(_nl?' · '+_nl:'');}
+    var ct=document.getElementById('doneCity'); if(ct){var _nl=nationalityLabel();ct.textContent='🏠 '+homeCitiesLabelFlags()+(_nl?' · '+_nl:'');}
     var vs=document.getElementById('doneVibes');
     if(vs){var _vp=vs.closest('.field');if(_vp)_vp.style.display='none';}
     var hk=document.getElementById('doneHook'); if(hk)hk.textContent='“'+(tr.bio||'No personal hook yet.')+'”';
@@ -720,7 +731,7 @@ function renderProfileDrawer(){
     if(vb){var v=(tr.verificationMethods||[]).length>0;vb.textContent=v?'✅ Verified':'';vb.style.display=v?'':'none';}
     var rl=document.getElementById('drawerRole');
     if(rl){var role=(ETIE.derivedRole||ETIE.activeRole||'traveller');rl.textContent=role==='local'?'🇭🇰 Local Host':'✈️ Traveller';rl.classList.toggle('city-host',role==='local');}
-    var ct=document.getElementById('drawerCity'); if(ct){var _nl=nationalityLabel();ct.textContent='🏠 '+homeCitiesLabel()+(_nl?' · '+_nl:'');}
+    var ct=document.getElementById('drawerCity'); if(ct){var _nl=nationalityLabel();ct.textContent='🏠 '+homeCitiesLabelFlags()+(_nl?' · '+_nl:'');}
     var vs=document.getElementById('drawerVibes');
     if(vs){var _vp=vs.closest('.field');if(_vp)_vp.style.display='none';}
     var hk=document.getElementById('drawerHook'); if(hk)hk.textContent='“'+(tr.bio||'No personal hook yet.')+'”';
@@ -1334,6 +1345,7 @@ function homeCities(){
   return ['Hong Kong'];
 }
 function homeCitiesLabel(){try{return homeCities().join(', ');}catch(e){return 'Hong Kong';}}
+function homeCitiesLabelFlags(){try{return homeCities().map(function(c){var f=flagForCity(c);return (f?f+' ':'')+c;}).join(', ');}catch(e){return homeCitiesLabel();}}
 function renderHomeCityChips(){
   try{
     var box=document.getElementById('homeCityChips');if(!box)return;
@@ -2218,7 +2230,7 @@ function openPinDetail(id){
     var rb=document.getElementById('pinRoleBadge');if(rb){var pr=(p.role==='local')?'local':'traveller';rb.textContent=(pr==='local'?getRegionFlag(p)+' ':'✈️ ')+(pr==='local'?'Local Host':'Traveller');rb.classList.toggle('city-host',pr==='local');}
     var ptt=document.getElementById('pinTitle');if(ptt)ptt.textContent=p.title||p.location||'Hook';
     var lc=document.getElementById('pinLoc');
-    if(lc){var locTxt=String(p.location||'Hong Kong').replace(/^\s*near\s+/i,'');lc.textContent=mapCatEmoji(p.category)+' Near '+locTxt;}
+    if(lc){var locTxt=String(p.location||'Hong Kong').replace(/^\s*near\s+/i,'');lc.textContent=mapCatEmoji(p.category)+' '+getRegionFlag(p)+' Near '+locTxt;}
     var pb=document.getElementById('pinBio');if(pb){var bb=p.members&&p.members[0]&&p.members[0].bio;pb.textContent=bb||'';pb.style.display=bb?'':'none';}
     var gb=document.getElementById('pinGroupBadge');if(gb)gb.textContent=groupBadgeText(p);
     // Lifecycle badge
@@ -2540,7 +2552,7 @@ function openChatDrawer(pinId){
   try{
     var p=findPin(pinId);if(!p){toast('Hook not found.');return;}
     _chatPinId=pinId;
-    var t=document.getElementById('chatHookTitle');if(t)t.textContent=p.location||'Group chat';
+    var t=document.getElementById('chatHookTitle');if(t)t.textContent=getRegionFlag(p)+' '+(p.location||'Group chat');
     var s=document.getElementById('chatHookSub');
     if(s)s.textContent=((p.members||[]).map(function(m){return m.nick;}).join(' · ')||'Open hook');
     renderQuestBanner(p);
@@ -2680,8 +2692,9 @@ function renderAreaSidebar(){
     (visibleMapPins()||[]).forEach(function(p){
       try{
         var k=(Math.round(p.lat*2)/2).toFixed(1)+','+(Math.round(p.lng*2)/2).toFixed(1);
-        var g=groups[k]||(groups[k]={lat:0,lng:0,n:0,people:{},labels:{},pins:[]});
+        var g=groups[k]||(groups[k]={lat:0,lng:0,n:0,people:{},labels:{},regions:{},pins:[]});
         g.lat+=p.lat;g.lng+=p.lng;g.n++;
+        var rg=p.region||'HK';g.regions[rg]=(g.regions[rg]||0)+1;
         (p.members||[]).forEach(function(m){if(m&&m.nick)g.people[m.nick]=1;});
         var lb=(p.location||p.district||'Hook spot');
         g.labels[lb]=(g.labels[lb]||0)+1;
@@ -2697,7 +2710,7 @@ function renderAreaSidebar(){
         var np=Object.keys(g.people).length;
         var row=document.createElement('div');row.className='area-row';
         row.innerHTML='<div><strong></strong><br><span class="muted small"></span></div>';
-        row.querySelector('strong').textContent=top.length>30?top.slice(0,29)+'…':top;
+        row.querySelector('strong').textContent=(function(){try{var rk=Object.keys(g.regions).sort(function(x,y){return g.regions[y]-g.regions[x];})[0];return (flagForCountry(rk||'HK')+' ');}catch(e){return '';}})()+(top.length>30?top.slice(0,29)+'…':top);
         row.querySelector('span.muted').textContent=g.n+' hook'+(g.n===1?'':'s')+(np?(' · '+np+' '+(np===1?'person':'people')):'');
         row.onclick=(function(la,ln,lb){return function(){flyToArea(la,ln,lb);};})(g.lat/g.n,g.lng/g.n,top);
         box.appendChild(row);
@@ -2744,7 +2757,7 @@ function renderHookChatList(){
         var state=getPinLifecycleState(p);
         var lifecycleLabel=state==='vanished'?' 👻' : (state==='ended'?' 🏁' : (state==='requests_closed'?' 🔒' : ''));
         row.innerHTML='<div><strong></strong><br><span class="muted"></span></div><span class="status"></span>';
-        row.querySelector('strong').textContent=mapCatEmoji(p.category)+' '+(p.title||p.location||'Hook')+lifecycleLabel;
+        row.querySelector('strong').textContent=mapCatEmoji(p.category)+' '+getRegionFlag(p)+' '+(p.title||p.location||'Hook')+lifecycleLabel;
         row.querySelector('span.muted').textContent=last?((last.nick||'')+': '+(last.text||'').slice(0,60)):'Tap to open chat';
         row.querySelector('span.status').textContent=groupBadgeText(p);
         (function(pin){

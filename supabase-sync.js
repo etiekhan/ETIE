@@ -909,6 +909,34 @@ destination: (typeof ETIE!=='undefined' && ETIE.trip && ETIE.trip.destination)||
       return function(){try{client.removeChannel(ch);delete hookChatChannels[key];}catch(e){}};
     }catch(e){return function(){};}
   }
+  // ---- Sidequest of the week (admin-published, read by everyone) ----
+  function sidequestTable(){return 'sidequests';}
+  function pushSidequest(title,desc){
+    return new Promise(function(resolve){
+      try{
+        if(!client||!session){resolve(null);return;}
+        client.from(sidequestTable()).update({is_active:false}).eq('is_active',true).then(function(){
+          client.from(sidequestTable()).insert({title:String(title||'').slice(0,80),descr:String(desc||'').slice(0,280),is_active:true,created_by:session.user.id}).then(function(r){resolve(r&&!r.error);}).catch(function(){resolve(null);});
+        }).catch(function(){resolve(null);});
+      }catch(e){resolve(null);}
+    });
+  }
+  function fetchSidequest(cb){
+    try{
+      if(!client||typeof cb!=='function'){cb(null);return;}
+      client.from(sidequestTable()).select('*').eq('is_active',true).order('created_at',{ascending:false}).limit(1).maybeSingle().then(function(r){
+        try{cb(r&&!r.error?r.data:null);}catch(e){cb(null);}
+      }).catch(function(){cb(null);});
+    }catch(e){try{cb(null);}catch(_){}}
+  }
+  function clearSidequest(){
+    return new Promise(function(resolve){
+      try{
+        if(!client||!session){resolve(null);return;}
+        client.from(sidequestTable()).update({is_active:false}).eq('is_active',true).then(function(r){resolve(r&&!r.error);}).catch(function(){resolve(null);});
+      }catch(e){resolve(null);}
+    });
+  }
   function fetchOwnProfile(cb){
     try{
       if(!client||!session){if(typeof cb==='function')cb(null);return;}
@@ -1036,6 +1064,7 @@ destination: (typeof ETIE!=='undefined' && ETIE.trip && ETIE.trip.destination)||
     pushHookMessage:pushHookMessage, subscribeHookChat:subscribeHookChat,
     fetchProfile:fetchProfile, fetchOwnProfile:fetchOwnProfile, redeemInvite:redeemInvite,
     pushHangoutLog:pushHangoutLog, fetchHookLogs:fetchHookLogs, fetchUserLogs:fetchUserLogs, updateHangoutLog:updateHangoutLog, fetchTaggedLogs:fetchTaggedLogs,
+    pushSidequest:pushSidequest, fetchSidequest:fetchSidequest, clearSidequest:clearSidequest,
     syncProfile:syncProfile, pushSharedRequest:pushSharedRequest, pushSharedMessage:pushSharedMessage, pushSharedMeetup:pushSharedMeetup,
     pushSharedReview:pushSharedReview, pushSharedReport:pushSharedReport,
     uploadPhoto:uploadPhoto,

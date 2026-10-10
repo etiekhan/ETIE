@@ -27,6 +27,7 @@
       <div class="avatar-dropdown hidden" id="avatarDropdown" role="menu">
         <button class="menu-item" id="navMapBtn" onclick="closeAvatarMenu();closeAllModals();showScreen('map')">🗺️ Map</button>
         <button class="menu-item" id="navProfileBtn" onclick="closeAvatarMenu();showScreen('profile')">Profile</button>
+        <button class="menu-item" id="navQuestBtn" onclick="closeAvatarMenu();openQuestDrawer()">⚡ Side Quest</button>
         <button class="menu-item" id="signOutBtn" onclick="EtieCloud.signOut()">Sign out</button>
       </div>
     </div>
@@ -135,6 +136,7 @@
       <h3>Live users on platform</h3><div class="list" id="adminLiveProfiles"><div class="muted small">No live data yet — sign in on both phones and open Admin again.</div></div>
       <h3>Live requests & meetups</h3><div class="list" id="adminLiveRequests"><div class="muted small">No requests yet.</div></div>
       <h3>Verification queue (live)</h3><div class="list" id="adminVerifyQueue"><div class="muted small">Loading live verifications…</div></div>
+      <h3>Sidequest of the Week</h3><div class="field" style="margin:0 0 8px;"><label>Title</label><input id="sqTitle" maxlength="80" placeholder="e.g. Night bus to nowhere" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #d6d0c8;border-radius:10px;"></div><div class="field" style="margin:0 0 8px;"><label>Description</label><textarea id="sqDesc" maxlength="280" rows="2" placeholder="What to do, where, what counts as done" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #d6d0c8;border-radius:10px;resize:vertical;"></textarea></div><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="secondary" onclick="saveSidequest()" style="padding:10px 16px;">Publish</button><button class="secondary" onclick="clearSidequestLive()" style="padding:10px 16px;">Clear live</button></div><p class="muted small" id="sqStatus">No live sidequest.</p>
       <h3>Safety</h3><p class="muted">Reports, block history, manual review and match intervention live here. This layer is essential for an MVP involving strangers.</p>
       <h3>Test data</h3><p class="muted small">Wipe local or cloud rows for this login during 2-phone realtime tests.</p><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="secondary" onclick="wipeLocalEtie()">Wipe local chat/history</button><button class="secondary" style="background:#fff0f0!important;border-color:#e8b4b4!important;color:#b00020!important;" onclick="wipeEverything()">☠️ Wipe everything (this login)</button></div><p class="muted small">Central kill: tap on each phone while signed in as that user — deletes that login’s cloud rows + local profile/trips/chats.</p>
       <p class="muted small" id="adminLegacyAnchor" style="display:none;">legacy anchor for JS compat</p>
@@ -442,6 +444,7 @@
     </div>
   </div>
   <div id="chatMemories" class="mem-strip" style="display:none;margin:0 12px;"></div>
+  <button class="secondary" id="weeklyQuestBtn" onclick="openQuestDrawer()" style="margin:0 12px 8px;padding:10px 12px;border-radius:12px;font-weight:700;">⚡ Sidequest of the week</button>
   <div class="chat-drawer-list" id="chatMsgList"></div>
   <div class="chat-drawer-foot"><input id="chatMsgInput" placeholder="Message the group..." onkeydown="if(event.key==='Enter')sendHookMessage()"><button class="primary" onclick="sendHookMessage()">Send</button></div>
 </div>
@@ -458,7 +461,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="supabase-config.js?v=69"></script>
-  <script src="app.js?v=102"></script>
-  <script src="supabase-sync.js?v=83"></script>
+  <script src="app.js?v=103"></script>
+  <script src="supabase-sync.js?v=84"></script>
 </body>
 </html>

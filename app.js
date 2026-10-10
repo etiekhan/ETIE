@@ -2985,15 +2985,19 @@ function saveCustomQuest(){
 }
 function openQuestDrawer(){
   try{
-    var p=findPin(_chatPinId);if(!p)return;
-    // Configure Quest of the Week (static for now, could come from backend)
-    var questWeek={
-      title:'Salsa & Bachata Night — Find the Hidden Speakeasy',
-      desc:'Dance your way through a secret salsa spot in Soho. Find the unmarked door, order the house cocktail, and learn 3 moves from a local.'
+    var p=null;try{p=findPin(_chatPinId);}catch(e){}
+    var paint=function(q){
+      try{
+        window._weeklyQuest=(q&&q.title)?{title:q.title,desc:q.descr||q.desc||''}:null;
+        var has=!!window._weeklyQuest;
+        var t=document.getElementById('questWeekTitle');if(t)t.textContent=has?window._weeklyQuest.title:'No sidequest this week yet.';
+        var d=document.getElementById('questWeekDesc');if(d)d.textContent=has?window._weeklyQuest.desc:'Check back soon — new quests drop weekly.';
+        var c=document.getElementById('questWeekCard');if(c)c.style.display='block';
+        var ab=document.querySelector('#questWeekCard .quest-accept');if(ab)ab.style.display=(has&&p)?'':'none';
+      }catch(e){}
     };
-    document.getElementById('questWeekTitle').textContent=questWeek.title;
-    document.getElementById('questWeekDesc').textContent=questWeek.desc;
-    document.getElementById('questWeekCard').style.display='block';
+    if(window.EtieCloud&&window.EtieCloud.fetchSidequest){try{window.EtieCloud.fetchSidequest(paint);}catch(e){paint(null);}}
+    else paint(null);
     document.getElementById('customQuestInput').classList.add('hidden');
     document.getElementById('activeQuestDisplay').classList.add('hidden');
     var o=document.getElementById('questDrawer');
@@ -3002,6 +3006,32 @@ function openQuestDrawer(){
 }
 function closeQuestDrawer(){
   try{var o=document.getElementById('questDrawer');if(o)o.classList.add('hidden');}catch(e){}
+}
+function saveSidequest(){
+  // admin publishes the sidequest of the week (admin UI only; RLS: signed-in writes)
+  try{
+    var t=((document.getElementById('sqTitle')||{}).value||'').trim().slice(0,80);
+    var d=((document.getElementById('sqDesc')||{}).value||'').trim().slice(0,280);
+    if(!t){toast('Give the sidequest a title first.');return;}
+    if(!(window.EtieCloud&&window.EtieCloud.pushSidequest)){toast('Cloud not ready — sign in first.');return;}
+    window.EtieCloud.pushSidequest(t,d).then(function(ok){
+      try{
+        var s=document.getElementById('sqStatus');
+        if(ok){if(s)s.textContent='Live now: '+t;toast('Sidequest live.');
+          try{document.getElementById('sqTitle').value='';document.getElementById('sqDesc').value='';}catch(e){}}
+        else{if(s)s.textContent='Save failed.';toast('Could not save sidequest.');}
+      }catch(e){}
+    });
+  }catch(e){toast('Could not save sidequest.');}
+}
+function clearSidequestLive(){
+  try{
+    if(!(window.EtieCloud&&window.EtieCloud.clearSidequest)){toast('Cloud not ready — sign in first.');return;}
+    window.EtieCloud.clearSidequest().then(function(ok){
+      try{var s=document.getElementById('sqStatus');if(s)s.textContent=ok?'No live sidequest.':'Clear failed.';}catch(e){}
+      if(ok)toast('Sidequest cleared.');
+    });
+  }catch(e){}
 }
 // ===== Memory Card Modal =====
 function openMemoryCard(log){
@@ -3052,17 +3082,15 @@ function closeMemoryCard(){
 function acceptCuratedQuest(){
   try{
     var p=findPin(_chatPinId);if(!p)return;
-    var questWeek={
-      title:'Salsa & Bachata Night — Find the Hidden Speakeasy',
-      desc:'Dance your way through a secret salsa spot in Soho. Find the unmarked door, order the house cocktail, and learn 3 moves from a local.'
-    };
-    p.quest={title:questWeek.title,setBy:'Side Quest',setAt:Date.now(),completed:false};
+    var qw=null;try{qw=window._weeklyQuest;}catch(e){}
+    if(!qw||!qw.title){toast('No live sidequest right now.');return;}
+    p.quest={title:qw.title,setBy:'Side Quest',setAt:Date.now(),completed:false};
     storePin(p);
     closeQuestDrawer();
     renderQuestBanner(p);
     // Pin quest banner to chat
     pinQuestToChat(p);
-    toast('Quest accepted: '+questWeek.title);
+    toast('Quest accepted: '+qw.title);
   }catch(e){toast('Could not accept quest.');}
 }
 function openCustomQuestInput(){

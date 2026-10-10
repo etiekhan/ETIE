@@ -2983,8 +2983,38 @@ function saveCustomQuest(){
     toast('Quest set: '+title);
   }catch(e){toast('Could not set quest.');}
 }
-function openQuestDrawer(){
+function refreshWeeklyBanner(){
+  // map pill for the live sidequest; hidden when none or dismissed (per quest id)
   try{
+    var show=function(q){
+      try{
+        var b=document.getElementById('weeklyQuestBanner');
+        if(!b)return;
+        var dismissed=null;try{dismissed=ETIE.dismissedWeeklyQuest;}catch(e){}
+        if(q&&q.title&&q.id!==dismissed){
+          window._weeklyQuest={id:q.id,title:q.title,desc:q.descr||''};
+          var t=document.getElementById('weeklyQuestBannerText');if(t)t.textContent=q.title;
+          b.classList.remove('hidden');
+          try{document.body.classList.add('has-weekly-quest');}catch(e){}
+        }else{
+          b.classList.add('hidden');
+          try{document.body.classList.remove('has-weekly-quest');}catch(e){}
+        }
+      }catch(e){}
+    };
+    if(window.EtieCloud&&window.EtieCloud.fetchSidequest)window.EtieCloud.fetchSidequest(show);else show(null);
+  }catch(e){}
+}
+function dismissWeeklyQuest(){
+  try{
+    var q=null;try{q=window._weeklyQuest;}catch(e){}
+    try{ETIE.dismissedWeeklyQuest=q&&q.id?q.id:'none';}catch(e){}
+    try{saveState();}catch(e){}
+    var b=document.getElementById('weeklyQuestBanner');if(b)b.classList.add('hidden');
+    try{document.body.classList.remove('has-weekly-quest');}catch(e){}
+  }catch(e){}
+}
+function openQuestDrawer(){  try{
     var p=null;try{p=findPin(_chatPinId);}catch(e){}
     var paint=function(q){
       try{
@@ -3541,6 +3571,7 @@ function sendHookMessage(){
 document.addEventListener('DOMContentLoaded',function(){
   restoreAll();
   try{ initHKMap(); renderMapFilter(); renderMapPins(); }catch(e){}
+  try{ if(typeof refreshWeeklyBanner==='function')refreshWeeklyBanner(); }catch(e){}
   // belt-and-braces: re-render once late so slow tiles/session can't leave an empty map
   try{setTimeout(function(){try{initHKMap();renderMapPins();}catch(e){}},2500);}catch(e){}
   try{ renderDerivedBadge(); locateUser(); }catch(e){}
@@ -3551,8 +3582,8 @@ document.addEventListener('DOMContentLoaded',function(){
   document.addEventListener('click',function(e){try{var m=document.getElementById('avatarMenu');if(m&&e.target&&!m.contains(e.target))closeAvatarMenu();}catch(err){}});
   // re-sync header whenever the tab regains focus (session may have landed elsewhere)
   try{
-    document.addEventListener('visibilitychange',function(){if(!document.hidden){try{updateAuthHeader();renderHeaderProfile();}catch(e){}try{if(window.EtieCloud&&window.EtieCloud.pullPins)window.EtieCloud.pullPins();}catch(e){}}});
-    window.addEventListener('focus',function(){try{updateAuthHeader();renderHeaderProfile();}catch(e){}try{if(window.EtieCloud&&window.EtieCloud.pullPins)window.EtieCloud.pullPins();}catch(e){}});
+    document.addEventListener('visibilitychange',function(){if(!document.hidden){try{updateAuthHeader();renderHeaderProfile();}catch(e){}try{if(window.EtieCloud&&window.EtieCloud.pullPins)window.EtieCloud.pullPins();}catch(e){}try{if(typeof refreshWeeklyBanner==='function')refreshWeeklyBanner();}catch(e){}}});
+    window.addEventListener('focus',function(){try{updateAuthHeader();renderHeaderProfile();}catch(e){}try{if(window.EtieCloud&&window.EtieCloud.pullPins)window.EtieCloud.pullPins();}catch(e){}try{if(typeof refreshWeeklyBanner==='function')refreshWeeklyBanner();}catch(e){}});
   }catch(e){}
   // Subscribe to reviews/reports when cloud is on
   setTimeout(function(){

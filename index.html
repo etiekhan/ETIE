@@ -40,6 +40,7 @@
   <div class="map-stack">
     <div id="mapFilterBar" class="map-filter"></div>
     <div id="mapRoleBar" class="map-filter"></div>
+    <button id="weeklyQuestBanner" class="weekly-quest-banner hidden" onclick="openQuestDrawer()" aria-label="Sidequest of the week"><span aria-hidden="true">⚡</span><span id="weeklyQuestBannerText">Sidequest of the week</span><span aria-hidden="true">→</span><span id="weeklyQuestDismiss" role="button" aria-label="Dismiss" onclick="event.stopPropagation();dismissWeeklyQuest()" style="margin-left:6px;opacity:.7;">✕</span></button>
     <div class="map-wrap2">
       <div id="hkMap"></div>
       <div id="mapEmptyBanner" class="map-empty hidden">No active hooks nearby yet. Be the first to drop a pin around you!</div>
@@ -461,7 +462,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="supabase-config.js?v=69"></script>
-  <script src="app.js?v=103"></script>
+  <script src="app.js?v=104"></script>
   <script src="supabase-sync.js?v=84"></script>
 </body>
 </html>

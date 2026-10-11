@@ -2016,7 +2016,7 @@ function paintSyncBadge(el,p){
     var st=pinSyncState(p);
     el.style.display='';
     el.className='small sync-badge sync-'+st;
-    var label=st==='live'?'☁️ Live — visible to everyone':(st==='syncing'?'⏳ Sharing…':'📴 Only on this device');
+    var label=st==='live'?'● Synced':(st==='syncing'?'⏳ Sharing…':'📴 Only on this device');
     try{if(st!=='live'&&p.syncError)label+=' · '+p.syncError;}catch(e){}
     el.textContent=label;
   }catch(e){}
@@ -2173,7 +2173,7 @@ function groupBadgeText(p){
   try{if(getPinLifecycleState(p)==='requests_closed')return '🔒 Requests closed'+cap;}catch(e){}
   if(p.status==='trio'||n>=3)return '3 Connected'+cap;
   if(p.status==='pair'||n===2)return '1-on-1 Meetup'+cap;
-  return 'Open hook · be the first'+cap;
+  return '🟢 Active'+cap;
 }
 var _expiryToasted={};
 function sweepExpiredPins(){
@@ -2233,17 +2233,7 @@ function openPinDetail(id){
     if(lc){var locTxt=String(p.location||'Hong Kong').replace(/^\s*near\s+/i,'');lc.textContent=mapCatEmoji(p.category)+' '+getRegionFlag(p)+' Near '+locTxt;}
     var pb=document.getElementById('pinBio');if(pb){var bb=p.members&&p.members[0]&&p.members[0].bio;pb.textContent=bb||'';pb.style.display=bb?'':'none';}
     var gb=document.getElementById('pinGroupBadge');if(gb)gb.textContent=groupBadgeText(p);
-    // Lifecycle badge
-    var lbadge=document.getElementById('pinLifecycleBadge');
-    if(!lbadge){
-      lbadge=document.createElement('div');
-      lbadge.id='pinLifecycleBadge';
-      lbadge.style.cssText='margin-top:8px;padding:8px 12px;border-radius:999px;font-size:12px;font-weight:700;text-align:center;';
-      var gc=document.getElementById('pinGroupBadge');
-      if(gc&&gc.parentNode)gc.parentNode.insertBefore(lbadge,gc.nextSibling);
-    }
-    lbadge.className='lifecycle-badge '+getPinLifecycleClass(p);
-    lbadge.textContent=getPinLifecycleLabel(p);
+    try{var _lb0=document.getElementById('pinLifecycleBadge');if(_lb0)_lb0.style.display='none';}catch(e){} // merged into group badge
     var sb=document.getElementById('pinSyncBadge');if(sb)paintSyncBadge(sb,p);
     var mem=document.getElementById('pinMembers');
     if(mem){mem.innerHTML='';(p.members||[]).forEach(function(m){var s=document.createElement('span');s.className='chip';var flag=(m.role==='local')?(m.region?flagForCountry(m.region):getRegionFlag(p)):'✈️ ';s.textContent=flag+m.nick;mem.appendChild(s);});}
@@ -3002,7 +2992,7 @@ function refreshWeeklyBanner(){
         }
       }catch(e){}
     };
-    if(window.EtieCloud&&window.EtieCloud.fetchSidequest)window.EtieCloud.fetchSidequest(show);else show(null);
+    if(window.EtieCloud&&window.EtieCloud.fetchSidequest){try{window.EtieCloud.fetchSidequest(function(q){show(q);try{if(window._chatPinId&&typeof renderQuestBanner==='function'&&typeof findPin==='function'){var pp=findPin(window._chatPinId);if(pp&&!pp.quest)renderQuestBanner(pp);}}catch(e){}});}catch(e){show(null);}}else show(null);
   }catch(e){}
 }
 function dismissWeeklyQuest(){
@@ -3153,29 +3143,33 @@ function acceptCustomQuest(){
   }catch(e){toast('Could not set quest.');}
 }
 function pinQuestToChat(p){
-  try{
-    var q=p?.quest;if(!q)return;
-    var box=document.getElementById('chatMsgList');if(!box)return;
-    // Remove existing quest banner
-    var existing=box.querySelector('.quest-pinned-banner');
-    if(existing)existing.remove();
-    // Create pinned banner
-    var banner=document.createElement('div');
-    banner.className='quest-pinned-banner';
-    banner.innerHTML='<span class="quest-icon">🏆</span>'
-      +'<div class="quest-info"><div class="quest-title">'+q.title+'</div>'
-      +'<div class="quest-meta">Set by '+q.setBy+' · '+fmtWhen(q.setAt)+'</div></div>'
-      +'<button class="quest-complete-btn primary" onclick="openQuestCamera()">📸 Complete & Take Snap</button>';
-box.insertBefore(banner,box.firstChild);
-    box.scrollTop=0;
-  }catch(e){}
+  // retired: the top quest banner card is the single quest surface now.
+  // (Previously this injected a second, near-identical banner as a chat message.)
+  try{}catch(e){}
 }
 function renderQuestBanner(p){
   try{
     var banner=document.getElementById('questBanner');
     if(!banner)return;
     var q=p?.quest;
-    if(!q){banner.classList.add('hidden');return;}
+    var actionBtn=banner.querySelector('.quest-action');
+    var completeBtn=banner.querySelector('.quest-complete');
+    if(!q){
+      // no hook quest: surface the live weekly sidequest instead, with Accept
+      var wq=null;
+      try{wq=window._weeklyQuest;}catch(e){}
+      if(!wq||!wq.title){banner.classList.add('hidden');return;}
+      banner.classList.remove('hidden');
+      banner.classList.add('quest-weekly');
+      var titleEl=banner.querySelector('.quest-title');
+      var subEl=banner.querySelector('.quest-sub');
+      if(titleEl)titleEl.textContent='⚡ '+wq.title;
+      if(subEl)subEl.textContent='Sidequest of the week · tap Accept to play it on this hook';
+      if(actionBtn){actionBtn.style.display='inline-flex';actionBtn.textContent='Accept';actionBtn.onclick=function(){acceptCuratedQuest();};}
+      if(completeBtn)completeBtn.style.display='none';
+      return;
+    }
+    banner.classList.remove('quest-weekly');
     banner.classList.remove('hidden');
     var titleEl=banner.querySelector('.quest-title');
     var subEl=banner.querySelector('.quest-sub');
@@ -3183,7 +3177,7 @@ function renderQuestBanner(p){
     var completeBtn=banner.querySelector('.quest-complete');
     if(titleEl)titleEl.textContent=q.title;
     if(subEl)subEl.textContent='Set by '+q.setBy+' · '+fmtWhen(q.setAt);
-    if(actionBtn)actionBtn.style.display=q.completed?'none':'inline-flex';
+    if(actionBtn){actionBtn.style.display=q.completed?'none':'inline-flex';actionBtn.textContent='✍️ Set Custom Quest';actionBtn.onclick=function(){openSetQuestModal();};}
     if(completeBtn)completeBtn.style.display=q.completed?'none':'inline-flex';
   }catch(e){}
 }

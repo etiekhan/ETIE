@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Etie — MVP User Flow Prototype</title>
 <!-- Phase 1: split from single-file prototype, no visual changes -->
-  <link rel="stylesheet" href="styles.css?v=74">
+  <link rel="stylesheet" href="styles.css?v=75">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 </head>
 <body>
@@ -207,7 +207,7 @@
   <div class="muted small" id="pinWindow" style="display:none;margin:4px 0;"></div>
   <div id="pinLogs" style="display:none;margin:6px 0;"></div>
   <div id="pinSpots" class="spot-strip" style="display:none;"></div>
-  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;"><button class="primary" id="pinChatBtn" onclick="openChatDrawer(_openPinId)" style="display:none;">Open group chat</button><button class="secondary" id="pinLogBtn" onclick="openLogSheet(_openPinId)" style="display:none;">📸 Log Hangout</button><button class="primary" id="pinRequestBtn" onclick="requestPinConnect()">Request to Connect</button></div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;"><button class="secondary" id="pinChatBtn" onclick="openChatDrawer(_openPinId)" style="display:none;">Open group chat</button><button class="primary" id="pinLogBtn" onclick="openLogSheet(_openPinId)" style="display:none;">📸 Log Hangout</button><button class="primary" id="pinRequestBtn" onclick="requestPinConnect()">Request to Connect</button></div>
 </div>
 <div class="chat-overlay hidden" id="groupModal">
   <div class="chat-popup glass-modal" role="dialog" aria-modal="true" aria-label="Expand group" style="width:min(480px,calc(100vw - 24px));">
@@ -445,7 +445,6 @@
     </div>
   </div>
   <div id="chatMemories" class="mem-strip" style="display:none;margin:0 12px;"></div>
-  <button class="secondary" id="weeklyQuestBtn" onclick="openQuestDrawer()" style="margin:0 12px 8px;padding:10px 12px;border-radius:12px;font-weight:700;">⚡ Sidequest of the week</button>
   <div class="chat-drawer-list" id="chatMsgList"></div>
   <div class="chat-drawer-foot"><input id="chatMsgInput" placeholder="Message the group..." onkeydown="if(event.key==='Enter')sendHookMessage()"><button class="primary" onclick="sendHookMessage()">Send</button></div>
 </div>
@@ -462,7 +461,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="supabase-config.js?v=69"></script>
-  <script src="app.js?v=104"></script>
+  <script src="app.js?v=105"></script>
   <script src="supabase-sync.js?v=84"></script>
 </body>
 </html>

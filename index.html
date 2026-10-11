@@ -445,6 +445,7 @@
     </div>
   </div>
   <div id="chatMemories" class="mem-strip" style="display:none;margin:0 12px;"></div>
+  <button class="secondary" id="weeklyQuestBtn" onclick="openQuestDrawer()" style="margin:0 12px 8px;padding:10px 12px;border-radius:12px;font-weight:700;">⚡ Sidequest of the week</button>
   <div class="chat-drawer-list" id="chatMsgList"></div>
   <div class="chat-drawer-foot"><input id="chatMsgInput" placeholder="Message the group..." onkeydown="if(event.key==='Enter')sendHookMessage()"><button class="primary" onclick="sendHookMessage()">Send</button></div>
 </div>
@@ -461,7 +462,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="supabase-config.js?v=69"></script>
-  <script src="app.js?v=105"></script>
+  <script src="app.js?v=106"></script>
   <script src="supabase-sync.js?v=84"></script>
 </body>
 </html>

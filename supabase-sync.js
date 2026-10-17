@@ -1006,9 +1006,13 @@ destination: (typeof ETIE!=='undefined' && ETIE.trip && ETIE.trip.destination)||
       try{
         if(!client||!session||!entry){resolve(null);return;}
         client.from(hangoutTable()).insert({
-          hook_id:String(entry.hookId||''), user_id:session.user.id,
+          hook_id:entry.hookId?String(entry.hookId):null, user_id:session.user.id,
           nickname:entry.nick||'Someone', photo_url:String(entry.photoUrl||'').slice(0,500),
           activity:String(entry.activity||'').slice(0,40),
+          title:String(entry.title||'').slice(0,120),
+          location:String(entry.location||'').slice(0,120),
+          lat:entry.lat==null?null:Number(entry.lat),
+          lng:entry.lng==null?null:Number(entry.lng),
           taken_at:entry.takenAt||new Date().toISOString(),
           is_live_verified:!!entry.verified,
           tagged_user_id:entry.taggedUserId||null,
@@ -1052,6 +1056,37 @@ destination: (typeof ETIE!=='undefined' && ETIE.trip && ETIE.trip.destination)||
       }).catch(function(){cb([]);});
     }catch(e){try{cb([]);}catch(_){}}
   }
+  // Every memory visible to me: ones I logged + ones I was tagged in.
+  function fetchMyMemories(cb){
+    try{
+      if(!client||!session||typeof cb!=='function'){cb([]);return;}
+      var me=session.user.id;
+      client.from(hangoutTable()).select('*').or('user_id.eq.'+me+',tagged_user_id.eq.'+me)
+        .order('taken_at',{ascending:false}).limit(300).then(function(r){
+          try{cb(r&&!r.error?(r.data||[]):[]);}catch(e){cb([]);}
+        }).catch(function(){cb([]);});
+    }catch(e){try{cb([]);}catch(_){}}
+  }
+  // People directory: any signed-in member of ETIE, searchable by name.
+  // Needed because nickname strings collide across cities (two "Kan").
+  function searchPeople(query,cb){
+    try{
+      if(!client||!session||typeof cb!=='function'){cb([]);return;}
+      var me=session.user.id;
+      var q=String(query||'').trim();
+      var run=function(rows){
+        try{
+          var out=(rows||[]).filter(function(r){return r&&r.user_id!==me;}).map(function(r){
+            return {user_id:r.user_id, name:r.display_name||'Someone', city:r.city||''};
+          });
+          cb(out.slice(0,12));
+        }catch(e){cb([]);}
+      };
+      var qy=client.from(profTable()).select('user_id,display_name,city').neq('user_id',me);
+      qy=(q?qy.ilike('display_name','%'+q+'%'):qy.order('display_name',{ascending:true}).limit(40));
+      qy.then(function(r){run(r&&!r.error?r.data:[]);}).catch(function(){cb([]);});
+    }catch(e){try{cb([]);}catch(_){}}
+  }
   // TODO(OAuth): Set up custom domain (e.g. auth.etie.app) in Supabase OAuth settings
 // to replace the raw supabase.co redirect URL on Google login.
 // Configure in Supabase Dashboard > Authentication > URL Configuration > Site URL & Redirect URLs.
@@ -1064,6 +1099,7 @@ destination: (typeof ETIE!=='undefined' && ETIE.trip && ETIE.trip.destination)||
     pushHookMessage:pushHookMessage, subscribeHookChat:subscribeHookChat,
     fetchProfile:fetchProfile, fetchOwnProfile:fetchOwnProfile, redeemInvite:redeemInvite,
     pushHangoutLog:pushHangoutLog, fetchHookLogs:fetchHookLogs, fetchUserLogs:fetchUserLogs, updateHangoutLog:updateHangoutLog, fetchTaggedLogs:fetchTaggedLogs,
+    fetchMyMemories:fetchMyMemories, searchPeople:searchPeople,
     pushSidequest:pushSidequest, fetchSidequest:fetchSidequest, clearSidequest:clearSidequest,
     syncProfile:syncProfile, pushSharedRequest:pushSharedRequest, pushSharedMessage:pushSharedMessage, pushSharedMeetup:pushSharedMeetup,
     pushSharedReview:pushSharedReview, pushSharedReport:pushSharedReport,

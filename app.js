@@ -799,65 +799,58 @@ function renderMemoryMapFull(){
   }catch(e){console.error('renderMemoryMapFull',e);}
 }
 // ===== Fetch hangout logs and render photo markers with clustering =====
+function buildMemoryCluster(photoLogs){
+  try{
+    var markers=L.markerClusterGroup({
+      iconCreateFunction:function(cluster){
+        var c=cluster.getChildCount();
+        var size=c<10?'small':(c<100?'medium':'large');
+        return L.divIcon({
+          html:'<div class="memory-cluster memory-cluster-'+size+'"><span>'+c+'</span></div>',
+          className:'',
+          iconSize:L.point(40,40),
+          iconAnchor:L.point(20,20)
+        });
+      },
+      spiderfyOnMaxZoom:true,
+      showCoverageOnHover:false,
+      zoomToBoundsOnClick:true,
+      maxClusterRadius:50
+    });
+    photoLogs.forEach(function(log){
+      var photo=log.photo_url;
+      var thumb=photo;
+      var lat=log.lat, lng=log.lng;
+      var title=log.title||log.location||'Hangout';
+      var taken=log.taken_at ? new Date(log.taken_at).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}) : '';
+      var questBadge=log.questCompleted ? ' ⚡' : '';
+      var html='<div class="memory-marker" style="width:56px;height:56px;border-radius:12px;overflow:hidden;background:#000;border:3px solid #fff;box-shadow:0 4px 16px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;">'
+        +'<img src="'+thumb+'" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">'
+        +'</div>';
+      var icon=L.divIcon({className:'',html:html,iconSize:[56,56],iconAnchor:[28,28]});
+      var mk=L.marker([lat,lng],{icon:icon,title:title});
+      mk.on('click',function(){
+        openMemoryCard(log);
+      });
+      markers.addLayer(mk);
+    });
+    return markers;
+  }catch(e){return null;}
+}
 function fetchAndRenderMemoryMarkers(mapInstance,onDone){
   try{
-    if(!window.EtieCloud||!window.EtieCloud.fetchUserLogs){mapInstance.off();return;}
+    if(!window.EtieCloud||!window.EtieCloud.fetchUserLogs){if(onDone)onDone(0);return;}
     var myId=null;try{myId=myUid();}catch(e){}
-    if(!myId)return;
+    if(!myId){if(onDone)onDone(0);return;}
     window.EtieCloud.fetchUserLogs(myId,function(logs){
       try{
-        var count=0;
-        if(!logs||!logs.length){
-          if(onDone)onDone(0);
-          return;
-        }
-        // Filter logs that have photos and location
-        var photoLogs=logs.filter(function(l){
-          return l && l.lat!=null && l.lng!=null && l.photo_url;
-        });
-        if(!photoLogs.length){
-          if(onDone)onDone(0);
-          return;
-        }
-        count=photoLogs.length;
-        // Create marker cluster group
-        var markers=L.markerClusterGroup({
-          iconCreateFunction:function(cluster){
-            var c=cluster.getChildCount();
-            var size=c<10?'small':(c<100?'medium':'large');
-            return L.divIcon({
-              html:'<div class="memory-cluster memory-cluster-'+size+'"><span>'+c+'</span></div>',
-              className:'',
-              iconSize:L.point(40,40),
-              iconAnchor:L.point(20,20)
-            });
-          },
-          spiderfyOnMaxZoom:true,
-          showCoverageOnHover:false,
-          zoomToBoundsOnClick:true,
-          maxClusterRadius:50
-        });
-        photoLogs.forEach(function(log){
-          var photo=log.photo_url;
-          var thumb=photo; // use full photo as thumb for now
-          var lat=log.lat, lng=log.lng;
-          var title=log.title||log.location||'Hangout';
-          var taken=log.taken_at ? new Date(log.taken_at).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}) : '';
-          var questBadge=log.questCompleted ? ' ⚡' : '';
-          var html='<div class="memory-marker" style="width:56px;height:56px;border-radius:12px;overflow:hidden;background:#000;border:3px solid #fff;box-shadow:0 4px 16px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;">'
-            +'<img src="'+thumb+'" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">'
-            +'</div>';
-          var icon=L.divIcon({className:'',html:html,iconSize:[56,56],iconAnchor:[28,28]});
-          var mk=L.marker([lat,lng],{icon:icon,title:title});
-          mk.on('click',function(){
-            openMemoryCard(log);
-          });
-          markers.addLayer(mk);
-        });
+        var photoLogs=(logs||[]).filter(function(l){return l&&l.lat!=null&&l.lng!=null&&l.photo_url;});
+        if(!photoLogs.length){if(onDone)onDone(0);return;}
+        var markers=buildMemoryCluster(photoLogs);
+        if(!markers){if(onDone)onDone(0);return;}
         mapInstance.addLayer(markers);
-        // Fit bounds to show all markers
         try{var group=new L.featureGroup(photoLogs.map(function(l){return L.marker([l.lat,l.lng]);}));mapInstance.fitBounds(group.getBounds().pad(0.1));}catch(e){}
-        if(onDone)onDone(count);
+        if(onDone)onDone(photoLogs.length);
       }catch(e){console.error('fetchAndRenderMemoryMarkers',e);if(onDone)onDone(0);}
     });
   }catch(e){console.error('fetchAndRenderMemoryMarkers outer',e);if(onDone)onDone(0);}
@@ -2672,6 +2665,7 @@ function renderAreaSidebar(){
   try{
     var box=document.getElementById('areaList');if(!box)return;
     box.innerHTML='';
+    if(_mapMode==='memories'){renderMemoryAreaSidebar(box);return;}
     var a=getAnchor();
     var me=document.createElement('div');me.className='area-row area-me';
     me.innerHTML='<div><strong></strong><br><span class="muted small">your map home</span></div>';
@@ -2710,6 +2704,88 @@ function renderAreaSidebar(){
     if(h)h.textContent=keys.length?keys.length+' area'+(keys.length===1?'':'s'):'';
   }catch(e){}
 }
+var _mapMode='hooks';
+var _mainMemoryCluster=null;
+function renderMemoryAreaSidebar(box){
+  try{
+    var logs=window._memoryLogsCache||[];
+    var a=getAnchor();
+    var me=document.createElement('div');me.className='area-row area-me';
+    me.innerHTML='<div><strong></strong><br><span class="muted small">your memory map home</span></div>';
+    me.querySelector('strong').textContent='📍 '+(a.label||'Around you');
+    me.onclick=function(){flyToArea(a.lat,a.lng,a.label||'Back home.');};
+    box.appendChild(me);
+    var groups={};
+    logs.forEach(function(l){
+      try{
+        if(!l||l.lat==null||l.lng==null)return;
+        var k=(Math.round(l.lat*2)/2).toFixed(1)+','+(Math.round(l.lng*2)/2).toFixed(1);
+        var g=groups[k]||(groups[k]={lat:0,lng:0,n:0,people:{},labels:{}});
+        g.lat+=l.lat;g.lng+=l.lng;g.n++;
+        if(l.tagged_nickname)g.people[l.tagged_nickname]=1;
+        var lb=l.location||l.title||'Hangout';
+        g.labels[lb]=(g.labels[lb]||0)+1;
+      }catch(e){}
+    });
+    var keys=Object.keys(groups).sort(function(x,y){return groups[y].n-groups[x].n;});
+    if(!keys.length){var em=document.createElement('div');em.className='muted small';em.textContent='No memories yet — use Log a memory below.';box.appendChild(em);}
+    keys.slice(0,12).forEach(function(k){
+      try{
+        var g=groups[k];
+        var top=Object.keys(g.labels).sort(function(x,y){return g.labels[y]-g.labels[x];})[0]||'Somewhere';
+        var np=Object.keys(g.people).length;
+        var row=document.createElement('div');row.className='area-row';
+        row.innerHTML='<div><strong></strong><br><span class="muted small"></span></div>';
+        row.querySelector('strong').textContent=top.length>30?top.slice(0,29)+'…':top;
+        row.querySelector('span.muted').textContent=g.n+' memor'+(g.n===1?'y':'ies')+(np?(' · '+np+' '+(np===1?'person':'people')):'');
+        row.onclick=(function(la,ln,lb2){return function(){flyToArea(la,ln,lb2);};})(g.lat/g.n,g.lng/g.n,top);
+        box.appendChild(row);
+      }catch(e){}
+    });
+    var h=document.getElementById('areaCount');
+    if(h)h.textContent=logs.length?(logs.length+' memor'+(logs.length===1?'y':'ies')):'';
+  }catch(e){}
+}
+function setMapMode(mode){
+  try{
+    _mapMode=(mode==='memories')?'memories':'hooks';
+    var a=document.getElementById('areaTabHooks'),b=document.getElementById('areaTabMem');
+    if(a)a.classList.toggle('active',_mapMode==='hooks');
+    if(b)b.classList.toggle('active',_mapMode==='memories');
+    try{renderAreaSidebar();}catch(e){}
+    applyMapMode();
+    toast(_mapMode==='memories'?'📸 Memories — everywhere you have actually been.':'🪝 Hooks — people going out.');
+  }catch(e){}
+}
+function applyMapMode(){
+  try{
+    if(!window.L||!_map)return;
+    if(_mainMemoryCluster){try{_map.removeLayer(_mainMemoryCluster);}catch(e){}_mainMemoryCluster=null;}
+    try{renderMapPins();}catch(e){}
+    if(_mapMode==='memories')loadMainMemoryMarkers();
+  }catch(e){}
+}
+function loadMainMemoryMarkers(){
+  try{
+    if(!window.EtieCloud||!window.EtieCloud.fetchMyMemories||!_map)return;
+    var myId=null;try{myId=myUid();}catch(e){}
+    if(!myId)return;
+    window.EtieCloud.fetchMyMemories(function(logs){
+      try{
+        window._memoryLogsCache=logs||[];
+        if(_mapMode!=='memories'||!_map)return;
+        if(_mainMemoryCluster){try{_map.removeLayer(_mainMemoryCluster);}catch(e){}_mainMemoryCluster=null;}
+        var photoLogs=window._memoryLogsCache.filter(function(l){return l&&l.lat!=null&&l.lng!=null&&l.photo_url;});
+        if(!photoLogs.length)return;
+        _mainMemoryCluster=buildMemoryCluster(photoLogs);
+        if(_mainMemoryCluster)_map.addLayer(_mainMemoryCluster);
+        try{renderAreaSidebar();}catch(e){}
+      }catch(e){}
+    });
+  }catch(e){}
+}
+function refreshMapMode(){try{applyMapMode();}catch(e){}}
+function closeGroupModal(){try{var o=document.getElementById('groupModal');if(o)o.classList.add('hidden');}catch(e){}}
 function leaveHookChat(pinId){
   // leave an ended hangout: removes you from members and clears local chat.
   // Syncs (members is a real column), so it sticks on every device.
@@ -2777,44 +2853,130 @@ function pinWindow(p){
     return {start:s,end:e};
   }catch(e){var n=Date.now();return {start:n,end:n+6*3600*1000};}
 }
-function closeLogSheet(){try{_logPinId=null;_logFile=null;var o=document.getElementById('logHangoutModal');if(o)o.classList.add('hidden');}catch(e){}}
-function populateLogTagDropdown(p){
+var _logPeople=[];
+var _logSearchResults=[];
+var _logStandalone=false;
+var _logSpot=null;
+function closeLogSheet(){try{_logPinId=null;_logFile=null;_logPeople=[];_logSearchResults=[];_logSpot=null;_logStandalone=false;var o=document.getElementById('logHangoutModal');if(o)o.classList.add('hidden');}catch(e){}}
+function logEsc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function renderLogPeopleChips(){
   try{
-    var sel=document.getElementById('logTaggedMember');
-    if(!sel) return;
-    var me=hookNick();
-    var opts=['<option value="">— No tag —</option>'];
-    (p.members||[]).forEach(function(m){
-      if(m.nick!==me){
-        opts.push('<option value="'+m.nick+'">'+(m.role==='local'?'🇭🇰 ':'✈️ ')+m.nick+'</option>');
-      }
+    var box=document.getElementById('logPeopleChips');if(!box)return;
+    if(!_logPeople.length){box.innerHTML='<span class="muted small">No one added yet.</span>';return;}
+    box.innerHTML=_logPeople.map(function(u){
+      return '<span class="chip"><span>'+logEsc(u.name||'Someone')+'</span><b role="button" aria-label="Remove '+logEsc(u.name||'')+'" onclick="removeLogPerson(\''+u.user_id+'\')" style="cursor:pointer;margin-left:6px;">✕</b></span>';
+    }).join('');
+  }catch(e){}
+}
+function addLogPerson(u){
+  try{
+    if(!u||!u.user_id)return;
+    if(_logPeople.some(function(x){return x.user_id===u.user_id;}))return;
+    _logPeople.push({user_id:u.user_id,name:u.name||'Someone',city:u.city||''});
+    renderLogPeopleChips();
+    var si=document.getElementById('logPeopleSearch');if(si)si.value='';
+    searchLogPeople('');
+  }catch(e){}
+}
+function addLogPersonByIndex(i){
+  try{var u=_logSearchResults[i];if(u)addLogPerson(u);}catch(e){}
+}
+function removeLogPerson(uid){
+  try{_logPeople=_logPeople.filter(function(x){return x.user_id!==uid;});renderLogPeopleChips();searchLogPeople('');}catch(e){}
+}
+// Suggested first: people already in your life (previous memories + approved hook members)
+function logPeopleSuggestions(){
+  try{
+    var out={},me=null;try{me=hookNick();}catch(e){}
+    if(window.EtieCloud&&window.EtieCloud.fetchMyMemories){
+      try{window.EtieCloud.fetchMyMemories(function(rows){
+        (rows||[]).forEach(function(r){
+          if(r&&r.tagged_user_id&&!out[r.tagged_user_id])out[r.tagged_user_id]={user_id:r.tagged_user_id,name:r.tagged_nickname||'Someone',city:''};
+        });
+        try{searchLogPeople('');}catch(_){}
+      });}catch(e){}
+    }
+    (allMapPins()||[]).forEach(function(p){
+      try{
+        (p&&p.members||[]).forEach(function(m){
+          if(m&&m.nick!==me&&m.uid&&!out[m.uid])out[m.uid]={user_id:m.uid,name:m.nick,city:''};
+        });
+      }catch(e){}
     });
-    (p.pending||[]).forEach(function(r){
-      if(r.nick!==me){
-        opts.push('<option value="'+r.nick+'">'+(r.role==='local'?'🇭🇰 ':'✈️ ')+r.nick+' (pending)</option>');
+    return Object.keys(out).map(function(k){return out[k];}).slice(0,8);
+  }catch(e){return [];}
+}
+function searchLogPeople(q){
+  try{
+    var res=document.getElementById('logPeopleResults');if(!res)return;
+    q=String(q||'').trim();
+    var mine={};_logPeople.forEach(function(u){mine[u.user_id]=1;});
+    var draw=function(list){
+      _logSearchResults=(list||[]).filter(function(u){return u&&u.user_id&&!mine[u.user_id];}).slice(0,8);
+      if(!_logSearchResults.length){res.innerHTML='';return;}
+      res.innerHTML=_logSearchResults.map(function(u,i){
+        return '<div class="pick-row" role="button" tabindex="0" onclick="addLogPersonByIndex('+i+')"><span>'+logEsc(u.name||'Someone')+'</span>'
+          +(u.city?'<span class="muted small">'+logEsc(u.city)+'</span>':'')+'</div>';
+      }).join('');
+    };
+    if(!q){
+      var sug=logPeopleSuggestions();
+      if(!sug.length){
+        res.innerHTML=_logSearchResults.length?res.innerHTML:'<div class="muted small" style="padding:6px 8px;">Type a name to find people on ETIE.</div>';
+        return;
       }
-    });
-    sel.innerHTML=opts.join('');
+      res.innerHTML='<div class="muted small" style="padding:6px 8px 2px;">Suggested</div>';
+      draw(sug);
+      return;
+    }
+    if(!window.EtieCloud||!window.EtieCloud.searchPeople){res.innerHTML='';return;}
+    res.innerHTML='<div class="muted small" style="padding:6px 8px;">Searching…</div>';
+    window.EtieCloud.searchPeople(q,function(list){draw(list||[]);});
+  }catch(e){}
+}
+function useMapSpotForLog(){
+  try{
+    if(!window.L||!_map){toast('Map is not ready yet.');return;}
+    var c=_map.getCenter();
+    _logSpot={lat:c.lat,lng:c.lng};
+    var n=document.getElementById('logSpotNote');
+    if(n)n.textContent='Pinned to this spot · '+c.lat.toFixed(4)+', '+c.lng.toFixed(4)+' — it will show on your Memory Map.';
+    toast('📍 Memory pinned here.');
   }catch(e){}
 }
 function openLogSheet(pinId){
   try{
-    var p=findPin(pinId);if(!p){toast('Hook not found.');return;}
+    var p=pinId?findPin(pinId):null;
+    if(pinId&&!p){toast('Hook not found.');return;}
     var me=hookNick();
-    if(!(p.members||[]).some(function(m){return m.nick===me;})){toast('Join this hook first to log photos.');return;}
-    _logPinId=pinId;_logFile=null;_logTakenAt=0;
-    var t=document.getElementById('logHookName');if(t)t.textContent=p.location||'Hook';
-    var w=pinWindow(p);
-    var wt=document.getElementById('logWindow');if(wt)wt.textContent='Hangout window: '+fmtWhen(w.start)+' → '+fmtWhen(w.end)+' (+2h grace for the badge)';
+    if(p&&!(p.members||[]).some(function(m){return m.nick===me;})){toast('Join this hook first to log photos.');return;}
+    _logPinId=p?pinId:null;_logStandalone=!p;_logFile=null;_logTakenAt=0;_logPeople=[];_logSearchResults=[];_logSpot=null;
+    var t=document.getElementById('logHookName');
+    if(t)t.textContent=p?((p.title||p.location||'Hook')):'A hangout off ETIE';
+    var w=document.getElementById('logWindow');
+    if(w){
+      if(p){var pw=pinWindow(p);w.textContent='Hangout window: '+fmtWhen(pw.start)+' → '+fmtWhen(pw.end)+' (+2h grace for the badge)';}
+      else{w.textContent='No hook, no matching, no approval needed. Photo + who you were with is enough.';}
+    }
     var sel=document.getElementById('logActivity');
-    if(sel){for(var i=0;i<sel.options.length;i++){if(sel.options[i].text===p.category){sel.selectedIndex=i;break;}}}
-    populateLogTagDropdown(p);
+    if(sel&&p){for(var i=0;i<sel.options.length;i++){if(sel.options[i].text===p.category){sel.selectedIndex=i;break;}}}
+    var cap=document.getElementById('logCaption');if(cap)cap.value='';
+    var loc=document.getElementById('logLocation');if(loc)loc.value=p?(p.location||''):'';
+    var note=document.getElementById('logSpotNote');
+    if(note)note.textContent='Pan the map to where it happened, then tap Use map view so it shows on your Memory Map.';
+    var si=document.getElementById('logPeopleSearch');if(si)si.value='';
+    renderLogPeopleChips();
     var pv=document.getElementById('logPreview');if(pv)pv.innerHTML='';
     var pi=document.getElementById('logPhotoInput');if(pi)pi.value='';
     var btn=document.getElementById('logUploadBtn');if(btn){btn.disabled=false;btn.textContent='Upload Log';}
     updateOutboxNote();
     var o=document.getElementById('logHangoutModal');if(o)o.classList.remove('hidden');
+    searchLogPeople('');
   }catch(e){}
+}
+// Door 2: log a hangout that happened off the app, with no hook involved.
+function openStandaloneLog(){
+  try{openLogSheet(null);}catch(e){}
 }
 function handleLogPhoto(input){
   try{
@@ -2844,49 +3006,71 @@ function updateOutboxNote(){
 }
 function submitHangoutLog(){
   try{
-    var p=findPin(_logPinId);if(!p){toast('Hook not found.');return;}
+    var p=_logStandalone?null:findPin(_logPinId);
+    if(!_logStandalone&&!p){toast('Hook not found.');return;}
     if(!_logFile){toast('Choose a photo first.');return;}
     var sel=document.getElementById('logActivity');
     var act=sel?sel.options[sel.selectedIndex].text:'';
-    var taggedSel=document.getElementById('logTaggedMember');
-    var taggedNick=taggedSel?taggedSel.value:'';
+    var capEl=document.getElementById('logCaption');
+    var locEl=document.getElementById('logLocation');
+    var caption=capEl?capEl.value.trim().slice(0,120):'';
+    var location=locEl?locEl.value.trim().slice(0,120):'';
     var taken=_logTakenAt||Date.now();
-    var w=pinWindow(p);
-    var ok=taken>=w.start-5*60*1000&&taken<=w.end+2*3600*1000;
-    var pid=p.cloudId||p.id, me=hookNick(), file=_logFile;
+    var ok=false,w=null;
+    if(p){w=pinWindow(p);ok=taken>=w.start-5*60*1000&&taken<=w.end+2*3600*1000;}
+    var pid=p?(p.cloudId||p.id):null;
+    var lat=null,lng=null;
+    if(_logSpot){lat=_logSpot.lat;lng=_logSpot.lng;}
+    else if(p){lat=p.lat;lng=p.lng;}
+    var title=caption||location||act||'Hangout';
+    var me=hookNick(), file=_logFile, tagged=(_logPeople||[]).slice(), urlFor=null;
     var btn=document.getElementById('logUploadBtn');
     var restore=function(){if(btn){btn.disabled=false;btn.textContent='Upload Log';}};
-    var finishUpload=function(url){
+    var done=function(){
       try{
-        restore();
-        if(!url){fileToDataURL(file,function(du){queueLog(pid,act,taken,me,du);toast('Upload failed — queued for retry.');closeLogSheet();updateOutboxNote();});return;}
-        var logEntry={hookId:pid,nick:me,photoUrl:url,activity:act,takenAt:new Date(taken).toISOString(),verified:ok};
-        if(taggedNick){
-          logEntry.taggedUserId=taggedNick;
-          logEntry.taggedNickname=taggedNick;
-          logEntry.status='pending';
-        } else {
-          logEntry.status='confirmed';
-          logEntry.confirmedAt=new Date().toISOString();
+        var entries=[];
+        if(!tagged.length){
+          entries.push({hookId:pid,nick:me,photoUrl:urlFor,activity:act,title:title,location:location,lat:lat,lng:lng,takenAt:new Date(taken).toISOString(),verified:ok,status:'confirmed',confirmedAt:new Date().toISOString()});
+        }else{
+          tagged.forEach(function(u){
+            entries.push({hookId:pid,nick:me,photoUrl:urlFor,activity:act,title:title,location:location,lat:lat,lng:lng,takenAt:new Date(taken).toISOString(),verified:ok,taggedUserId:u.user_id,taggedNickname:u.name||'Someone',status:'pending'});
+          });
         }
-        window.EtieCloud.pushHangoutLog(logEntry).then(function(saved){
-          if(taggedNick){
-            toast('Log uploaded — handshake request sent to '+taggedNick+' (24h to confirm).');
-          } else {
-            if(ok&&saved)bumpPassion(act);
-            toast(ok?('⚡ Verified Live Log · '+fmtWhen(taken)):'Logged — outside the window, no badge this time.');
+        var chain=Promise.resolve();
+        entries.forEach(function(en){chain=chain.then(function(){return window.EtieCloud.pushHangoutLog(en);});});
+        chain.then(function(){
+          if(tagged.length){
+            toast('Memory logged — asked '+tagged.map(function(u){return u.name;}).join(', ')+' to confirm.');
+          }else{
+            if(ok&&p)bumpPassion(act);
+            toast(ok?('⚡ Verified Live Log · '+fmtWhen(taken)):'Memory logged to your map.');
           }
-          closeLogSheet();renderPinLogs(p.id);
+          closeLogSheet();
+          if(p)renderPinLogs(p.id);
+          refreshMapMode();
         });
       }catch(e){restore();}
     };
-    if(!navigator.onLine){fileToDataURL(file,function(du){queueLog(pid,act,taken,me,du);toast('Offline — queued, will upload on reconnect.');closeLogSheet();updateOutboxNote();});return;}
+    var finishUpload=function(url){
+      urlFor=url||null;
+      if(!url){
+        if(_logStandalone){restore();toast('Upload failed — please try again while online.');return;}
+        fileToDataURL(file,function(du){queueLog(pid,act,taken,me,du);toast('Upload failed — queued for retry.');closeLogSheet();updateOutboxNote();});return;
+      }
+      done();
+    };
+    if(!navigator.onLine){
+      if(_logStandalone){toast('You are offline — connect to log a memory.');return;}
+      fileToDataURL(file,function(du){queueLog(pid,act,taken,me,du);toast('Offline — queued, will upload on reconnect.');closeLogSheet();updateOutboxNote();});return;
+    }
     if(btn){btn.disabled=true;btn.textContent='Uploading…';}
     if(window.EtieCloud&&window.EtieCloud.uploadPhoto){
       window.EtieCloud.uploadPhoto(file,'log').then(function(url){finishUpload(url||null);}).catch(function(){
+        if(_logStandalone){restore();toast('Upload failed — please try again.');return;}
         fileToDataURL(file,function(du){restore();queueLog(pid,act,taken,me,du);toast('Upload failed — queued for retry.');closeLogSheet();updateOutboxNote();});
       });
     }else{
+      if(_logStandalone){restore();toast('Upload unavailable — please try again while online.');return;}
       fileToDataURL(file,function(du){restore();queueLog(pid,act,taken,me,du);toast('Offline — queued, will upload on reconnect.');closeLogSheet();updateOutboxNote();});
     }
   }catch(e){}

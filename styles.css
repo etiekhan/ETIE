@@ -663,3 +663,18 @@ body.has-weekly-quest .map-empty{top:180px;}
   .glass-nav #googleBtn{font-size:0!important;padding:8px 12px;white-space:nowrap;}
   .glass-nav #googleBtn::after{content:'Sign in';font-size:12px;font-weight:750;}
 }
+
+/* ===== Map mode switcher on the area bubble ===== */
+.area-tabs{display:flex;gap:4px;margin:0 0 8px;background:rgba(255,255,255,.07);border-radius:11px;padding:3px;}
+.area-tab{flex:1;appearance:none;border:0;background:transparent;color:rgba(245,243,239,.62);font:inherit;font-size:12px;font-weight:700;padding:7px 4px;border-radius:9px;cursor:pointer;transition:background .16s,color .16s;white-space:nowrap;}
+.area-tab:hover{color:#f5f3ef;}
+.area-tab.active{background:#f5f3ef;color:#121214;box-shadow:0 1px 4px rgba(0,0,0,.3);}
+.area-log{appearance:none;margin-top:10px;width:100%;border:1px dashed rgba(255,255,255,.28);background:rgba(255,255,255,.05);color:#f5f3ef;font:inherit;font-size:12px;font-weight:700;padding:9px 8px;border-radius:11px;cursor:pointer;}
+.area-log:hover{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.5);}
+
+/* ===== People picker in the log sheet ===== */
+.pick-results{max-height:168px;overflow-y:auto;display:flex;flex-direction:column;gap:2px;}
+.pick-results:empty{display:none;}
+.pick-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 10px;border-radius:9px;background:rgba(255,255,255,.06);cursor:pointer;font-size:14px;}
+.pick-row:hover{background:rgba(255,255,255,.14);}
+.chips .chip{display:inline-flex;align-items:center;}

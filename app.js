@@ -839,10 +839,12 @@ function buildMemoryCluster(photoLogs){
 }
 function fetchAndRenderMemoryMarkers(mapInstance,onDone){
   try{
-    if(!window.EtieCloud||!window.EtieCloud.fetchUserLogs){if(onDone)onDone(0);return;}
+    if(!window.EtieCloud||!window.EtieCloud.fetchMyMemories){if(onDone)onDone(0);return;}
     var myId=null;try{myId=myUid();}catch(e){}
     if(!myId){if(onDone)onDone(0);return;}
-    window.EtieCloud.fetchUserLogs(myId,function(logs){
+    // fetchMyMemories, not fetchUserLogs: a memory you were tagged in is
+    // logged by someone else, and it belongs on your map too.
+    window.EtieCloud.fetchMyMemories(function(logs){
       try{
         var photoLogs=(logs||[]).filter(function(l){return l&&l.lat!=null&&l.lng!=null&&l.photo_url;});
         if(!photoLogs.length){if(onDone)onDone(0);return;}
@@ -1146,9 +1148,8 @@ function renderMemories(){
       })(i);
     }
     try{
-      if(window.EtieCloud&&window.EtieCloud.fetchUserLogs){
-        var myId=null;try{var _s=window.EtieCloud.getSession();myId=_s&&_s.user&&_s.user.id;}catch(e){}
-        if(myId)window.EtieCloud.fetchUserLogs(myId,function(rows){
+      if(window.EtieCloud&&window.EtieCloud.fetchMyMemories){
+          window.EtieCloud.fetchMyMemories(function(rows){
           try{
             var urls={};
             (rows||[]).forEach(function(r){if(r&&r.is_live_verified&&r.photo_url)urls[r.photo_url]=1;});

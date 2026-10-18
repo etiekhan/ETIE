@@ -692,3 +692,17 @@ body.has-weekly-quest .map-empty{top:180px;}
 .mem-pop-meta strong{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .mem-pop-add{appearance:none;margin-top:8px;width:100%;border:1px dashed rgba(255,255,255,.3);background:rgba(255,255,255,.06);color:#f5f3ef;font:inherit;font-size:12px;font-weight:700;padding:8px;border-radius:10px;cursor:pointer;}
 .mem-pop-add:hover{background:rgba(255,255,255,.14);}
+
+/* ===== Unified Add popup: Drop a hook / Log a memory ===== */
+.add-toggle{display:flex;gap:4px;margin:12px 16px 0;background:rgba(255,255,255,.07);border-radius:12px;padding:3px;}
+.add-tab{flex:1;appearance:none;border:0;background:transparent;color:rgba(245,243,239,.6);font:inherit;font-size:13px;font-weight:700;padding:10px 4px;border-radius:10px;cursor:pointer;white-space:nowrap;transition:background .16s,color .16s;}
+.add-tab:hover{color:#f5f3ef;}
+.add-tab.on{background:#3ddc97;color:#08130e;box-shadow:0 2px 6px rgba(0,0,0,.35);}
+.add-tab.on.mem{background:#ff5fa2;color:#2a0716;}
+.add-where{margin:14px 0 4px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.09);border-radius:14px;padding:12px;}
+.add-where-label{font-size:11px;font-weight:800;letter-spacing:.06em;opacity:.55;text-transform:uppercase;margin-bottom:9px;}
+.add-gps{width:100%;font-size:13px;font-weight:700;padding:11px;}
+.add-minimap{height:112px;border-radius:11px;margin:9px 0;background:#17171a;border:1px solid rgba(255,255,255,.1);}
+#addPlaceName{width:100%;appearance:none;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);color:#f5f3ef;font:inherit;font-size:14px;padding:11px;border-radius:10px;}
+#addPlaceName::placeholder{color:rgba(245,243,239,.35);}
+.add-body.hidden{display:none;}

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Etie — MVP User Flow Prototype</title>
 <!-- Phase 1: split from single-file prototype, no visual changes -->
-  <link rel="stylesheet" href="styles.css?v=77">
+  <link rel="stylesheet" href="styles.css?v=78">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 </head>
 <body>
@@ -47,7 +47,7 @@
       <div id="mapEmptyBanner" class="map-empty hidden">No active hooks nearby yet. Be the first to drop a pin around you!</div>
     </div>
     <div id="bottomActions">
-      <button class="fab" onclick="openDropHook()">+ Drop a Hook</button>
+      <button class="fab" onclick="openDropHook()">+ Drop a hook</button>
       <div class="map-foot"><span class="muted small" id="mapPinCount"></span><span class="muted small">Tap anywhere on the map to place your pin.</span></div>
     </div>
     <div class="map-credit">© Stadia Maps © OpenMapTiles © OpenStreetMap</div>
@@ -147,10 +147,22 @@
 </div>
 <!-- compat: old #admin id still exists for JS that queries it -->
 <div id="admin" style="display:none;"></div>
-<div class="chat-overlay hidden" id="dropHookModal" onclick="if(event.target===this)closeDropHook()">
-  <div class="chat-popup glass-modal" role="dialog" aria-modal="true" aria-label="Drop a Hook" style="width:min(560px,calc(100vw - 24px));">
-    <div class="chat-popup-head"><div><strong>📍 Drop a Hook</strong><div class="muted small">Pin a hangout on the HK map</div></div><button class="secondary" onclick="closeDropHook()" aria-label="Close" style="padding:8px 12px;">✕</button></div>
+<div class="chat-overlay hidden" id="addPopupModal" onclick="if(event.target===this)closeAddPopup()">
+  <div class="chat-popup glass-modal" role="dialog" aria-modal="true" aria-label="Add something" style="width:min(560px,calc(100vw - 24px));">
+    <div class="chat-popup-head"><div><strong>Add something</strong><div class="muted small" id="addSubLabel">One place to drop a hook or log a memory</div></div><button class="secondary" onclick="closeAddPopup()" aria-label="Close" style="padding:8px 12px;">✕</button></div>
+    <div class="add-toggle" role="tablist">
+      <button class="add-tab on" id="addTabHook" role="tab" onclick="setAddTab('hook')">🪝 Drop a hook</button>
+      <button class="add-tab" id="addTabMem" role="tab" onclick="setAddTab('mem')">📸 Log a memory</button>
+    </div>
     <div class="chat-popup-body">
+      <div class="add-where">
+        <div class="add-where-label">Where?</div>
+        <button class="secondary add-gps" onclick="useGpsForAdd()">📍 Use my location</button>
+        <div id="addMiniMap" class="add-minimap"></div>
+        <input id="addPlaceName" maxlength="120" placeholder="Name this place — Mong Kok" oninput="syncAddPlace()">
+        <p class="muted small" id="addSpotNote" style="margin:5px 0 0;">Pins this on your map. Required for a hook, optional for a memory.</p>
+      </div>
+      <div id="addHookBody" class="add-body">
 <div class="field"><label>Quick drop — 1 tap</label><div class="preset-row" id="hookPresets"></div></div>
       <div class="field"><label>1 · Activity title *</label><input id="hookTitle" maxlength="60" placeholder="e.g. Sunrise hike up Dragon's Back"></div>
       <div class="field"><label>2 · Time window *</label>
@@ -189,7 +201,27 @@
         <textarea id="hookText" maxlength="140" rows="2" oninput="hookCountTick()" placeholder="e.g. Grabbing late-night claypot rice in Sham Shui Po—who's down to join?"></textarea>
         <p class="muted small" style="margin:4px 0 0;text-align:right;"><span id="hookCount">0 / 140</span></p>
       </div>
-      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;"><button class="secondary" onclick="closeDropHook()">Cancel</button><button class="primary" onclick="saveDropHook()">Drop Pin</button></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;"><button class="secondary" onclick="closeDropHook()">Cancel</button><button class="primary" onclick="saveDropHook()">Drop hook</button></div>
+      </div>
+      <div id="addMemBody" class="add-body hidden">
+      <p class="muted small" id="logWindow">—</p>
+      <div class="field"><label>Activity tag</label><select id="logActivity"><option>Food</option><option>Nightlife</option><option>Photo</option><option>Sports</option><option>Cafe</option><option>Salsa</option><option>Football</option><option>Coffee</option></select></div>
+      <div class="field"><label>One line about it (optional)</label><input id="logCaption" maxlength="120" placeholder="e.g. Dim sum in Mong Kok"></div>
+      <div class="field"><label>Who were you with? (optional)</label>
+        <input id="logPeopleSearch" maxlength="40" placeholder="Search people on ETIE…" oninput="searchLogPeople(this.value)" autocomplete="off">
+        <div id="logPeopleResults" class="pick-results"></div>
+        <div id="logPeopleChips" class="chips" style="margin-top:8px;"></div>
+        <p class="muted small" style="margin:4px 0 0;">Suggested first: people you've hung out with before. Tagged people can confirm it.</p>
+      </div>
+      <div class="field"><label>Hangout photo</label>
+        <div id="logPreview" style="margin-bottom:8px;"></div>
+        <input type="file" id="logPhotoInput" accept="image/*" style="display:none;" onchange="handleLogPhoto(this)">
+        <button class="secondary" onclick="document.getElementById('logPhotoInput').click()">Choose photo / Take photo</button>
+      </div>
+      <p class="muted small">⚡ Photos taken during your hangout window earn a Verified Live badge!</p>
+      <p class="muted small" id="logOutboxNote" style="display:none;"></p>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;"><button class="secondary" onclick="closeLogSheet()">Cancel</button><button class="primary" id="logUploadBtn" onclick="submitHangoutLog()">Log memory</button></div>
+      </div>
     </div>
   </div>
 </div>
@@ -217,34 +249,6 @@
       <p class="muted small">The group expands to 3 only if <strong>all</strong> existing members accept.</p>
       <div id="groupMembers"></div>
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;"><button class="secondary" onclick="closeGroupModal()">Not now</button></div>
-    </div>
-  </div>
-</div>
-<div class="chat-overlay hidden" id="logHangoutModal" onclick="if(event.target===this)closeLogSheet()">
-  <div class="chat-popup glass-modal" role="dialog" aria-modal="true" aria-label="Log Hangout" style="width:min(480px,calc(100vw - 24px));">
-    <div class="chat-popup-head"><div><strong>📸 Log Hangout</strong><div class="muted small" id="logHookName">—</div></div><button class="secondary" onclick="closeLogSheet()" aria-label="Close" style="padding:8px 12px;">✕</button></div>
-    <div class="chat-popup-body" style="background:transparent;">
-      <p class="muted small" id="logWindow">—</p>
-      <div class="field"><label>Activity tag</label><select id="logActivity"><option>Food</option><option>Nightlife</option><option>Photo</option><option>Sports</option><option>Cafe</option><option>Salsa</option><option>Football</option><option>Coffee</option></select></div>
-      <div class="field"><label>One line about it (optional)</label><input id="logCaption" maxlength="120" placeholder="e.g. Dim sum in Mong Kok"></div>
-      <div class="field"><label>Where did it happen? (optional)</label>
-        <div style="display:flex;gap:8px;"><input id="logLocation" maxlength="120" placeholder="Place or area" style="flex:1;"><button class="secondary" id="logUseMapSpot" onclick="useMapSpotForLog()" style="padding:10px 12px;white-space:nowrap;">📍 Use map view</button></div>
-        <p class="muted small" style="margin:4px 0 0;" id="logSpotNote">Pan the map to where it happened, then tap Use map view so it shows on your Memory Map.</p>
-      </div>
-      <div class="field"><label>Who were you with? (optional)</label>
-        <input id="logPeopleSearch" maxlength="40" placeholder="Search people on ETIE…" oninput="searchLogPeople(this.value)" autocomplete="off">
-        <div id="logPeopleResults" class="pick-results"></div>
-        <div id="logPeopleChips" class="chips" style="margin-top:8px;"></div>
-        <p class="muted small" style="margin:4px 0 0;">Suggested first: people you've hung out with before. Tagged people can confirm it.</p>
-      </div>
-      <div class="field"><label>Hangout photo</label>
-        <div id="logPreview" style="margin-bottom:8px;"></div>
-        <input type="file" id="logPhotoInput" accept="image/*" style="display:none;" onchange="handleLogPhoto(this)">
-        <button class="secondary" onclick="document.getElementById('logPhotoInput').click()">Choose photo / Take photo</button>
-      </div>
-      <p class="muted small">⚡ Photos taken during your hangout window earn a Verified Live badge!</p>
-      <p class="muted small" id="logOutboxNote" style="display:none;"></p>
-      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;"><button class="secondary" onclick="closeLogSheet()">Cancel</button><button class="primary" id="logUploadBtn" onclick="submitHangoutLog()">Upload Log</button></div>
     </div>
   </div>
 </div>
@@ -468,7 +472,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="supabase-config.js?v=69"></script>
-  <script src="app.js?v=109"></script>
+  <script src="app.js?v=110"></script>
   <script src="supabase-sync.js?v=85"></script>
 </body>
 </html>

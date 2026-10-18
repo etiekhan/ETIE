@@ -834,7 +834,7 @@ function addMemoryHereAt(i){
     var l=_popupMemories[i];if(!l)return;
     openLogSheet(null);
     _logSpot={lat:Number(l.lat),lng:Number(l.lng)};
-    var n=document.getElementById('logSpotNote');
+    var n=document.getElementById('addSpotNote');
     if(n)n.textContent='Adding to this spot · '+Number(l.lat).toFixed(4)+', '+Number(l.lng).toFixed(4);
     var loc=document.getElementById('logLocation');
     if(loc&&!loc.value.trim())loc.value=l.location||'';
@@ -1993,6 +1993,7 @@ function renderHookPresets(){
 function openDropHook(){
   try{
     if(needProfile('drop a hook'))return;
+    _addInitHook=true;
     var startRole='traveller';
     try{startRole=(ETIE.derivedRole||ETIE.activeRole)==='local'?'local':'traveller';}catch(e){}
     _hookDraft={category:'general',categoryTouched:false,role:startRole,window:'custom',capacity:3,customStart:null,customEnd:null,photos:[]};
@@ -2036,9 +2037,141 @@ function openDropHook(){
     hookCountTick();setHookRole(_hookDraft.role);
     if(_dropMarker){try{_map.removeLayer(_dropMarker);}catch(e){}_dropMarker=null;}
     if(_dropPoint){try{_dropMarker=L.marker([_dropPoint.lat,_dropPoint.lng],{title:'Your pin location'}).addTo(_map);}catch(e){}}
+    try{adoptSharedPlace();}catch(e2){}
+    if(_suppressPopupShow){_suppressPopupShow=false;}else{showAddPopup('hook');}
   }catch(e){}
 }
-function closeDropHook(){try{var o=document.getElementById('dropHookModal');if(o)o.classList.add('hidden');}catch(e){}}
+// ===== Unified "Add something" popup: Drop a hook / Log a memory =====
+// One location block for both tabs. The picker writes _addPoint and the shared
+// name field writes back into each tab's own input, so saveDropHook() and
+// submitHangoutLog() keep reading the exact variables they always read.
+var _addTab='hook';
+var _addPoint=null;
+var _addMiniMap=null;
+var _addMiniMarker=null;
+var _addInitHook=false;
+var _addInitMem=false;
+var _suppressPopupShow=false;
+// Each tab has its own init (draft state, defaults, validation). Entering the
+// popup on one tab must not leave the other tab half-built, or saving it
+// silently fails on undefined draft state.
+function ensureAddTabInit(tab){
+  try{
+    if(tab==='hook'){
+      if(!_addInitHook){_addInitHook=true;_suppressPopupShow=true;try{openDropHook();}catch(e){}}
+      return;
+    }
+    if(!_addInitMem){_addInitMem=true;_suppressPopupShow=true;try{openLogSheet(null);}catch(e){}}
+  }catch(e){}
+}
+function syncAddPlace(){
+  try{
+    var v=((document.getElementById('addPlaceName')||{}).value)||'';
+    var h=document.getElementById('hookLocation');if(h)h.value=v;
+    var l=document.getElementById('logLocation');if(l)l.value=v;
+    var n=document.getElementById('addSpotNote');
+    if(n)n.textContent=_addPoint?('Pinned · '+_addPoint.lat.toFixed(4)+', '+_addPoint.lng.toFixed(4)+(_addTab==='hook'?' — required for a hook.':' — optional for a memory.')):'Pins this on your map. Required for a hook, optional for a memory.';
+  }catch(e){}
+}
+function adoptSharedPlace(){
+  try{
+    var s=document.getElementById('addPlaceName');
+    if(s&&!String(s.value||'').trim()){
+      var h=document.getElementById('hookLocation'),l=document.getElementById('logLocation');
+      var hv=h?String(h.value||'').trim():'', lv=l?String(l.value||'').trim():'';
+      if(hv)s.value=hv; else if(lv)s.value=lv;
+    }
+    // A point chosen earlier in this session (e.g. a map tap before the popup)
+    if(!_addPoint&&typeof _dropPoint!=='undefined'&&_dropPoint)_addPoint={lat:_dropPoint.lat,lng:_dropPoint.lng};
+    if(!_addPoint&&typeof _logSpot!=='undefined'&&_logSpot)_addPoint={lat:_logSpot.lat,lng:_logSpot.lng};
+    // Each tab's init clears its own spot variable. Push the shared point back
+    // into both, or switching tabs silently discards the pin.
+    if(_addPoint&&(typeof _logSpot==='undefined'||!_logSpot||Math.abs((_logSpot.lat||0)-_addPoint.lat)>1e-6)){
+      setAddPoint(_addPoint.lat,_addPoint.lng,true);
+    }
+    syncAddPlace();
+  }catch(e){}
+}
+function setAddPoint(lat,lng,quiet){
+  try{
+    _addPoint={lat:Number(lat),lng:Number(lng)};
+    if(typeof _dropPoint!=='undefined')_dropPoint={lat:_addPoint.lat,lng:_addPoint.lng};
+    if(typeof _logSpot!=='undefined')_logSpot={lat:_addPoint.lat,lng:_addPoint.lng};
+    if(!quiet)toast('📍 Pinned here.');
+    syncAddPlace();
+    if(_addMiniMap){
+      try{_addMiniMap.setView([_addPoint.lat,_addPoint.lng],Math.max(14,_addMiniMap.getZoom()));}catch(e){}
+      if(_addMiniMarker){try{_addMiniMarker.setLatLng([_addPoint.lat,_addPoint.lng]);}catch(e){}}
+      else{try{_addMiniMarker=L.marker([_addPoint.lat,_addPoint.lng],{draggable:true}).addTo(_addMiniMap);_addMiniMarker.on('dragend',function(){var p=_addMiniMarker.getLatLng();setAddPoint(p.lat,p.lng,true);});}catch(e){}}
+    }
+    try{if(_map&&_dropMarker){_map.removeLayer(_dropMarker);_dropMarker=null;}}catch(e){}
+  }catch(e){}
+}
+function useGpsForAdd(){
+  try{
+    if(!navigator.geolocation){toast('Location is not available on this device.');return;}
+    toast('📍 Finding you…');
+    navigator.geolocation.getCurrentPosition(function(pos){
+      try{setAddPoint(pos.coords.latitude,pos.coords.longitude);toast('📍 Pinned to where you are.');}catch(e){}
+    },function(){toast('Could not get your location — tap the mini map instead.');},{enableHighAccuracy:true,timeout:9000,maximumAge:30000});
+  }catch(e){}
+}
+function destroyAddMiniMap(){
+  try{if(_addMiniMap){_addMiniMap.remove();}}catch(e){}
+  _addMiniMap=null;_addMiniMarker=null;
+}
+function initAddMiniMap(){
+  try{
+    destroyAddMiniMap();
+    if(!window.L)return;
+    var el=document.getElementById('addMiniMap');if(!el)return;
+    var c=_addPoint||{lat:(getAnchor?getAnchor().lat:22.3193),lng:(getAnchor?getAnchor().lng:114.1694)};
+    _addMiniMap=L.map(el,{zoomControl:false,attributionControl:false,dragging:true,touchZoom:true,scrollWheelZoom:false,doubleClickZoom:false,boxZoom:false,keyboard:false});
+    L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png?api_key=cc9c3230-65b0-44c0-8361-2c86413b0744',{maxZoom:18,attribution:''}).addTo(_addMiniMap);
+    _addMiniMap.setView([c.lat,c.lng],14);
+    _addMiniMap.on('click',function(e){setAddPoint(e.latlng.lat,e.latlng.lng);});
+    _addMiniMarker=L.marker([c.lat,c.lng],{draggable:true}).addTo(_addMiniMap);
+    _addMiniMarker.on('dragend',function(){var p=_addMiniMarker.getLatLng();setAddPoint(p.lat,p.lng,true);});
+    setTimeout(function(){try{_addMiniMap.invalidateSize();}catch(e){}},120);
+  }catch(e){}
+}
+function setAddTab(tab){
+  try{
+    _addTab=(tab==='mem')?'mem':'hook';
+    var a=document.getElementById('addTabHook'),b=document.getElementById('addTabMem');
+    if(a){a.classList.toggle('on',_addTab==='hook');a.classList.remove('mem');}
+    if(b){b.classList.toggle('on',_addTab==='mem');b.classList.toggle('mem',_addTab==='mem');}
+    var hb=document.getElementById('addHookBody'),mb=document.getElementById('addMemBody');
+    if(hb)hb.classList.toggle('hidden',_addTab!=='hook');
+    if(mb)mb.classList.toggle('hidden',_addTab!=='mem');
+    var sl=document.getElementById('addSubLabel');
+    if(sl)sl.textContent=_addTab==='mem'?'A hangout that already happened':'Something coming up you want people to join';
+    ensureAddTabInit(_addTab);
+    // never lose what was typed: the shared place/name/pin live outside both bodies
+    syncAddPlace();
+    if(_addTab==='mem'){try{searchLogPeople('');}catch(e){}}
+    try{if(_addMiniMap)_addMiniMap.invalidateSize();}catch(e){}
+  }catch(e){}
+}
+function showAddPopup(tab){
+  try{
+    var t=(tab==='mem')?'mem':'hook';
+    setAddTab(t);
+    var o=document.getElementById('addPopupModal');if(!o)return;
+    o.classList.remove('hidden');
+    try{var b=o.querySelector('.chat-popup-body');if(b)b.scrollTop=0;}catch(e){}
+    initAddMiniMap();
+    syncAddPlace();
+  }catch(e){}
+}
+function closeAddPopup(){
+  try{
+    var o=document.getElementById('addPopupModal');if(o)o.classList.add('hidden');
+    destroyAddMiniMap();
+    _addInitHook=false;_addInitMem=false;
+  }catch(e){}
+}
+function closeDropHook(){try{closeAddPopup();}catch(e){}}
 function handleHookPhotos(input){
   try{
     var files=Array.from(input.files||[]).slice(0,3);
@@ -2930,7 +3063,7 @@ var _logPeople=[];
 var _logSearchResults=[];
 var _logStandalone=false;
 var _logSpot=null;
-function closeLogSheet(){try{_logPinId=null;_logFile=null;_logPeople=[];_logSearchResults=[];_logSpot=null;_logStandalone=false;var o=document.getElementById('logHangoutModal');if(o)o.classList.add('hidden');}catch(e){}}
+function closeLogSheet(){try{closeAddPopup();}catch(e){}}
 function logEsc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 function renderLogPeopleChips(){
   try{
@@ -3007,18 +3140,9 @@ function searchLogPeople(q){
     window.EtieCloud.searchPeople(q,function(list){draw(list||[]);});
   }catch(e){}
 }
-function useMapSpotForLog(){
-  try{
-    if(!window.L||!_map){toast('Map is not ready yet.');return;}
-    var c=_map.getCenter();
-    _logSpot={lat:c.lat,lng:c.lng};
-    var n=document.getElementById('logSpotNote');
-    if(n)n.textContent='Pinned to this spot · '+c.lat.toFixed(4)+', '+c.lng.toFixed(4)+' — it will show on your Memory Map.';
-    toast('📍 Memory pinned here.');
-  }catch(e){}
-}
 function openLogSheet(pinId){
   try{
+    _addInitMem=true;
     var p=pinId?findPin(pinId):null;
     if(pinId&&!p){toast('Hook not found.');return;}
     var me=hookNick();
@@ -3035,15 +3159,16 @@ function openLogSheet(pinId){
     if(sel&&p){for(var i=0;i<sel.options.length;i++){if(sel.options[i].text===p.category){sel.selectedIndex=i;break;}}}
     var cap=document.getElementById('logCaption');if(cap)cap.value='';
     var loc=document.getElementById('logLocation');if(loc)loc.value=p?(p.location||''):'';
-    var note=document.getElementById('logSpotNote');
-    if(note)note.textContent='Pan the map to where it happened, then tap Use map view so it shows on your Memory Map.';
+    var note=document.getElementById('addSpotNote');
+    if(note)note.textContent='Pins this on your map. Optional for a memory.';
     var si=document.getElementById('logPeopleSearch');if(si)si.value='';
     renderLogPeopleChips();
     var pv=document.getElementById('logPreview');if(pv)pv.innerHTML='';
     var pi=document.getElementById('logPhotoInput');if(pi)pi.value='';
     var btn=document.getElementById('logUploadBtn');if(btn){btn.disabled=false;btn.textContent='Upload Log';}
     updateOutboxNote();
-    var o=document.getElementById('logHangoutModal');if(o)o.classList.remove('hidden');
+    try{adoptSharedPlace();}catch(e2){}
+    if(_suppressPopupShow){_suppressPopupShow=false;}else{showAddPopup('mem');}
     searchLogPeople('');
   }catch(e){}
 }
@@ -3085,7 +3210,7 @@ function submitHangoutLog(){
     var sel=document.getElementById('logActivity');
     var act=sel?sel.options[sel.selectedIndex].text:'';
     var capEl=document.getElementById('logCaption');
-    var locEl=document.getElementById('logLocation');
+    var locEl=document.getElementById('logLocation')||document.getElementById('addPlaceName');
     var caption=capEl?capEl.value.trim().slice(0,120):'';
     var location=locEl?locEl.value.trim().slice(0,120):'';
     var taken=_logTakenAt||Date.now();

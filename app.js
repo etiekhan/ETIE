@@ -799,8 +799,67 @@ function renderMemoryMapFull(){
   }catch(e){console.error('renderMemoryMapFull',e);}
 }
 // ===== Fetch hangout logs and render photo markers with clustering =====
-function buildMemoryCluster(photoLogs){
+// A hangout with N tagged people is stored as N rows (one tagged_user_id each).
+// Collapse them into one entry so a single hangout never shows up N times, and
+// merge everyone's names so the popup can still say who was there.
+function dedupeMemories(logs){
   try{
+    var map={},order=[];
+    (logs||[]).forEach(function(l){
+      try{
+        if(!l)return;
+        var k=(l.photo_url||'')+'|'+(l.taken_at||'')+'|'+(l.location||'')+'|'+l.lat+','+l.lng;
+        var ex=map[k];
+        if(!ex){
+          ex={};for(var f in l){if(Object.prototype.hasOwnProperty.call(l,f))ex[f]=l[f];}
+          ex._people=[];ex._nicknames=[];
+          map[k]=ex;order.push(ex);
+        }
+        if(l.tagged_user_id&&ex._people.indexOf(l.tagged_user_id)<0){
+          ex._people.push(l.tagged_user_id);
+          if(l.tagged_nickname&&ex._nicknames.indexOf(l.tagged_nickname)<0)ex._nicknames.push(l.tagged_nickname);
+        }
+        if(l.status==='confirmed')ex.status='confirmed';
+      }catch(e){}
+    });
+    return order;
+  }catch(e){return logs||[];}
+}
+var _popupMemories=[];
+function openPopupMemory(i){
+  try{var l=_popupMemories[i];if(l)openMemoryCard(l);}catch(e){}
+}
+function addMemoryHereAt(i){
+  try{
+    var l=_popupMemories[i];if(!l)return;
+    openLogSheet(null);
+    _logSpot={lat:Number(l.lat),lng:Number(l.lng)};
+    var n=document.getElementById('logSpotNote');
+    if(n)n.textContent='Adding to this spot · '+Number(l.lat).toFixed(4)+', '+Number(l.lng).toFixed(4);
+    var loc=document.getElementById('logLocation');
+    if(loc&&!loc.value.trim())loc.value=l.location||'';
+  }catch(e){}
+}
+function memoryPopupHtml(list){
+  try{
+    var rows=list.map(function(l,i){
+      var when='';try{when=l.taken_at?fmtWhen(new Date(l.taken_at).getTime()):'';}catch(e){}
+      var sub=[when,l.location].filter(Boolean).join(' · ');
+      var who=(l._nicknames||[]).join(', ');
+      return '<div class="mem-pop-row" role="button" tabindex="0" onclick="openPopupMemory('+i+')">'
+        +'<div class="mem-pop-thumb">'+(l.photo_url?('<img src="'+l.photo_url+'" alt="">'):'')+'</div>'
+        +'<div class="mem-pop-meta"><strong>'+logEsc(l.title||l.location||'Hangout')+'</strong>'
+        +(sub?'<span class="muted small">'+logEsc(sub)+'</span>':'')
+        +(who?'<span class="muted small">with '+logEsc(who)+'</span>':'')
+        +'</div></div>';
+    }).join('');
+    return '<div class="mem-pop"><div class="mem-pop-head">'+list.length+' memor'+(list.length===1?'y':'ies')+' here</div>'
+      +rows+'<button class="mem-pop-add" onclick="addMemoryHereAt(0)">+ Add a photo here</button></div>';
+  }catch(e){return '';}
+}
+function buildMemoryCluster(rawLogs){
+  try{
+    var photoLogs=dedupeMemories(rawLogs);
     var markers=L.markerClusterGroup({
       iconCreateFunction:function(cluster){
         var c=cluster.getChildCount();
@@ -814,25 +873,38 @@ function buildMemoryCluster(photoLogs){
       },
       spiderfyOnMaxZoom:true,
       showCoverageOnHover:false,
-      zoomToBoundsOnClick:true,
+      // Photos logged at the same spot have identical coordinates, so their
+      // cluster bounds are a single point. Zooming toward it did nothing and
+      // the photos became unreachable. Open the feed popup instead.
+      zoomToBoundsOnClick:false,
       maxClusterRadius:50
     });
-    photoLogs.forEach(function(log){
-      var photo=log.photo_url;
-      var thumb=photo;
-      var lat=log.lat, lng=log.lng;
-      var title=log.title||log.location||'Hangout';
-      var taken=log.taken_at ? new Date(log.taken_at).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}) : '';
-      var questBadge=log.questCompleted ? ' ⚡' : '';
-      var html='<div class="memory-marker" style="width:56px;height:56px;border-radius:12px;overflow:hidden;background:#000;border:3px solid #fff;box-shadow:0 4px 16px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;">'
-        +'<img src="'+thumb+'" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">'
-        +'</div>';
-      var icon=L.divIcon({className:'',html:html,iconSize:[56,56],iconAnchor:[28,28]});
-      var mk=L.marker([lat,lng],{icon:icon,title:title});
-      mk.on('click',function(){
-        openMemoryCard(log);
-      });
-      markers.addLayer(mk);
+    rawLogs.forEach(function(log){
+      try{
+        var photo=log.photo_url;
+        var thumb=photo;
+        var lat=log.lat, lng=log.lng;
+        var title=log.title||log.location||'Hangout';
+        var html='<div class="memory-marker" style="width:56px;height:56px;border-radius:12px;overflow:hidden;background:#000;border:3px solid #fff;box-shadow:0 4px 16px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;">'
+          +'<img src="'+thumb+'" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">'
+          +'</div>';
+        var icon=L.divIcon({className:'',html:html,iconSize:[56,56],iconAnchor:[28,28]});
+        var mk=L.marker([lat,lng],{icon:icon,title:title});
+        mk.options.etieLog=log;
+        mk.on('click',function(){openMemoryCard(log);});
+        markers.addLayer(mk);
+      }catch(e){}
+    });
+    markers.on('clusterclick',function(e){
+      try{
+        var kids=e.layer.getAllChildMarkers();
+        var logs=(kids||[]).map(function(mk){return mk&&mk.options?mk.options.etieLog:null;}).filter(Boolean);
+        var list=dedupeMemories(logs);
+        if(!list.length)return;
+        if(list.length===1){openMemoryCard(list[0]);return;}
+        _popupMemories=list;
+        e.layer.bindPopup(memoryPopupHtml(list),{maxWidth:290,minWidth:230,className:'mem-popup-wrap'}).openPopup();
+      }catch(e2){}
     });
     return markers;
   }catch(e){return null;}
@@ -2773,7 +2845,7 @@ function loadMainMemoryMarkers(){
     if(!myId)return;
     window.EtieCloud.fetchMyMemories(function(logs){
       try{
-        window._memoryLogsCache=logs||[];
+        window._memoryLogsCache=dedupeMemories(logs);
         if(_mapMode!=='memories'||!_map)return;
         if(_mainMemoryCluster){try{_map.removeLayer(_mainMemoryCluster);}catch(e){}_mainMemoryCluster=null;}
         var photoLogs=window._memoryLogsCache.filter(function(l){return l&&l.lat!=null&&l.lng!=null&&l.photo_url;});

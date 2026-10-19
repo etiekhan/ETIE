@@ -2792,6 +2792,9 @@ function updateFabForMapMode(){
 }
 function openAddByMapMode(){
   try{
+    // Read the mode once, and correct the label from that same value. The
+    // button can then never describe one thing and do another.
+    updateFabForMapMode();
     if(_mapMode==='memories'){openStandaloneLog();return;}
     openDropHook();
   }catch(e){}

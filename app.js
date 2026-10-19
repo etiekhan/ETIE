@@ -1754,12 +1754,18 @@ function initHKMap(){
 var _pickMode=null; // legacy map-tap mode flag (kept for compat)
 function onMapTap(e){
   try{
-    _dropPoint={lat:e.latlng.lat,lng:e.latlng.lng};
+    var lat=e.latlng.lat,lng=e.latlng.lng;
+    _dropPoint={lat:lat,lng:lng};
     if(_dropMarker){try{_map.removeLayer(_dropMarker);}catch(_){}}
-    _dropMarker=L.marker([_dropPoint.lat,_dropPoint.lng],{title:'Your pin location'}).addTo(_map);
-    var guess='Near '+nearestDistrictLabel(_dropPoint.lat,_dropPoint.lng);
+    _dropMarker=L.marker([lat,lng],{title:'Your pin location'}).addTo(_map);
     _pickMode=null;
-    window._pendingDropGuess=guess;
+    // Tapping the map is the single way in, on both maps. Which procedure it
+    // opens is decided by the sidebar mode -- no second button to remember.
+    if(_mapMode==='memories'){
+      try{openLogSheet(null,{lat:lat,lng:lng,label:nearestDistrictLabel(lat,lng)});}catch(_){}
+      return;
+    }
+    window._pendingDropGuess='Near '+nearestDistrictLabel(lat,lng);
     openDropHook();
   }catch(err){}
 }
@@ -2777,28 +2783,6 @@ function renderAreaSidebar(){
     if(h)h.textContent=keys.length?keys.length+' area'+(keys.length===1?'':'s'):'';
   }catch(e){}
 }
-// The left-hand map mode (Hooks / Memories) is the single switch that decides
-// what the main add button creates. No second toggle inside the popup -- the
-// sidebar already answers "hooks or memories?" and duplicating it is the
-// complexity we were trying to remove.
-function updateFabForMapMode(){
-  try{
-    var b=document.getElementById('addFab');if(!b)return;
-    var mem=(_mapMode==='memories');
-    b.textContent=mem?'+ Log a memory':'+ Drop a hook';
-    b.classList.toggle('mem',mem);
-    b.setAttribute('aria-label',mem?'Log a memory':'Drop a hook');
-  }catch(e){}
-}
-function openAddByMapMode(){
-  try{
-    // Read the mode once, and correct the label from that same value. The
-    // button can then never describe one thing and do another.
-    updateFabForMapMode();
-    if(_mapMode==='memories'){openStandaloneLog();return;}
-    openDropHook();
-  }catch(e){}
-}
 var _mapMode='hooks';
 var _mainMemoryCluster=null;
 function renderMemoryAreaSidebar(box){
@@ -2848,7 +2832,7 @@ function setMapMode(mode){
     if(a)a.classList.toggle('active',_mapMode==='hooks');
     if(b)b.classList.toggle('active',_mapMode==='memories');
     try{renderAreaSidebar();}catch(e){}
-    updateFabForMapMode();
+    try{var h=document.getElementById('mapTapHint');if(h)h.textContent=_mapMode==='memories'?'Tap anywhere on the map to log a memory here.':'Tap anywhere on the map to place your pin.';}catch(_){}
     applyMapMode();
     toast(_mapMode==='memories'?'📸 Memories — everywhere you have actually been.':'🪝 Hooks — people going out.');
   }catch(e){}
@@ -3040,13 +3024,15 @@ function useMapSpotForLog(){
     toast('📍 Memory pinned here.');
   }catch(e){}
 }
-function openLogSheet(pinId){
+function openLogSheet(pinId,spot){
   try{
     var p=pinId?findPin(pinId):null;
     if(pinId&&!p){toast('Hook not found.');return;}
     var me=hookNick();
     if(p&&!(p.members||[]).some(function(m){return m.nick===me;})){toast('Join this hook first to log photos.');return;}
     _logPinId=p?pinId:null;_logStandalone=!p;_logFile=null;_logTakenAt=0;_logPeople=[];_logSearchResults=[];_logSpot=null;
+    // Called from a map tap: keep the tapped point (this reset just cleared it)
+    if(spot&&spot.lat!=null)_logSpot={lat:Number(spot.lat),lng:Number(spot.lng)};
     var t=document.getElementById('logHookName');
     if(t)t.textContent=p?((p.title||p.location||'Hook')):'A hangout off ETIE';
     var w=document.getElementById('logWindow');
@@ -3057,7 +3043,8 @@ function openLogSheet(pinId){
     var sel=document.getElementById('logActivity');
     if(sel&&p){for(var i=0;i<sel.options.length;i++){if(sel.options[i].text===p.category){sel.selectedIndex=i;break;}}}
     var cap=document.getElementById('logCaption');if(cap)cap.value='';
-    var loc=document.getElementById('logLocation');if(loc)loc.value=p?(p.location||''):'';
+    var loc=document.getElementById('logLocation');
+    if(loc)loc.value=p?(p.location||''):((spot&&spot.label)?spot.label:'');
     var note=document.getElementById('logSpotNote');
     if(note)note.textContent='Pan the map to where it happened, then tap Use map view so it shows on your Memory Map.';
     var si=document.getElementById('logPeopleSearch');if(si)si.value='';

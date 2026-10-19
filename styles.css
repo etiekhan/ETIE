@@ -693,6 +693,3 @@ body.has-weekly-quest .map-empty{top:180px;}
 .mem-pop-add{appearance:none;margin-top:8px;width:100%;border:1px dashed rgba(255,255,255,.3);background:rgba(255,255,255,.06);color:#f5f3ef;font:inherit;font-size:12px;font-weight:700;padding:8px;border-radius:10px;cursor:pointer;}
 .mem-pop-add:hover{background:rgba(255,255,255,.14);}
 
-/* Main add button follows the sidebar map mode: hooks vs memories */
-.fab.mem{background:#ff5fa2;color:#2a0716;}
-.fab.mem:hover{background:#ff7fb5;}

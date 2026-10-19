@@ -2965,17 +2965,16 @@ function removeLogPerson(uid){
   try{_logPeople=_logPeople.filter(function(x){return x.user_id!==uid;});renderLogPeopleChips();searchLogPeople('');}catch(e){}
 }
 // Suggested first: people already in your life (previous memories + approved hook members)
+// Fallback: all registered users on ETIE (paginated search)
 function logPeopleSuggestions(){
   try{
     var out={},me=null;try{me=hookNick();}catch(e){}
-    if(window.EtieCloud&&window.EtieCloud.fetchMyMemories){
-      try{window.EtieCloud.fetchMyMemories(function(rows){
-        (rows||[]).forEach(function(r){
-          if(r&&r.tagged_user_id&&!out[r.tagged_user_id])out[r.tagged_user_id]={user_id:r.tagged_user_id,name:r.tagged_nickname||'Someone',city:''};
-        });
-        try{searchLogPeople('');}catch(_){}
-      });}catch(e){}
-    }
+    try{window.EtieCloud.fetchMyMemories(function(rows){
+      (rows||[]).forEach(function(r){
+        if(r&&r.tagged_user_id&&!out[r.tagged_user_id])out[r.tagged_user_id]={user_id:r.tagged_user_id,name:r.tagged_nickname||'Someone',city:''};
+      });
+      try{searchLogPeople('');}catch(_){}
+    });}catch(e){}
     (allMapPins()||[]).forEach(function(p){
       try{
         (p&&p.members||[]).forEach(function(m){
@@ -2983,6 +2982,7 @@ function logPeopleSuggestions(){
         });
       }catch(e){}
     });
+    // Fallback: all registered users (search will handle pagination)
     return Object.keys(out).map(function(k){return out[k];}).slice(0,8);
   }catch(e){return [];}
 }

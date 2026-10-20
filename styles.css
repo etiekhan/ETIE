@@ -701,3 +701,18 @@ body.has-weekly-quest .map-empty{top:180px;}
   align-items:center;
   justify-content:center;
 }
+
+/* High-contrast dark map via CSS tile inversion (zero API key) */
+.leaflet-tile-pane { 
+  filter: invert(100%) hue-rotate(180deg) brightness(90%) contrast(140%); 
+}
+.leaflet-container { 
+  background: #000000 !important; 
+}
+/* Fix attribution and UI elements that got inverted */
+.leaflet-control-attribution { 
+  filter: invert(100%) hue-rotate(180deg) brightness(90%) contrast(140%); 
+}
+.leaflet-control-zoom { 
+  filter: invert(100%) hue-rotate(180deg) brightness(90%) contrast(140%); 
+}

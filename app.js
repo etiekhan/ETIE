@@ -774,7 +774,7 @@ function renderProfileMemoryMap(){
     if(!window.L){container.innerHTML='<div class="muted" style="padding:20px;text-align:center;">Map loading…</div>';return;}
     _profileMemoryMap=L.map('memoryMap',{zoomControl:false,attributionControl:false,dragging:true,touchZoom:true,scrollWheelZoom:true,doubleClickZoom:true,boxZoom:false,keyboard:false,tap:true});
     _profileMemoryMap.setView(HK_CENTER,11);
-    L.tileLayer('https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?key=cb1_4pws_1_6abd6411ad7ebdb7b1be6aaf',{maxZoom:18,attribution:'© CARTO © OpenStreetMap contributors'}).addTo(_profileMemoryMap);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'© OpenStreetMap contributors'}).addTo(_profileMemoryMap);
     if(window.L.Control.Locate){_profileMemoryMap.addControl(L.control.locate({locateOptions:{enableHighAccuracy:true,maxZoom:15},drawCircle:false,drawMarker:false,showPopup:false,strings:{title:'My location'}}));}
     fetchAndRenderMemoryMarkers(_profileMemoryMap);
   }catch(e){console.error('renderProfileMemoryMap',e);}
@@ -790,7 +790,7 @@ function renderMemoryMapFull(){
     if(!window.L){container.innerHTML='<div class="muted" style="padding:20px;text-align:center;">Map loading…</div>';return;}
     _memoryMapFull=L.map('memoryMapFull',{zoomControl:false,attributionControl:false,dragging:true,touchZoom:true,scrollWheelZoom:true,doubleClickZoom:true,boxZoom:false,keyboard:false,tap:true});
     _memoryMapFull.setView(HK_CENTER,11);
-    L.tileLayer('https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?key=cb1_4pws_1_6abd6411ad7ebdb7b1be6aaf',{maxZoom:18,attribution:'© CARTO © OpenStreetMap contributors'}).addTo(_memoryMapFull);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'© OpenStreetMap contributors'}).addTo(_memoryMapFull);
     if(window.L.Control.Locate){_memoryMapFull.addControl(L.control.locate({locateOptions:{enableHighAccuracy:true,maxZoom:15},drawCircle:false,drawMarker:false,showPopup:false,strings:{title:'My location'}}));}
     fetchAndRenderMemoryMarkers(_memoryMapFull, function(count){
       var el=document.getElementById('memoryMapCount');
@@ -1746,7 +1746,7 @@ function initHKMap(){
     var globalBounds=[[-85,-180],[85,180]];
     _map=L.map('hkMap',{zoomControl:false,minZoom:2,maxZoom:20,maxBounds:globalBounds,maxBoundsViscosity:0.3,worldCopyJump:true}).setView([_anchor.lat,_anchor.lng],HK_ZOOM);
     try{L.control.zoom({position:'bottomright'}).addTo(_map);}catch(e){}
-    L.tileLayer('https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?key=cb1_4pws_1_6abd6411ad7ebdb7b1be6aaf',{maxZoom:20,attribution:'© CARTO © OpenStreetMap contributors'}).addTo(_map);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:20,attribution:'© OpenStreetMap contributors'}).addTo(_map);
     _map.on('click',onMapTap);
     renderMapFilter();try{renderMapPins();}catch(e){} // render regardless of gate — wall covers map anyway
   }catch(e){}

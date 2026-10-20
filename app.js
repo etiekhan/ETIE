@@ -776,7 +776,7 @@ function renderProfileMemoryMap(){
     if(!window.maplibregl){container.innerHTML='<div class="muted" style="padding:20px;text-align:center;">Map loading…</div>';return;}
     _profileMemoryMap=new maplibregl.Map({
       container:'memoryMap',
-      style:'https://api.maptiler.com/maps/streets-v2/style.json?key=cb1_4pws_1_6abd6411ad7ebdb7b1be6aaf',
+      style:'https://api.maptiler.com/maps/streets-v2/style.json?key=mWVa9FJ4Nxh6qsIOagwY',
       center:HK_CENTER,
       zoom:11,
       attributionControl:false
@@ -796,7 +796,7 @@ function renderMemoryMapFull(){
     if(!window.maplibregl){container.innerHTML='<div class="muted" style="padding:20px;text-align:center;">Map loading…</div>';return;}
     _memoryMapFull=new maplibregl.Map({
       container:'memoryMapFull',
-      style:'https://api.maptiler.com/maps/streets-v2/style.json?key=cb1_4pws_1_6abd6411ad7ebdb7b1be6aaf',
+      style:'https://api.maptiler.com/maps/streets-v2/style.json?key=mWVa9FJ4Nxh6qsIOagwY',
       center:HK_CENTER,
       zoom:11,
       attributionControl:false
@@ -1762,7 +1762,7 @@ function initHKMap(){
     var _anchor=getAnchor();
     _map=new maplibregl.Map({
       container:'hkMap',
-      style:'https://api.maptiler.com/maps/streets-v2/style.json?key=cb1_4pws_1_6abd6411ad7ebdb7b1be6aaf',
+      style:'https://api.maptiler.com/maps/streets-v2/style.json?key=mWVa9FJ4Nxh6qsIOagwY',
       center:[_anchor.lng,_anchor.lat],
       zoom:HK_ZOOM,
       minZoom:2,

@@ -197,6 +197,7 @@ function loadState() {
 var ETIE = loadState();
 window.ETIE = ETIE;
 function saveState() { try { localStorage.setItem(ETIE_KEY, JSON.stringify(ETIE)); } catch (e) {} try { if (typeof window!=='undefined' && window.EtieCloud && window.EtieCloud.push) window.EtieCloud.push(); } catch (e) {} }
+window.saveState = saveState;
 
 // Photo handling — cloud-first (Supabase Storage), fallback to base64
 // Optional travel photos (traveller step 6 + local step 7) — any role, detected by input id
@@ -2889,6 +2890,7 @@ function loadMainMemoryMarkers(){
         try{renderAreaSidebar();}catch(e){}
       }catch(e){}
     });
+  }catch(e){}
 }
 function refreshMapMode(){try{applyMapMode();}catch(e){}}
 function closeGroupModal(){try{var o=document.getElementById('groupModal');if(o)o.classList.add('hidden');}catch(e){}}

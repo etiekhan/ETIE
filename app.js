@@ -195,6 +195,7 @@ function loadState() {
   } catch (e) { return etieDefaults(); }
 }
 var ETIE = loadState();
+window.ETIE = ETIE;
 function saveState() { try { localStorage.setItem(ETIE_KEY, JSON.stringify(ETIE)); } catch (e) {} try { if (typeof window!=='undefined' && window.EtieCloud && window.EtieCloud.push) window.EtieCloud.push(); } catch (e) {} }
 
 // Photo handling — cloud-first (Supabase Storage), fallback to base64

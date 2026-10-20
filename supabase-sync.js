@@ -143,7 +143,7 @@
     session=null;window.ETIE_LIVE_LOCALS=[];paint('offline','Cloud: offline — sign in');
     // privacy: clear local profile/trips/chats so next user on a public device sees blank (cloud copy stays for next sign-in)
     try{ localStorage.removeItem('etie-v1'); localStorage.removeItem('etie-v1-user-backup'); localStorage.removeItem('etie-v1-backup'); }catch(e){}
-    try{ if(typeof etieDefaults==='function') ETIE=etieDefaults(); }catch(e){}
+    try{ if(typeof etieDefaults==='function') window.ETIE=etieDefaults(); }catch(e){}
     try{ if(typeof restoreAll==='function') restoreAll(); }catch(e){}
     try{ if(typeof updateAuthHeader==='function')updateAuthHeader(); if(typeof renderHeaderProfile==='function')renderHeaderProfile(); if(typeof updateProfileVisibility==='function')updateProfileVisibility(); }catch(e){}
     // guarantee the gate screen: close everything, back to map, show sign-in wall
@@ -158,7 +158,7 @@
       clearTimeout(pushTimer);
       pushTimer=setTimeout(function(){
         try{
-          var payload={user_id:session.user.id, data:(typeof ETIE!=='undefined'?ETIE:{}), updated_at:new Date().toISOString()};
+          var payload={user_id:session.user.id, data:(typeof window.ETIE!=='undefined'?window.ETIE:{}), updated_at:new Date().toISOString()};
           client.from(table()).upsert(payload).then(function(r){
             if(r&&r.error)console.warn('Etie cloud push failed',r.error.message);
           });
@@ -177,7 +177,7 @@
         if(!cloud||typeof cloud!=='object')return;
         var hasLocal=false;
         try{
-          var cur=(typeof ETIE!=='undefined'?ETIE:{});
+          var cur=(typeof window.ETIE!=='undefined'?window.ETIE:{});
           hasLocal=cur&&(Object.keys(cur.requests||{}).length||Object.keys(cur.messages||{}).length||Object.keys(cur.meetups||{}).length);
         }catch(e){}
         if(hasLocal){
@@ -186,7 +186,7 @@
         }
         try { localStorage.setItem('etie-v1-backup', localStorage.getItem('etie-v1')||''); }catch(e){}
         try{
-          ETIE=Object.assign(ETIE||{},cloud);
+          window.ETIE=Object.assign(window.ETIE||{},cloud);
           saveState();
           if(typeof restoreAll==='function')restoreAll();
           try{if(typeof refreshGate==='function')refreshGate();}catch(e){}
@@ -204,11 +204,11 @@
   function syncProfile(){
     try{
       if(!isSharedOn())return;
-      if(typeof ETIE==='undefined'||!ETIE.local)return;
-      var p=ETIE.local;
-      var travNick=(typeof ETIE!=='undefined'&&ETIE.traveller&&ETIE.traveller.nickname)||'';
+      if(typeof window.ETIE==='undefined'||!window.ETIE.local)return;
+      var p=window.ETIE.local;
+      var travNick=(typeof window.ETIE!=='undefined'&&window.ETIE.traveller&&window.ETIE.traveller.nickname)||'';
       var localNick=p.displayName||'';
-      var chosen=localNick || travNick || (ETIE.traveller && ETIE.traveller.name) || session.user.email.split('@')[0];
+      var chosen=localNick || travNick || (window.ETIE.traveller && window.ETIE.traveller.name) || session.user.email.split('@')[0];
       var base={
         user_id: session.user.id,
         display_name: chosen,
@@ -225,7 +225,7 @@
       };
       var extra={
         nationality: p.nationality || '',
-        traveller_nationality: (typeof ETIE!=='undefined'&&ETIE.traveller&&ETIE.traveller.nationality)||'HK',
+        traveller_nationality: (typeof window.ETIE!=='undefined'&&window.ETIE.traveller&&window.ETIE.traveller.nationality)||'HK',
         district: p.district || 'Central / Soho',
         tier: p.tier || 'Rookie',
         hosted_count: p.hostedCount || 0,
@@ -237,14 +237,14 @@
         social_vibe: (p.socialVibe!=null?p.socialVibe:1),
         travel_pace: (p.travelPace!=null?p.travelPace:1),
         style_interests: (p.styleInterests||[]),
-        personal_hook: ((typeof ETIE!=='undefined'&&ETIE.traveller&&ETIE.traveller.bio)||'').slice(0,140),
-        memories: ((typeof ETIE!=='undefined'&&ETIE.traveller&&ETIE.traveller.memories)||[]).slice(0,3),
-        role: (function(){try{return ((ETIE.activeRole||ETIE.derivedRole)==='local')?'local_host':'traveller';}catch(e){return 'traveller';}})(),
-        recommended_spots: ((typeof ETIE!=='undefined'&&ETIE.traveller&&ETIE.traveller.spots)||[]).slice(0,3),
-        is_onboarded: !!((typeof ETIE!=='undefined')&&ETIE.profileComplete),
-        activity_stats: ((typeof ETIE!=='undefined'&&ETIE.traveller&&ETIE.traveller.activityStats)||{}),
-        featured_memories: ((typeof ETIE!=='undefined'&&ETIE.traveller&&ETIE.traveller.featuredMemories)||[]).slice(0,3),
-        photo_url: (function(){try{var ph=(typeof ETIE!=='undefined'&&ETIE.traveller&&ETIE.traveller.photo)||'';return (ph.indexOf('http')===0)?ph.slice(0,500):'';}catch(e){return '';}})()
+        personal_hook: ((typeof window.ETIE!=='undefined'&&window.ETIE.traveller&&window.ETIE.traveller.bio)||'').slice(0,140),
+        memories: ((typeof window.ETIE!=='undefined'&&window.ETIE.traveller&&window.ETIE.traveller.memories)||[]).slice(0,3),
+        role: (function(){try{return ((window.ETIE.activeRole||window.ETIE.derivedRole)==='local')?'local_host':'traveller';}catch(e){return 'traveller';}})(),
+        recommended_spots: ((typeof window.ETIE!=='undefined'&&window.ETIE.traveller&&window.ETIE.traveller.spots)||[]).slice(0,3),
+        is_onboarded: !!((typeof window.ETIE!=='undefined')&&window.ETIE.profileComplete),
+        activity_stats: ((typeof window.ETIE!=='undefined'&&window.ETIE.traveller&&window.ETIE.traveller.activityStats)||{}),
+        featured_memories: ((typeof window.ETIE!=='undefined'&&window.ETIE.traveller&&window.ETIE.traveller.featuredMemories)||[]).slice(0,3),
+        photo_url: (function(){try{var ph=(typeof window.ETIE!=='undefined'&&window.ETIE.traveller&&window.ETIE.traveller.photo)||'';return (ph.indexOf('http')===0)?ph.slice(0,500):'';}catch(e){return '';}})()
       };
       function tryUpsert(payload){
         return client.from(profTable()).upsert(payload).then(function(r){
@@ -283,7 +283,7 @@
       if(!isSharedOn())return Promise.resolve(null);
       if(!localMockId) localMockId=(typeof reqKey==='function'?reqKey():'local-marta');
       var k=localMockId;
-      var localReq=(typeof ETIE!=='undefined' && ETIE.requests && ETIE.requests[k])?ETIE.requests[k]:null;
+      var localReq=(typeof window.ETIE!=='undefined' && window.ETIE.requests && window.ETIE.requests[k])?window.ETIE.requests[k]:null;
       if(!localReq)return Promise.resolve(null);
       return client.from(reqTable()).select('id,traveller_id,status').eq('local_mock_id', k).order('updated_at',{ascending:false}).limit(1).maybeSingle().then(function(found){
         var existing=found&&found.data;
@@ -293,8 +293,8 @@
             status: localReq.status,
             message: localReq.message||'',
             local_name: localReq.localName||k,
-destination: (typeof ETIE!=='undefined' && ETIE.trip && ETIE.trip.destination)||'Hong Kong',
-            dates: (typeof ETIE!=='undefined' && ETIE.trip && ETIE.trip.dates)||'',
+destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETIE.trip.destination)||'Hong Kong',
+            dates: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETIE.trip.dates)||'',
             updated_at: new Date().toISOString()
           }).eq('id', existing.id).select('id').maybeSingle().then(function(r){
             if(r&&r.error)console.warn('pushSharedRequest (local update) failed',r.error.message);
@@ -308,9 +308,9 @@ destination: (typeof ETIE!=='undefined' && ETIE.trip && ETIE.trip.destination)||
           local_id: null,
           status: localReq.status,
           message: localReq.message||'',
-          destination: (typeof ETIE!=='undefined' && ETIE.trip && ETIE.trip.destination)||'Hong Kong',
-          dates: (typeof ETIE!=='undefined' && ETIE.trip && ETIE.trip.dates)||'',
-          traveller_name: (typeof ETIE!=='undefined' && ETIE.traveller && (ETIE.traveller.nickname||ETIE.traveller.name))||'Traveller',
+          destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETIE.trip.destination)||'Hong Kong',
+          dates: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETIE.trip.dates)||'',
+          traveller_name: (typeof window.ETIE!=='undefined' && window.ETIE.traveller && (window.ETIE.traveller.nickname||window.ETIE.traveller.name))||'Traveller',
           local_name: localReq.localName||k,
           updated_at: new Date().toISOString()
         };
@@ -324,14 +324,14 @@ destination: (typeof ETIE!=='undefined' && ETIE.trip && ETIE.trip.destination)||
   }
   function pushSharedRequests(){
     try{
-      if(!isSharedOn()||typeof ETIE==='undefined'||!ETIE.requests)return;
-      Object.keys(ETIE.requests).forEach(function(k){ pushSharedRequest(k); });
+      if(!isSharedOn()||typeof window.ETIE==='undefined'||!window.ETIE.requests)return;
+      Object.keys(window.ETIE.requests).forEach(function(k){ pushSharedRequest(k); });
     }catch(e){}
   }
   function syncPendingMessages(localMockId, requestId){
     try{
       if(!isSharedOn())return;
-      var arr=(ETIE.messages&&ETIE.messages[localMockId])||[];
+      var arr=(window.ETIE.messages&&window.ETIE.messages[localMockId])||[];
       if(!arr.length)return;
       client.from(msgTable()).select('id,text,sender_role,created_at').eq('request_id', requestId).then(function(r){
         var existing=(r&&r.data)||[];
@@ -374,9 +374,9 @@ destination: (typeof ETIE!=='undefined' && ETIE.trip && ETIE.trip.destination)||
   }
   function pushSharedMeetup(localMockId){
     try{
-      if(!isSharedOn()||typeof ETIE==='undefined'||!ETIE.meetups)return;
+      if(!isSharedOn()||typeof window.ETIE==='undefined'||!window.ETIE.meetups)return;
       var k=localMockId|| (typeof meetKey==='function'?meetKey():(typeof reqKey==='function'?reqKey():'local-marta'));
-      var mu=ETIE.meetups[k];
+      var mu=window.ETIE.meetups[k];
       if(!mu||mu.status==='none')return;
       client.from(reqTable()).select('id').eq('local_mock_id', k).order('updated_at',{ascending:false}).limit(1).maybeSingle().then(function(r){
         var rid=r&&r.data&&r.data.id;
@@ -398,12 +398,12 @@ destination: (typeof ETIE!=='undefined' && ETIE.trip && ETIE.trip.destination)||
         var changed=false;
         rows.forEach(function(row){
           var k=row.local_mock_id;
-          var existing=(ETIE.requests&&ETIE.requests[k])||null;
+          var existing=(window.ETIE.requests&&window.ETIE.requests[k])||null;
           var cloudTs=new Date(row.updated_at).getTime();
           var localTs=existing&&existing.updatedAt?existing.updatedAt:0;
           if(!existing || cloudTs > localTs + 1500){
-            if(!ETIE.requests)ETIE.requests={};
-            ETIE.requests[k]={status: row.status, message: row.message||'', updatedAt: cloudTs, localName: row.local_name||k, travellerName: row.traveller_name||'Traveller', destination: row.destination||'', dates: row.dates||''};
+            if(!window.ETIE.requests)window.ETIE.requests={};
+            window.ETIE.requests[k]={status: row.status, message: row.message||'', updatedAt: cloudTs, localName: row.local_name||k, travellerName: row.traveller_name||'Traveller', destination: row.destination||'', dates: row.dates||''};
             changed=true;
           }
         });
@@ -431,17 +431,17 @@ destination: (typeof ETIE!=='undefined' && ETIE.trip && ETIE.trip.destination)||
           rows.forEach(function(m){
             var k=idToKey[m.request_id];
             if(!k)return;
-            if(!ETIE.messages)ETIE.messages={};
-            if(!ETIE.messages[k])ETIE.messages[k]=[];
+            if(!window.ETIE.messages)window.ETIE.messages={};
+            if(!window.ETIE.messages[k])window.ETIE.messages[k]=[];
             var role=m.sender_role;
             var text=m.text;
-            var exists=ETIE.messages[k].some(function(x){ return x.text===text && x.from===role; });
+            var exists=window.ETIE.messages[k].some(function(x){ return x.text===text && x.from===role; });
             if(exists)return;
-            ETIE.messages[k].push({from: role, text: text, ts: new Date(m.created_at).getTime()});
+            window.ETIE.messages[k].push({from: role, text: text, ts: new Date(m.created_at).getTime()});
             changed=true;
           });
           if(changed){
-            Object.keys(ETIE.messages).forEach(function(k){ ETIE.messages[k].sort(function(a,b){return a.ts-b.ts;}); });
+            Object.keys(window.ETIE.messages).forEach(function(k){ window.ETIE.messages[k].sort(function(a,b){return a.ts-b.ts;}); });
             try{ saveState(); }catch(e){}
             try{ if(typeof renderChat==='function')renderChat(); if(typeof renderMessagesList==='function')renderMessagesList(); }catch(e){}
           }
@@ -462,11 +462,11 @@ destination: (typeof ETIE!=='undefined' && ETIE.trip && ETIE.trip.destination)||
           rows.forEach(function(mu){
             var k=idToKey[mu.request_id];
             if(!k)return;
-            if(!ETIE.meetups)ETIE.meetups={};
-            var cur=ETIE.meetups[k];
+            if(!window.ETIE.meetups)window.ETIE.meetups={};
+            var cur=window.ETIE.meetups[k];
             var cloudStatus=mu.status;
             if(!cur || cur.status!==cloudStatus || cur.activity!==mu.activity){
-              ETIE.meetups[k]={activity:mu.activity, when:mu.when_text, where:mu.where_text, status:mu.status, with:mu.with_name||k};
+              window.ETIE.meetups[k]={activity:mu.activity, when:mu.when_text, where:mu.where_text, status:mu.status, with:mu.with_name||k};
               changed=true;
             }
           });
@@ -551,13 +551,13 @@ destination: (typeof ETIE!=='undefined' && ETIE.trip && ETIE.trip.destination)||
           client.from(reqTable()).select('local_mock_id').eq('id', row.request_id).maybeSingle().then(function(r){
             var k=r&&r.data&&r.data.local_mock_id;
             if(!k)return;
-            if(!ETIE.reviews)ETIE.reviews={};
-            ETIE.reviews[k]=ETIE.reviews[k]||{};
+            if(!window.ETIE.reviews)window.ETIE.reviews={};
+            window.ETIE.reviews[k]=window.ETIE.reviews[k]||{};
             if(row.trav_rating){
-              ETIE.reviews[k].trav={rating:row.trav_rating,meetAgain:row.trav_meet_again,highlights:row.trav_highlights,privateText:row.trav_private_text,at:new Date(row.created_at).getTime()};
+              window.ETIE.reviews[k].trav={rating:row.trav_rating,meetAgain:row.trav_meet_again,highlights:row.trav_highlights,privateText:row.trav_private_text,at:new Date(row.created_at).getTime()};
             }
             if(row.local_rating){
-              ETIE.reviews[k].local={rating:row.local_rating,meetAgain:row.local_meet_again,highlights:row.local_highlights,privateText:row.local_private_text,at:new Date(row.created_at).getTime()};
+              window.ETIE.reviews[k].local={rating:row.local_rating,meetAgain:row.local_meet_again,highlights:row.local_highlights,privateText:row.local_private_text,at:new Date(row.created_at).getTime()};
             }
             changed=true;
           });
@@ -649,8 +649,8 @@ destination: (typeof ETIE!=='undefined' && ETIE.trip && ETIE.trip.destination)||
   // ---- Auto-tier promotion ----
   function checkAutoTier(role, rating){
     try{
-      if(!isSharedOn()||typeof ETIE==='undefined')return;
-      var p = role==='trav' ? ETIE.traveller : ETIE.local;
+      if(!isSharedOn()||typeof window.ETIE==='undefined')return;
+      var p = role==='trav' ? window.ETIE.traveller : window.ETIE.local;
       var completed = role==='trav' ? (p.completedTrips||0)+1 : (p.hostedCount||0)+1;
       var avgRating = role==='trav' ? (p.avgRatingReceived||0) : (p.avgHostRating||0);
       var newAvg = avgRating===0 ? rating : Math.round((avgRating*(completed-1)+rating)/completed);
@@ -721,7 +721,7 @@ destination: (typeof ETIE!=='undefined' && ETIE.trip && ETIE.trip.destination)||
     }catch(e){return null;}
   }
   function pinToRow(p){
-    var dr='traveller';try{dr=(typeof ETIE!=='undefined'&&ETIE.derivedRole)||p.role||'traveller';}catch(e){}
+    var dr='traveller';try{dr=(typeof window.ETIE!=='undefined'&&window.ETIE.derivedRole)||p.role||'traveller';}catch(e){}
     return {id:String(p.cloudId||p.id),user_id:(session&&session.user&&session.user.id)||null,
       nickname:p.name||'Someone',verified:!!p.verified,role:p.role||'traveller',derived_role:dr,category:p.category||'Food',
       location:p.location||'Hong Kong',lat:p.lat,lng:p.lng,content:String(p.hook||'').slice(0,140),activity_hook:String(p.hook||'').slice(0,140),
@@ -736,8 +736,8 @@ destination: (typeof ETIE!=='undefined' && ETIE.trip && ETIE.trip.destination)||
         try{
           if(r&&(r.error||!r.data))return; // table not migrated yet → stay local-only
           var cloud=(r.data||[]).map(pinRowToPin).filter(Boolean);
-          if(typeof ETIE==='undefined')return;
-          var local=(ETIE.mapPins||[]).filter(function(p){return p&&p.origin!=='cloud';});
+          if(typeof window.ETIE==='undefined')return;
+          var local=(window.ETIE.mapPins||[]).filter(function(p){return p&&p.origin!=='cloud';});
           var openReqN=-1;
           var pinsChanged=false;
           try{if(typeof _openPinId!=='undefined'&&_openPinId&&typeof findPin==='function'){var _op=findPin(_openPinId);openReqN=_op?((_op.requests||[]).filter(function(r){return r.status==='pending';}).length):-1;}}catch(e){}
@@ -763,7 +763,7 @@ destination: (typeof ETIE!=='undefined' && ETIE.trip && ETIE.trip.destination)||
             }
             // guest copies with unsent changes keep local until they upload
           });
-          ETIE.mapPins=local;
+          window.ETIE.mapPins=local;
           // persist only when the merge changed something, so reloads show
           // last-known pins instantly (otherwise cloud pins vanish until pull)
           try{if(pinsChanged&&typeof saveState==='function')saveState();}catch(e){}
@@ -801,8 +801,8 @@ destination: (typeof ETIE!=='undefined' && ETIE.trip && ETIE.trip.destination)||
           var ok=!!(r&&!r.error);
           var code=(r&&r.error&&(r.error.code||r.error.message))||null;
           if(!ok)notePinErr(code,(r&&r.error&&r.error.message)||'');
-          if(typeof ETIE!=='undefined'){
-            (ETIE.mapPins||[]).forEach(function(p){if(p&&(p.id===pin.id)){p.cloudId=String(row.id);p.syncState=ok?'live':'local';p.syncError=ok?null:code;}});
+          if(typeof window.ETIE!=='undefined'){
+            (window.ETIE.mapPins||[]).forEach(function(p){if(p&&(p.id===pin.id)){p.cloudId=String(row.id);p.syncState=ok?'live':'local';p.syncError=ok?null:code;}});
             try{if(typeof saveState==='function')saveState();}catch(e){}
           }
           try{if(typeof markPinSynced==='function')markPinSynced(pin.id,ok);}catch(e){}
@@ -886,7 +886,7 @@ destination: (typeof ETIE!=='undefined' && ETIE.trip && ETIE.trip.destination)||
               if(changed){try{if(typeof renderHookChat==='function')renderHookChat();}catch(e){}}
               return;
             }
-            var all=(typeof ETIE==='undefined')?null:ETIE;
+            var all=(typeof window.ETIE==='undefined')?null:window.ETIE;
             (r.data||[]).forEach(function(row){
               try{
                 if(!all||!all.mapPins)return;
@@ -943,27 +943,27 @@ destination: (typeof ETIE!=='undefined' && ETIE.trip && ETIE.trip.destination)||
       client.from(profTable()).select('*').eq('user_id',session.user.id).maybeSingle().then(function(r){
         try{
           var row=r&&!r.error?r.data:null;
-          if(row&&typeof ETIE!=='undefined'){
-            try{ETIE.cloudOnboarded=!!row.is_onboarded;}catch(e){}
+          if(row&&typeof window.ETIE!=='undefined'){
+            try{window.ETIE.cloudOnboarded=!!row.is_onboarded;}catch(e){}
             try{
               var adopted=false;
-              if(row.display_name&&!ETIE.traveller.nickname&&!ETIE.local.displayName){ETIE.traveller.nickname=row.display_name;ETIE.local.displayName=row.display_name;adopted=true;}
-              if(row.photo_url&&row.photo_url.indexOf('http')===0&&!ETIE.traveller.photo){ETIE.traveller.photo=row.photo_url;ETIE.local.photo=row.photo_url;adopted=true;}
-              if(row.personal_hook&&!ETIE.traveller.bio){ETIE.traveller.bio=row.personal_hook;adopted=true;}
+              if(row.display_name&&!window.ETIE.traveller.nickname&&!window.ETIE.local.displayName){window.ETIE.traveller.nickname=row.display_name;window.ETIE.local.displayName=row.display_name;adopted=true;}
+              if(row.photo_url&&row.photo_url.indexOf('http')===0&&!window.ETIE.traveller.photo){window.ETIE.traveller.photo=row.photo_url;window.ETIE.local.photo=row.photo_url;adopted=true;}
+              if(row.personal_hook&&!window.ETIE.traveller.bio){window.ETIE.traveller.bio=row.personal_hook;adopted=true;}
               try{
                 var _hc=String(row.city||'').split(',').map(function(s){return s.trim();}).filter(Boolean).slice(0,5);
-                if(_hc.length&&(!(ETIE.local.cities||[]).length)){ETIE.local.cities=_hc;ETIE.local.city=_hc[0];adopted=true;}
+                if(_hc.length&&(!(window.ETIE.local.cities||[]).length)){window.ETIE.local.cities=_hc;window.ETIE.local.city=_hc[0];adopted=true;}
               }catch(e){}
               try{
-                if(row.nationality&&!ETIE.local.nationality){ETIE.local.nationality=row.nationality;ETIE.traveller.nationality=row.nationality;adopted=true;}
+                if(row.nationality&&!window.ETIE.local.nationality){window.ETIE.local.nationality=row.nationality;window.ETIE.traveller.nationality=row.nationality;adopted=true;}
               }catch(e){}
               try{
-                if(Array.isArray(row.style_interests)&&row.style_interests.length&&!(ETIE.local.styleInterests||[]).length){ETIE.local.styleInterests=row.style_interests.slice(0,5);adopted=true;}
+                if(Array.isArray(row.style_interests)&&row.style_interests.length&&!(window.ETIE.local.styleInterests||[]).length){window.ETIE.local.styleInterests=row.style_interests.slice(0,5);adopted=true;}
               }catch(e){}
-              if(row.city&&row.city!==ETIE.local.city&&(!ETIE.local.city||ETIE.local.city==='Hong Kong')){ETIE.local.city=row.city;adopted=true;}
-              if(Array.isArray(row.memories)&&row.memories.length&&!(ETIE.traveller.memories||[]).length){ETIE.traveller.memories=row.memories.slice(0,3);adopted=true;}
-              if(Array.isArray(row.featured_memories)&&row.featured_memories.length&&!(ETIE.traveller.featuredMemories||[]).length){ETIE.traveller.featuredMemories=row.featured_memories.slice(0,3);adopted=true;}
-              if(row.verification&&Array.isArray(row.verification.methods)&&row.verification.methods.length&&!(ETIE.traveller.verificationMethods||[]).length){ETIE.traveller.verificationMethods=row.verification.methods.slice();ETIE.local.verificationMethods=row.verification.methods.slice();adopted=true;}
+              if(row.city&&row.city!==window.ETIE.local.city&&(!window.ETIE.local.city||window.ETIE.local.city==='Hong Kong')){window.ETIE.local.city=row.city;adopted=true;}
+              if(Array.isArray(row.memories)&&row.memories.length&&!(window.ETIE.traveller.memories||[]).length){window.ETIE.traveller.memories=row.memories.slice(0,3);adopted=true;}
+              if(Array.isArray(row.featured_memories)&&row.featured_memories.length&&!(window.ETIE.traveller.featuredMemories||[]).length){window.ETIE.traveller.featuredMemories=row.featured_memories.slice(0,3);adopted=true;}
+              if(row.verification&&Array.isArray(row.verification.methods)&&row.verification.methods.length&&!(window.ETIE.traveller.verificationMethods||[]).length){window.ETIE.traveller.verificationMethods=row.verification.methods.slice();window.ETIE.local.verificationMethods=row.verification.methods.slice();adopted=true;}
               if(adopted){saveState();try{if(typeof renderLiteProfile==='function')renderLiteProfile();}catch(e){}}
             }catch(e){}
           }
@@ -984,7 +984,7 @@ destination: (typeof ETIE!=='undefined' && ETIE.trip && ETIE.trip.destination)||
           if(row.used_by&&row.used_by!==session.user.id){resolve(false);return;}
           client.from('invite_codes').update({used_by:session.user.id,used_at:new Date().toISOString()}).eq('code',code).then(function(u){
             if(u&&u.error){resolve(false);return;}
-            try{ETIE.inviteOk=true;ETIE.inviteCode=code;saveState();}catch(e){}
+            try{window.ETIE.inviteOk=true;window.ETIE.inviteCode=code;saveState();}catch(e){}
             try{if(typeof refreshGate==='function')refreshGate();}catch(e){}
             resolve(true);
           }).catch(function(){resolve(false);});
@@ -1067,7 +1067,7 @@ destination: (typeof ETIE!=='undefined' && ETIE.trip && ETIE.trip.destination)||
         }).catch(function(){cb([]);});
     }catch(e){try{cb([]);}catch(_){}}
   }
-  // People directory: any signed-in member of ETIE, searchable by name.
+  // People directory: any signed-in member of window.ETIE, searchable by name.
   // Needed because nickname strings collide across cities (two "Kan").
   function searchPeople(query,cb){
     try{

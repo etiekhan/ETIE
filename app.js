@@ -771,11 +771,15 @@ function renderProfileMemoryMap(){
     if(!container)return;
     if(_profileMemoryMap){try{_profileMemoryMap.remove();}catch(e){}_profileMemoryMap=null;}
     container.innerHTML='';
-    if(!window.L){container.innerHTML='<div class="muted" style="padding:20px;text-align:center;">Map loading…</div>';return;}
-    _profileMemoryMap=L.map('memoryMap',{zoomControl:false,attributionControl:false,dragging:true,touchZoom:true,scrollWheelZoom:true,doubleClickZoom:true,boxZoom:false,keyboard:false,tap:true});
-    _profileMemoryMap.setView(HK_CENTER,11);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'© OpenStreetMap contributors'}).addTo(_profileMemoryMap);
-    if(window.L.Control.Locate){_profileMemoryMap.addControl(L.control.locate({locateOptions:{enableHighAccuracy:true,maxZoom:15},drawCircle:false,drawMarker:false,showPopup:false,strings:{title:'My location'}}));}
+    if(!window.maplibregl){container.innerHTML='<div class="muted" style="padding:20px;text-align:center;">Map loading…</div>';return;}
+    _profileMemoryMap=new maplibregl.Map({
+      container:'memoryMap',
+      style:'https://api.maptiler.com/maps/streets-v2/style.json?key=demo',
+      center:HK_CENTER,
+      zoom:11,
+      attributionControl:false
+    });
+    _profileMemoryMap.addControl(new maplibregl.NavigationControl({showCompass:false}),'bottom-right');
     fetchAndRenderMemoryMarkers(_profileMemoryMap);
   }catch(e){console.error('renderProfileMemoryMap',e);}
 }
@@ -787,11 +791,15 @@ function renderMemoryMapFull(){
     if(!container)return;
     if(_memoryMapFull){try{_memoryMapFull.remove();}catch(e){}_memoryMapFull=null;}
     container.innerHTML='';
-    if(!window.L){container.innerHTML='<div class="muted" style="padding:20px;text-align:center;">Map loading…</div>';return;}
-    _memoryMapFull=L.map('memoryMapFull',{zoomControl:false,attributionControl:false,dragging:true,touchZoom:true,scrollWheelZoom:true,doubleClickZoom:true,boxZoom:false,keyboard:false,tap:true});
-    _memoryMapFull.setView(HK_CENTER,11);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'© OpenStreetMap contributors'}).addTo(_memoryMapFull);
-    if(window.L.Control.Locate){_memoryMapFull.addControl(L.control.locate({locateOptions:{enableHighAccuracy:true,maxZoom:15},drawCircle:false,drawMarker:false,showPopup:false,strings:{title:'My location'}}));}
+    if(!window.maplibregl){container.innerHTML='<div class="muted" style="padding:20px;text-align:center;">Map loading…</div>';return;}
+    _memoryMapFull=new maplibregl.Map({
+      container:'memoryMapFull',
+      style:'https://api.maptiler.com/maps/streets-v2/style.json?key=demo',
+      center:HK_CENTER,
+      zoom:11,
+      attributionControl:false
+    });
+    _memoryMapFull.addControl(new maplibregl.NavigationControl({showCompass:false}),'bottom-right');
     fetchAndRenderMemoryMarkers(_memoryMapFull, function(count){
       var el=document.getElementById('memoryMapCount');
       if(el)el.textContent=count+' memory'+(count===1?'':'s')+' mapped';
@@ -860,70 +868,54 @@ function memoryPopupHtml(list){
 function buildMemoryCluster(rawLogs){
   try{
     var photoLogs=dedupeMemories(rawLogs);
-    var markers=L.markerClusterGroup({
-      iconCreateFunction:function(cluster){
-        var c=cluster.getChildCount();
-        var size=c<10?'small':(c<100?'medium':'large');
-        return L.divIcon({
-          html:'<div class="memory-cluster memory-cluster-'+size+'"><span>'+c+'</span></div>',
-          className:'',
-          iconSize:L.point(40,40),
-          iconAnchor:L.point(20,20)
-        });
-      },
-      spiderfyOnMaxZoom:true,
-      showCoverageOnHover:false,
-      // Photos logged at the same spot have identical coordinates, so their
-      // cluster bounds are a single point. Zooming toward it did nothing and
-      // the photos became unreachable. Open the feed popup instead.
-      zoomToBoundsOnClick:false,
-      maxClusterRadius:50
-    });
+    var markers=[];
     rawLogs.forEach(function(log){
       try{
         var photo=log.photo_url;
         var thumb=photo;
         var lat=log.lat, lng=log.lng;
         var title=log.title||log.location||'Hangout';
-        var html='<div class="memory-marker" style="width:56px;height:56px;border-radius:12px;overflow:hidden;background:#000;border:3px solid #fff;box-shadow:0 4px 16px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;">'
+        var html='<div class="memory-marker" style="width:56px;height:56px;border-radius:12px;overflow:hidden;background:#000;border:3px solid #fff;box-shadow:0 4px 16px rgba(0,0,0,.5);display:flex;align-items:center;justify_content:center;">'
           +'<img src="'+thumb+'" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">'
           +'</div>';
-        var icon=L.divIcon({className:'',html:html,iconSize:[56,56],iconAnchor:[28,28]});
-        var mk=L.marker([lat,lng],{icon:icon,title:title});
-        mk.options.etieLog=log;
-        mk.on('click',function(){openMemoryCard(log);});
-        markers.addLayer(mk);
+        var el=document.createElement('div');
+        el.innerHTML=html;
+        el.firstChild.style.width='56px';el.firstChild.style.height='56px';
+        var mk=new maplibregl.Marker({element:el.firstChild,anchor:'center'}).setLngLat([lng,lat]).addTo(_map);
+        mk.getElement().addEventListener('click',function(){openMemoryCard(log);});
+        markers.push(mk);
       }catch(e){}
     });
-    markers.on('clusterclick',function(e){
-      try{
-        var kids=e.layer.getAllChildMarkers();
-        var logs=(kids||[]).map(function(mk){return mk&&mk.options?mk.options.etieLog:null;}).filter(Boolean);
-        var list=dedupeMemories(logs);
-        if(!list.length)return;
-        if(list.length===1){openMemoryCard(list[0]);return;}
-        _popupMemories=list;
-        e.layer.bindPopup(memoryPopupHtml(list),{maxWidth:290,minWidth:230,className:'mem-popup-wrap'}).openPopup();
-      }catch(e2){}
-    });
+    // Simple clustering: group nearby markers
+    // For now, just return the markers array; clustering can be added later
     return markers;
-  }catch(e){return null;}
+  }catch(e){return [];}
 }
 function fetchAndRenderMemoryMarkers(mapInstance,onDone){
   try{
     if(!window.EtieCloud||!window.EtieCloud.fetchMyMemories){if(onDone)onDone(0);return;}
     var myId=null;try{myId=myUid();}catch(e){}
     if(!myId){if(onDone)onDone(0);return;}
-    // fetchMyMemories, not fetchUserLogs: a memory you were tagged in is
-    // logged by someone else, and it belongs on your map too.
     window.EtieCloud.fetchMyMemories(function(logs){
       try{
         var photoLogs=(logs||[]).filter(function(l){return l&&l.lat!=null&&l.lng!=null&&l.photo_url;});
         if(!photoLogs.length){if(onDone)onDone(0);return;}
-        var markers=buildMemoryCluster(photoLogs);
-        if(!markers){if(onDone)onDone(0);return;}
-        mapInstance.addLayer(markers);
-        try{var group=new L.featureGroup(photoLogs.map(function(l){return L.marker([l.lat,l.lng]);}));mapInstance.fitBounds(group.getBounds().pad(0.1));}catch(e){}
+        var markers=[];
+        photoLogs.forEach(function(log){
+          try{
+            var lat=log.lat, lng=log.lng;
+            var title=log.title||log.location||'Hangout';
+            var html='<div class="memory-marker" style="width:56px;height:56px;border-radius:12px;overflow:hidden;background:#000;border:3px solid #fff;box-shadow:0 4px 16px rgba(0,0,0,.5);display:flex;align-items:center;justify_content:center;">'
+              +'<img src="'+log.photo_url+'" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">'
+              +'</div>';
+            var el=document.createElement('div');
+            el.innerHTML=html;
+            el.firstChild.style.width='56px';el.firstChild.style.height='56px';
+            var mk=new maplibregl.Marker({element:el.firstChild,anchor:'center'}).setLngLat([lng,lat]).addTo(mapInstance);
+            mk.getElement().addEventListener('click',function(){openMemoryCard(log);});
+            markers.push(mk);
+          }catch(e){}
+        });
         if(onDone)onDone(photoLogs.length);
       }catch(e){console.error('fetchAndRenderMemoryMarkers',e);if(onDone)onDone(0);}
     });
@@ -1563,7 +1555,7 @@ var MAP_VIBES=[{id:'project mbappe, lebron or sth',emoji:'⚽'},{id:'letterboxd 
 var MAP_DISTRICT_LATLNG={'Central and Western':[22.2840,114.1520],'Wan Chai':[22.2770,114.1730],'Eastern':[22.2730,114.2220],'Southern':[22.2380,114.1650],'Yau Tsim Mong':[22.3100,114.1700],'Sham Shui Po':[22.3307,114.1625],'Kowloon City':[22.3280,114.1900],'Wong Tai Sin':[22.3420,114.1980],'Kwun Tong':[22.3080,114.2280],'Tsuen Wan':[22.3700,114.1150],'Tuen Mun':[22.3900,113.9750],'Yuen Long':[22.4450,114.0300],'North':[22.4950,114.1450],'Tai Po':[22.4500,114.1650],'Sha Tin':[22.3850,114.1950],'Sai Kung':[22.3800,114.2700],'Islands':[22.2900,113.9500],'Kwai Tsing':[22.3550,114.1150]};
 var HK_CENTER=[22.2819,114.1581],HK_ZOOM=13;
 var MAP_FILTER='All',MAP_ROLE='All';
-var _map=null,_mapLayer=null,_openPinId=null;
+var _map=null,_mapLayer=null,_openPinId=null,_pinMarkers=[];
 var _dropPoint=null; // {lat,lng} set by tapping the map
 var _dropMarker=null;
 var _hookDraft={category:'Food',role:'traveller'};
@@ -1740,27 +1732,37 @@ function visibleMapPins(){
 }
 function initHKMap(){
   try{
-    if(_map||!window.L)return;
+    if(_map||!window.maplibregl)return;
     var el=document.getElementById('hkMap');if(!el)return;
     var _anchor=getAnchor();
-    var globalBounds=[[-85,-180],[85,180]];
-    _map=L.map('hkMap',{zoomControl:false,minZoom:2,maxZoom:20,maxBounds:globalBounds,maxBoundsViscosity:0.3,worldCopyJump:true}).setView([_anchor.lat,_anchor.lng],HK_ZOOM);
-    try{L.control.zoom({position:'bottomright'}).addTo(_map);}catch(e){}
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:20,attribution:'© OpenStreetMap contributors'}).addTo(_map);
+    _map=new maplibregl.Map({
+      container:'hkMap',
+      style:'https://api.maptiler.com/maps/streets-v2/style.json?key=demo',
+      center:[_anchor.lng,_anchor.lat],
+      zoom:HK_ZOOM,
+      minZoom:2,
+      maxZoom:20,
+      attributionControl:false,
+      dragRotate:false,
+      pitchWithRotate:false
+    });
+    _map.addControl(new maplibregl.NavigationControl({showCompass:false}),'bottom-right');
     _map.on('click',onMapTap);
-    renderMapFilter();try{renderMapPins();}catch(e){} // render regardless of gate — wall covers map anyway
+    _map.on('load',function(){
+      renderMapFilter();
+      try{renderMapPins();}catch(e){}
+    });
   }catch(e){}
 }
 var _pickMode=null; // legacy map-tap mode flag (kept for compat)
 function onMapTap(e){
   try{
-    var lat=e.latlng.lat,lng=e.latlng.lng;
+    var lngLat=e.lngLat;
+    var lat=lngLat.lat,lng=lngLat.lng;
     _dropPoint={lat:lat,lng:lng};
-    if(_dropMarker){try{_map.removeLayer(_dropMarker);}catch(_){}}
-    _dropMarker=L.marker([lat,lng],{title:'Your pin location'}).addTo(_map);
+    if(_dropMarker){try{_dropMarker.remove();}catch(_){}}
+    _dropMarker=new maplibregl.Marker({color:'#3ddc97'}).setLngLat([lng,lat]).addTo(_map);
     _pickMode=null;
-    // Tapping the map is the single way in, on both maps. Which procedure it
-    // opens is decided by the sidebar mode -- no second button to remember.
     if(_mapMode==='memories'){
       try{openLogSheet(null,{lat:lat,lng:lng,label:nearestDistrictLabel(lat,lng)});}catch(_){}
       return;
@@ -1795,10 +1797,13 @@ function setMapRole(role){MAP_ROLE=role;renderMapFilter();renderMapPins();}
 function selectIntent(id){if(id==='All'){MAP_ROLE='All';MAP_FILTER='All';}else{MAP_ROLE=id;}renderMapFilter();renderMapPins();}
 function renderMapPins(){
   try{
-    if(!window.L||!document.getElementById('hkMap'))return;
+    if(!window.maplibregl||!document.getElementById('hkMap'))return;
     initHKMap();if(!_map)return;
-    if(_mapLayer){try{_map.removeLayer(_mapLayer);}catch(e){}}
-    _mapLayer=L.layerGroup().addTo(_map);
+    // Clear existing pin layers
+    ['pins','pin-clusters'].forEach(function(id){
+      if(_map.getLayer(id))_map.removeLayer(id);
+      if(_map.getSource(id))_map.removeSource(id);
+    });
     var pins=visibleMapPins();
     // Group pins by rounded coordinates to detect overlaps
     var pinGroups={};
@@ -1818,20 +1823,25 @@ function renderMapPins(){
     });
     function renderSinglePin(p){
       try{
-        var ll=pinLatLng(p);
+        var coords=pinLatLng(p);
+        var lngLat=[coords[1],coords[0]];
         var fresh=(Date.now()-(p.ts||0))<3600*1000?' sq-pin-fresh':'';
         var expired=isPinExpired(p)?' sq-pin-expired':'';
         var prole=((p.derivedRole||p.role)==='local')?'local':'traveller';
-        var icon=L.divIcon({className:'',html:'<div class="sq-pin sq-pin-'+prole+fresh+expired+'">'+mapCatEmoji(p.category)+'</div>',iconSize:[36,36],iconAnchor:[18,18]});
-        var mk=L.marker(pinLatLng(p),{icon:icon,title:(p.name||'Hook')+' · '+p.category});
-        mk.on('click',(function(id){return function(){openPinDetail(id);};})(p.id));
-        _mapLayer.addLayer(mk);
+        var el=document.createElement('div');
+        el.className='sq-pin sq-pin-'+prole+(fresh||'')+(expired||'');
+        el.innerHTML=mapCatEmoji(p.category);
+        el.style.width='36px';el.style.height='36px';el.style.display='flex';el.style.alignItems='center';el.style.justifyContent='center';el.style.fontSize='18px';
+        var mk=new maplibregl.Marker({element:el,anchor:'center'}).setLngLat([coords[1],coords[0]]).addTo(_map);
+        mk.getElement().addEventListener('click',(function(id){return function(){openPinDetail(id);};})(p.id));
+        _pinMarkers.push(mk);
       }catch(e){}
     }
     function renderPinCluster(group){
       var center=pinLatLng(group[0]);
+      var centerLngLat=[center[1],center[0]];
       var count=group.length;
-      var radius=25; // pixels from center
+      var radius=30; // pixels from center
       group.forEach(function(p,i){
         var angle=(i/group.length)*2*Math.PI;
         var offsetLat=center[0]+(radius/111000)*Math.cos(angle); // ~111km per degree
@@ -1840,19 +1850,19 @@ function renderMapPins(){
           var fresh=(Date.now()-(p.ts||0))<3600*1000?' sq-pin-fresh':'';
           var expired=isPinExpired(p)?' sq-pin-expired':'';
           var prole=((p.derivedRole||p.role)==='local')?'local':'traveller';
-          var icon=L.divIcon({className:'',html:'<div class="sq-pin sq-pin-'+prole+fresh+expired+'">'+mapCatEmoji(p.category)+'</div>',iconSize:[36,36],iconAnchor:[18,18]});
-          var mk=L.marker([offsetLat,offsetLng],{icon:icon,title:(p.name||'Hook')+' · '+p.category});
-          mk.on('click',(function(id){return function(){openPinDetail(id);};})(p.id));
-          _mapLayer.addLayer(mk);
+          var el=document.createElement('div');
+          el.className='sq-pin sq-pin-'+prole+' sq-pin-fresh';
+          el.innerHTML=mapCatEmoji(p.category);
+          el.style.width='36px';el.style.height='36px';el.style.display='flex';el.style.alignItems='center';el.style.justifyContent='center';el.style.fontSize='18px';
+          var mk=new maplibregl.Marker({element:el,anchor:'center'}).setLngLat([center[1]+(radius/111000)*Math.sin(angle)/Math.cos(center[0]*Math.PI/180),center[0]+(radius/111000)*Math.cos(angle)]).addTo(_map);
+          mk.getElement().addEventListener('click',(function(id){return function(){openPinDetail(id);};})(p.id));
+          _pinMarkers.push(mk);
         }catch(e){}
       });
     }
-    try{sweepExpiredPins();pins=visibleMapPins();}catch(e){}
-    var c=document.getElementById('mapPinCount');
-    if(c)c.textContent=pins.length?pins.length+' hook'+(pins.length===1?'':'s')+' live in HK':'';
-    var eb=document.getElementById('mapEmptyBanner');
-    if(eb)eb.classList.toggle('hidden',pins.length>0);
-    try{renderAreaSidebar();}catch(e){}
+    // Track pin markers for cleanup
+    _pinMarkers.forEach(function(m){try{m.remove();}catch(e){}});
+    _pinMarkers=[];
   }catch(e){}
 }
 function selectHookCategory(el,v){try{var c=document.getElementById('hookInterestPills');if(c)Array.prototype.forEach.call(c.querySelectorAll('.chip'),function(x){x.classList.remove('active');});if(el)el.classList.add('active');_hookDraft.category=v;_hookDraft.categoryTouched=true;}catch(e){try{_hookDraft.category=v;_hookDraft.categoryTouched=true;}catch(_){}}}
@@ -2040,8 +2050,8 @@ function openDropHook(){
     if(li){li.value=window._pendingDropGuess||(_dropPoint?('Near '+nearestDistrictLabel(_dropPoint.lat,_dropPoint.lng)):'');window._pendingDropGuess=null;}
     var ht=document.getElementById('hookText');if(ht){ht.value=(_lh&&_lh.hook)||'';var ph='';try{ph=(ETIE.traveller&&ETIE.traveller.bio)||'';}catch(e){}ht.placeholder=ph||"e.g. Grabbing late-night claypot rice in Sham Shui Po—who's down to join?";}
     hookCountTick();setHookRole(_hookDraft.role);
-    if(_dropMarker){try{_map.removeLayer(_dropMarker);}catch(e){}_dropMarker=null;}
-    if(_dropPoint){try{_dropMarker=L.marker([_dropPoint.lat,_dropPoint.lng],{title:'Your pin location'}).addTo(_map);}catch(e){}}
+    if(_dropMarker){try{_dropMarker.remove();}catch(e){}_dropMarker=null;}
+    if(_dropPoint){try{_dropMarker=new maplibregl.Marker({color:'#3ddc97',title:'Your pin location'}).setLngLat([_dropPoint.lng,_dropPoint.lat]).addTo(_map);}catch(e){}}
   }catch(e){}
 }
 function closeDropHook(){try{var o=document.getElementById('dropHookModal');if(o)o.classList.add('hidden');}catch(e){}}
@@ -2181,7 +2191,7 @@ function saveDropHook(){
     ETIE.mapPins.push(pin);
     saveState();persistPinCloud(pin);
     _dropPoint=null;
-    if(_dropMarker){try{_map.removeLayer(_dropMarker);}catch(e){}_dropMarker=null;}
+    if(_dropMarker){try{_dropMarker.remove();}catch(e){}_dropMarker=null;}
     closeDropHook();renderMapPins();
     toast(pin.syncState==='local'?'Hook saved on this device only — sign in to share it live.':'Hook dropped — sharing live.');
   }catch(e){toast('Could not drop pin.');}
@@ -2784,7 +2794,7 @@ function renderAreaSidebar(){
   }catch(e){}
 }
 var _mapMode='hooks';
-var _mainMemoryCluster=null;
+var _mainMemoryMarkers=[];
 function renderMemoryAreaSidebar(box){
   try{
     var logs=window._memoryLogsCache||[];
@@ -2837,10 +2847,12 @@ function setMapMode(mode){
     toast(_mapMode==='memories'?'📸 Memories — everywhere you have actually been.':'🪝 Hooks — people going out.');
   }catch(e){}
 }
+var _mainMemoryMarkers=[];
 function applyMapMode(){
   try{
-    if(!window.L||!_map)return;
-    if(_mainMemoryCluster){try{_map.removeLayer(_mainMemoryCluster);}catch(e){}_mainMemoryCluster=null;}
+    if(!window.maplibregl||!_map)return;
+    _mainMemoryMarkers.forEach(function(m){try{m.remove();}catch(e){}});
+    _mainMemoryMarkers=[];
     try{renderMapPins();}catch(e){}
     if(_mapMode==='memories')loadMainMemoryMarkers();
   }catch(e){}
@@ -2854,15 +2866,28 @@ function loadMainMemoryMarkers(){
       try{
         window._memoryLogsCache=dedupeMemories(logs);
         if(_mapMode!=='memories'||!_map)return;
-        if(_mainMemoryCluster){try{_map.removeLayer(_mainMemoryCluster);}catch(e){}_mainMemoryCluster=null;}
+        _mainMemoryMarkers.forEach(function(m){try{m.remove();}catch(e){}});
+        _mainMemoryMarkers=[];
         var photoLogs=window._memoryLogsCache.filter(function(l){return l&&l.lat!=null&&l.lng!=null&&l.photo_url;});
         if(!photoLogs.length)return;
-        _mainMemoryCluster=buildMemoryCluster(photoLogs);
-        if(_mainMemoryCluster)_map.addLayer(_mainMemoryCluster);
+        photoLogs.forEach(function(log){
+          try{
+            var lat=log.lat, lng=log.lng;
+            var title=log.title||log.location||'Hangout';
+            var html='<div class="memory-marker" style="width:56px;height:56px;border-radius:12px;overflow:hidden;background:#000;border:3px solid #fff;box-shadow:0 4px 16px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;">'
+              +'<img src="'+log.photo_url+'" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">'
+              +'</div>';
+            var el=document.createElement('div');
+            el.innerHTML=html;
+            el.firstChild.style.width='56px';el.firstChild.style.height='56px';
+            var mk=new maplibregl.Marker({element:el.firstChild,anchor:'center'}).setLngLat([log.lng,log.lat]).addTo(_map);
+            mk.getElement().addEventListener('click',function(){openMemoryCard(log);});
+            _mainMemoryMarkers.push(mk);
+          }catch(e){}
+        });
         try{renderAreaSidebar();}catch(e){}
       }catch(e){}
     });
-  }catch(e){}
 }
 function refreshMapMode(){try{applyMapMode();}catch(e){}}
 function closeGroupModal(){try{var o=document.getElementById('groupModal');if(o)o.classList.add('hidden');}catch(e){}}

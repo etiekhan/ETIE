@@ -773,7 +773,7 @@ function renderProfileMemoryMap(){
     if(!container)return;
     if(_profileMemoryMap){try{_profileMemoryMap.remove();}catch(e){}_profileMemoryMap=null;}
     container.innerHTML='';
-    if(!window.maplibregl){container.innerHTML='<div class="muted" style="padding:20px;text-align:center;">Map loading…</div>';return;}
+    if(!window.L){container.innerHTML='<div class="muted" style="padding:20px;text-align:center;">Map loading…</div>';return;}
     _profileMemoryMap=L.map('memoryMap',{zoomControl:false,attributionControl:false,dragging:true,touchZoom:true,scrollWheelZoom:true,doubleClickZoom:true,boxZoom:false,keyboard:false,tap:true});
     _profileMemoryMap.setView(HK_CENTER,11);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:18,attribution:'© OpenStreetMap contributors © CARTO'}).addTo(_profileMemoryMap);
@@ -789,7 +789,7 @@ function renderMemoryMapFull(){
     if(!container)return;
     if(_memoryMapFull){try{_memoryMapFull.remove();}catch(e){}_memoryMapFull=null;}
     container.innerHTML='';
-    if(!window.maplibregl){container.innerHTML='<div class="muted" style="padding:20px;text-align:center;">Map loading…</div>';return;}
+    if(!window.L){container.innerHTML='<div class="muted" style="padding:20px;text-align:center;">Map loading…</div>';return;}
     _memoryMapFull=L.map('memoryMapFull',{zoomControl:false,attributionControl:false,dragging:true,touchZoom:true,scrollWheelZoom:true,doubleClickZoom:true,boxZoom:false,keyboard:false,tap:true});
     _memoryMapFull.setView(HK_CENTER,11);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:18,attribution:'© OpenStreetMap contributors © CARTO'}).addTo(_memoryMapFull);
@@ -1791,7 +1791,7 @@ function setMapRole(role){MAP_ROLE=role;renderMapFilter();renderMapPins();}
 function selectIntent(id){if(id==='All'){MAP_ROLE='All';MAP_FILTER='All';}else{MAP_ROLE=id;}renderMapFilter();renderMapPins();}
 function renderMapPins(){
   try{
-    if(!window.maplibregl||!document.getElementById('hkMap'))return;
+    if(!window.L||!document.getElementById('hkMap'))return;
     initHKMap();if(!_map)return;
     // Clear existing pin layers
     ['pins','pin-clusters'].forEach(function(id){
@@ -1844,7 +1844,7 @@ function renderMapPins(){
           el.className='sq-pin sq-pin-'+prole+' sq-pin-fresh';
           el.innerHTML=mapCatEmoji(p.category);
           el.style.width='36px';el.style.height='36px';el.style.display='flex';el.style.alignItems='center';el.style.justifyContent='center';el.style.fontSize='18px';
-          var mk=new maplibregl.Marker({element:el,anchor:'center'}).setLngLat([center[1]+(radius/111000)*Math.sin(angle)/Math.cos(center[0]*Math.PI/180),center[0]+(radius/111000)*Math.cos(angle)]).addTo(_map);
+          var mk=new L.Marker({element:el,anchor:'center'}).setLngLat([center[1]+(radius/111000)*Math.sin(angle)/Math.cos(center[0]*Math.PI/180),center[0]+(radius/111000)*Math.cos(angle)]).addTo(_map);
           mk.getElement().addEventListener('click',(function(id){return function(){openPinDetail(id);};})(p.id));
           _pinMarkers.push(mk);
         }catch(e){}

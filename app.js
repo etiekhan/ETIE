@@ -774,14 +774,10 @@ function renderProfileMemoryMap(){
     if(_profileMemoryMap){try{_profileMemoryMap.remove();}catch(e){}_profileMemoryMap=null;}
     container.innerHTML='';
     if(!window.maplibregl){container.innerHTML='<div class="muted" style="padding:20px;text-align:center;">Map loading…</div>';return;}
-    _profileMemoryMap=new maplibregl.Map({
-      container:'memoryMap',
-      style:'https://api.maptiler.com/maps/streets-v2/style.json?key=demo',
-      center:HK_CENTER,
-      zoom:11,
-      attributionControl:false
-    });
-    _profileMemoryMap.addControl(new maplibregl.NavigationControl({showCompass:false}),'bottom-right');
+    _profileMemoryMap=L.map('memoryMap',{zoomControl:false,attributionControl:false,dragging:true,touchZoom:true,scrollWheelZoom:true,doubleClickZoom:true,boxZoom:false,keyboard:false,tap:true});
+    _profileMemoryMap.setView(HK_CENTER,11);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:18,attribution:'© OpenStreetMap contributors © CARTO'}).addTo(_profileMemoryMap);
+    if(window.L.Control.Locate){_profileMemoryMap.addControl(L.control.locate({locateOptions:{enableHighAccuracy:true,maxZoom:15},drawCircle:false,drawMarker:false,showPopup:false,strings:{title:'My location'}}));}
     fetchAndRenderMemoryMarkers(_profileMemoryMap);
   }catch(e){console.error('renderProfileMemoryMap',e);}
 }
@@ -794,14 +790,10 @@ function renderMemoryMapFull(){
     if(_memoryMapFull){try{_memoryMapFull.remove();}catch(e){}_memoryMapFull=null;}
     container.innerHTML='';
     if(!window.maplibregl){container.innerHTML='<div class="muted" style="padding:20px;text-align:center;">Map loading…</div>';return;}
-    _memoryMapFull=new maplibregl.Map({
-      container:'memoryMapFull',
-      style:'https://api.maptiler.com/maps/streets-v2/style.json?key=demo',
-      center:HK_CENTER,
-      zoom:11,
-      attributionControl:false
-    });
-    _memoryMapFull.addControl(new maplibregl.NavigationControl({showCompass:false}),'bottom-right');
+    _memoryMapFull=L.map('memoryMapFull',{zoomControl:false,attributionControl:false,dragging:true,touchZoom:true,scrollWheelZoom:true,doubleClickZoom:true,boxZoom:false,keyboard:false,tap:true});
+    _memoryMapFull.setView(HK_CENTER,11);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:18,attribution:'© OpenStreetMap contributors © CARTO'}).addTo(_memoryMapFull);
+    if(window.L.Control.Locate){_memoryMapFull.addControl(L.control.locate({locateOptions:{enableHighAccuracy:true,maxZoom:15},drawCircle:false,drawMarker:false,showPopup:false,strings:{title:'My location'}}));}
     fetchAndRenderMemoryMarkers(_memoryMapFull, function(count){
       var el=document.getElementById('memoryMapCount');
       if(el)el.textContent=count+' memory'+(count===1?'':'s')+' mapped';
@@ -870,28 +862,51 @@ function memoryPopupHtml(list){
 function buildMemoryCluster(rawLogs){
   try{
     var photoLogs=dedupeMemories(rawLogs);
-    var markers=[];
+    var markers=L.markerClusterGroup({
+      iconCreateFunction:function(cluster){
+        var c=cluster.getChildCount();
+        var size=c<10?'small':(c<100?'medium':'large');
+        return L.divIcon({
+          html:'<div class="memory-cluster memory-cluster-'+size+'"><span>'+c+'</span></div>',
+          className:'',
+          iconSize:L.point(40,40),
+          iconAnchor:L.point(20,20)
+        });
+      },
+      spiderfyOnMaxZoom:true,
+      showCoverageOnHover:false,
+      zoomToBoundsOnClick:false,
+      maxClusterRadius:50
+    });
     rawLogs.forEach(function(log){
       try{
         var photo=log.photo_url;
         var thumb=photo;
         var lat=log.lat, lng=log.lng;
         var title=log.title||log.location||'Hangout';
-        var html='<div class="memory-marker" style="width:56px;height:56px;border-radius:12px;overflow:hidden;background:#000;border:3px solid #fff;box-shadow:0 4px 16px rgba(0,0,0,.5);display:flex;align-items:center;justify_content:center;">'
+        var html='<div class="memory-marker" style="width:56px;height:56px;border-radius:12px;overflow:hidden;background:#000;border:3px solid #fff;box-shadow:0 4px 16px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;">'
           +'<img src="'+thumb+'" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">'
           +'</div>';
-        var el=document.createElement('div');
-        el.innerHTML=html;
-        el.firstChild.style.width='56px';el.firstChild.style.height='56px';
-        var mk=new maplibregl.Marker({element:el.firstChild,anchor:'center'}).setLngLat([lng,lat]).addTo(_map);
-        mk.getElement().addEventListener('click',function(){openMemoryCard(log);});
-        markers.push(mk);
+        var icon=L.divIcon({className:'',html:html,iconSize:[56,56],iconAnchor:[28,28]});
+        var mk=L.marker([lat,lng],{icon:icon,title:title});
+        mk.options.etieLog=log;
+        mk.on('click',function(){openMemoryCard(log);});
+        markers.addLayer(mk);
       }catch(e){}
     });
-    // Simple clustering: group nearby markers
-    // For now, just return the markers array; clustering can be added later
+    markers.on('clusterclick',function(e){
+      try{
+        var kids=e.layer.getAllChildMarkers();
+        var logs=(kids||[]).map(function(mk){return mk&&mk.options?mk.options.etieLog:null;}).filter(Boolean);
+        var list=dedupeMemories(logs);
+        if(!list.length)return;
+        if(list.length===1){openMemoryCard(list[0]);return;}
+        _popupMemories=list;
+        e.layer.bindPopup(memoryPopupHtml(list),{maxWidth:290,minWidth:230,className:'mem-popup-wrap'}).openPopup();
+      }catch(e2){}
+    });
     return markers;
-  }catch(e){return [];}
+  }catch(e){return null;}
 }
 function fetchAndRenderMemoryMarkers(mapInstance,onDone){
   try{
@@ -902,22 +917,10 @@ function fetchAndRenderMemoryMarkers(mapInstance,onDone){
       try{
         var photoLogs=(logs||[]).filter(function(l){return l&&l.lat!=null&&l.lng!=null&&l.photo_url;});
         if(!photoLogs.length){if(onDone)onDone(0);return;}
-        var markers=[];
-        photoLogs.forEach(function(log){
-          try{
-            var lat=log.lat, lng=log.lng;
-            var title=log.title||log.location||'Hangout';
-            var html='<div class="memory-marker" style="width:56px;height:56px;border-radius:12px;overflow:hidden;background:#000;border:3px solid #fff;box-shadow:0 4px 16px rgba(0,0,0,.5);display:flex;align-items:center;justify_content:center;">'
-              +'<img src="'+log.photo_url+'" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">'
-              +'</div>';
-            var el=document.createElement('div');
-            el.innerHTML=html;
-            el.firstChild.style.width='56px';el.firstChild.style.height='56px';
-            var mk=new maplibregl.Marker({element:el.firstChild,anchor:'center'}).setLngLat([lng,lat]).addTo(mapInstance);
-            mk.getElement().addEventListener('click',function(){openMemoryCard(log);});
-            markers.push(mk);
-          }catch(e){}
-        });
+        var markers=buildMemoryCluster(photoLogs);
+        if(!markers){if(onDone)onDone(0);return;}
+        mapInstance.addLayer(markers);
+        try{var group=new L.featureGroup(photoLogs.map(function(l){return L.marker([l.lat,l.lng]);}));mapInstance.fitBounds(group.getBounds().pad(0.1));}catch(e){}
         if(onDone)onDone(photoLogs.length);
       }catch(e){console.error('fetchAndRenderMemoryMarkers',e);if(onDone)onDone(0);}
     });
@@ -1734,26 +1737,15 @@ function visibleMapPins(){
 }
 function initHKMap(){
   try{
-    if(_map||!window.maplibregl)return;
+    if(_map||!window.L)return;
     var el=document.getElementById('hkMap');if(!el)return;
     var _anchor=getAnchor();
-    _map=new maplibregl.Map({
-      container:'hkMap',
-      style:'https://api.maptiler.com/maps/streets-v2/style.json?key=demo',
-      center:[_anchor.lng,_anchor.lat],
-      zoom:HK_ZOOM,
-      minZoom:2,
-      maxZoom:20,
-      attributionControl:false,
-      dragRotate:false,
-      pitchWithRotate:false
-    });
-    _map.addControl(new maplibregl.NavigationControl({showCompass:false}),'bottom-right');
+    var globalBounds=[[-85,-180],[85,180]];
+    _map=L.map('hkMap',{zoomControl:false,minZoom:2,maxZoom:20,maxBounds:globalBounds,maxBoundsViscosity:0.3,worldCopyJump:true}).setView([_anchor.lat,_anchor.lng],HK_ZOOM);
+    try{L.control.zoom({position:'bottomright'}).addTo(_map);}catch(e){}
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:20,attribution:'© OpenStreetMap contributors © CARTO'}).addTo(_map);
     _map.on('click',onMapTap);
-    _map.on('load',function(){
-      renderMapFilter();
-      try{renderMapPins();}catch(e){}
-    });
+    renderMapFilter();try{renderMapPins();}catch(e){}
   }catch(e){}
 }
 var _pickMode=null; // legacy map-tap mode flag (kept for compat)
@@ -1763,7 +1755,7 @@ function onMapTap(e){
     var lat=lngLat.lat,lng=lngLat.lng;
     _dropPoint={lat:lat,lng:lng};
     if(_dropMarker){try{_dropMarker.remove();}catch(_){}}
-    _dropMarker=new maplibregl.Marker({color:'#3ddc97'}).setLngLat([lng,lat]).addTo(_map);
+    _dropMarker=L.marker([lat,lng],{title:'Your pin location'}).addTo(_map);
     _pickMode=null;
     if(_mapMode==='memories'){
       try{openLogSheet(null,{lat:lat,lng:lng,label:nearestDistrictLabel(lat,lng)});}catch(_){}
@@ -1825,18 +1817,14 @@ function renderMapPins(){
     });
     function renderSinglePin(p){
       try{
-        var coords=pinLatLng(p);
-        var lngLat=[coords[1],coords[0]];
+        var ll=pinLatLng(p);
         var fresh=(Date.now()-(p.ts||0))<3600*1000?' sq-pin-fresh':'';
         var expired=isPinExpired(p)?' sq-pin-expired':'';
         var prole=((p.derivedRole||p.role)==='local')?'local':'traveller';
-        var el=document.createElement('div');
-        el.className='sq-pin sq-pin-'+prole+(fresh||'')+(expired||'');
-        el.innerHTML=mapCatEmoji(p.category);
-        el.style.width='36px';el.style.height='36px';el.style.display='flex';el.style.alignItems='center';el.style.justifyContent='center';el.style.fontSize='18px';
-        var mk=new maplibregl.Marker({element:el,anchor:'center'}).setLngLat([coords[1],coords[0]]).addTo(_map);
-        mk.getElement().addEventListener('click',(function(id){return function(){openPinDetail(id);};})(p.id));
-        _pinMarkers.push(mk);
+        var icon=L.divIcon({className:'',html:'<div class="sq-pin sq-pin-'+prole+fresh+expired+'">'+mapCatEmoji(p.category)+'</div>',iconSize:[36,36],iconAnchor:[18,18]});
+        var mk=L.marker(pinLatLng(p),{icon:icon,title:(p.name||'Hook')+' · '+p.category});
+        mk.on('click',(function(id){return function(){openPinDetail(id);};})(p.id));
+        _mapLayer.addLayer(mk);
       }catch(e){}
     }
     function renderPinCluster(group){
@@ -1863,7 +1851,7 @@ function renderMapPins(){
       });
     }
     // Track pin markers for cleanup
-    _pinMarkers.forEach(function(m){try{m.remove();}catch(e){}});
+    _pinMarkers.forEach(function(m){try{_map.removeLayer(m);}catch(e){}});
     _pinMarkers=[];
   }catch(e){}
 }
@@ -2053,7 +2041,7 @@ function openDropHook(){
     var ht=document.getElementById('hookText');if(ht){ht.value=(_lh&&_lh.hook)||'';var ph='';try{ph=(ETIE.traveller&&ETIE.traveller.bio)||'';}catch(e){}ht.placeholder=ph||"e.g. Grabbing late-night claypot rice in Sham Shui Po—who's down to join?";}
     hookCountTick();setHookRole(_hookDraft.role);
     if(_dropMarker){try{_dropMarker.remove();}catch(e){}_dropMarker=null;}
-    if(_dropPoint){try{_dropMarker=new maplibregl.Marker({color:'#3ddc97',title:'Your pin location'}).setLngLat([_dropPoint.lng,_dropPoint.lat]).addTo(_map);}catch(e){}}
+    if(_dropPoint){try{_dropMarker=L.marker([_dropPoint.lat,_dropPoint.lng],{title:'Your pin location'}).addTo(_map);}catch(e){}}
   }catch(e){}
 }
 function closeDropHook(){try{var o=document.getElementById('dropHookModal');if(o)o.classList.add('hidden');}catch(e){}}
@@ -2849,12 +2837,11 @@ function setMapMode(mode){
     toast(_mapMode==='memories'?'📸 Memories — everywhere you have actually been.':'🪝 Hooks — people going out.');
   }catch(e){}
 }
-var _mainMemoryMarkers=[];
+var _mainMemoryMarkers=null;
 function applyMapMode(){
   try{
-    if(!window.maplibregl||!_map)return;
-    _mainMemoryMarkers.forEach(function(m){try{m.remove();}catch(e){}});
-    _mainMemoryMarkers=[];
+    if(!window.L||!_map)return;
+    if(_mainMemoryMarkers){try{_map.removeLayer(_mainMemoryMarkers);}catch(e){}_mainMemoryMarkers=null;}
     try{renderMapPins();}catch(e){}
     if(_mapMode==='memories')loadMainMemoryMarkers();
   }catch(e){}
@@ -2868,10 +2855,26 @@ function loadMainMemoryMarkers(){
       try{
         window._memoryLogsCache=dedupeMemories(logs);
         if(_mapMode!=='memories'||!_map)return;
-        _mainMemoryMarkers.forEach(function(m){try{m.remove();}catch(e){}});
+        _mainMemoryMarkers.forEach(function(m){try{_map.removeLayer(m);}catch(e){}});
         _mainMemoryMarkers=[];
         var photoLogs=window._memoryLogsCache.filter(function(l){return l&&l.lat!=null&&l.lng!=null&&l.photo_url;});
         if(!photoLogs.length)return;
+        var markers=L.markerClusterGroup({
+          iconCreateFunction:function(cluster){
+            var c=cluster.getChildCount();
+            var size=c<10?'small':(c<100?'medium':'large');
+            return L.divIcon({
+              html:'<div class="memory-cluster memory-cluster-'+size+'"><span>'+c+'</span></div>',
+              className:'',
+              iconSize:L.point(40,40),
+              iconAnchor:L.point(20,20)
+            });
+          },
+          spiderfyOnMaxZoom:true,
+          showCoverageOnHover:false,
+          zoomToBoundsOnClick:false,
+          maxClusterRadius:50
+        });
         photoLogs.forEach(function(log){
           try{
             var lat=log.lat, lng=log.lng;
@@ -2879,14 +2882,26 @@ function loadMainMemoryMarkers(){
             var html='<div class="memory-marker" style="width:56px;height:56px;border-radius:12px;overflow:hidden;background:#000;border:3px solid #fff;box-shadow:0 4px 16px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;">'
               +'<img src="'+log.photo_url+'" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">'
               +'</div>';
-            var el=document.createElement('div');
-            el.innerHTML=html;
-            el.firstChild.style.width='56px';el.firstChild.style.height='56px';
-            var mk=new maplibregl.Marker({element:el.firstChild,anchor:'center'}).setLngLat([log.lng,log.lat]).addTo(_map);
-            mk.getElement().addEventListener('click',function(){openMemoryCard(log);});
-            _mainMemoryMarkers.push(mk);
+            var icon=L.divIcon({className:'',html:html,iconSize:[56,56],iconAnchor:[28,28]});
+            var mk=L.marker([lat,lng],{icon:icon,title:title});
+            mk.options.etieLog=log;
+            mk.on('click',function(){openMemoryCard(log);});
+            markers.addLayer(mk);
           }catch(e){}
         });
+        markers.on('clusterclick',function(e){
+          try{
+            var kids=e.layer.getAllChildMarkers();
+            var logs=(kids||[]).map(function(mk){return mk&&mk.options?mk.options.etieLog:null;}).filter(Boolean);
+            var list=dedupeMemories(logs);
+            if(!list.length)return;
+            if(list.length===1){openMemoryCard(list[0]);return;}
+            _popupMemories=list;
+            e.layer.bindPopup(memoryPopupHtml(list),{maxWidth:290,minWidth:230,className:'mem-popup-wrap'}).openPopup();
+          }catch(e2){}
+        });
+        _mainMemoryMarkers = markers;
+        _map.addLayer(markers);
         try{renderAreaSidebar();}catch(e){}
       }catch(e){}
     });

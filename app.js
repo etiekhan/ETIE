@@ -290,7 +290,7 @@ function showScreen(id){
     panels.forEach(function(p){var el=document.getElementById(p);if(el)el.classList.toggle('panel-open',want.indexOf(p)!==-1);});
     if(id==='profile'){renderLiteProfile();}
     if(id==='messages'){try{renderHookChatList();}catch(e){}}
-    if(id==='map'){try{initHKMap();if(window.maplibregl&&_map){setTimeout(function(){try{_map.invalidateSize();}catch(e){}},120);}renderMapPins();}catch(e){}}
+    if(id==='map'){try{initHKMap();if(window.maplibregl&&_map){setTimeout(function(){try{_map.resize();}catch(e){}},120);}renderMapPins();}catch(e){}}
   }catch(e){}
 }
 
@@ -774,13 +774,12 @@ function renderProfileMemoryMap(){
     if(_profileMemoryMap){try{_profileMemoryMap.remove();}catch(e){}_profileMemoryMap=null;}
     container.innerHTML='';
     if(!window.maplibregl){container.innerHTML='<div class="muted" style="padding:20px;text-align:center;">Map loading…</div>';return;}
-    _profileMemoryMap=new maplibregl.Map({
-      container:'memoryMap',
-      style:'https://api.maptiler.com/maps/streets-v2/style.json?key=mWVa9FJ4Nxh6qsIOagwY',
-      center:HK_CENTER,
+    _profileMemoryMap=createEtieMap('memoryMap',{
+      center:[HK_CENTER[1],HK_CENTER[0]],
       zoom:11,
       attributionControl:false
     });
+    if(!_profileMemoryMap)return;
     _profileMemoryMap.addControl(new maplibregl.NavigationControl({showCompass:false}),'bottom-right');
     fetchAndRenderMemoryMarkers(_profileMemoryMap);
   }catch(e){console.error('renderProfileMemoryMap',e);}
@@ -794,13 +793,12 @@ function renderMemoryMapFull(){
     if(_memoryMapFull){try{_memoryMapFull.remove();}catch(e){}_memoryMapFull=null;}
     container.innerHTML='';
     if(!window.maplibregl){container.innerHTML='<div class="muted" style="padding:20px;text-align:center;">Map loading…</div>';return;}
-    _memoryMapFull=new maplibregl.Map({
-      container:'memoryMapFull',
-      style:'https://api.maptiler.com/maps/streets-v2/style.json?key=mWVa9FJ4Nxh6qsIOagwY',
-      center:HK_CENTER,
+    _memoryMapFull=createEtieMap('memoryMapFull',{
+      center:[HK_CENTER[1],HK_CENTER[0]],
       zoom:11,
       attributionControl:false
     });
+    if(!_memoryMapFull)return;
     _memoryMapFull.addControl(new maplibregl.NavigationControl({showCompass:false}),'bottom-right');
     fetchAndRenderMemoryMarkers(_memoryMapFull, function(count){
       var el=document.getElementById('memoryMapCount');
@@ -870,22 +868,7 @@ function memoryPopupHtml(list){
 function buildMemoryCluster(rawLogs){
   try{
     var photoLogs=dedupeMemories(rawLogs);
-    var markers=L.markerClusterGroup({
-      iconCreateFunction:function(cluster){
-        var c=cluster.getChildCount();
-        var size=c<10?'small':(c<100?'medium':'large');
-        return L.divIcon({
-          html:'<div class="memory-cluster memory-cluster-'+size+'"><span>'+c+'</span></div>',
-          className:'',
-          iconSize:L.point(40,40),
-          iconAnchor:L.point(20,20)
-        });
-      },
-      spiderfyOnMaxZoom:true,
-      showCoverageOnHover:false,
-      zoomToBoundsOnClick:false,
-      maxClusterRadius:50
-    });
+    var markers=[];
     rawLogs.forEach(function(log){
       try{
         var photo=log.photo_url;
@@ -895,26 +878,16 @@ function buildMemoryCluster(rawLogs){
         var html='<div class="memory-marker" style="width:56px;height:56px;border-radius:12px;overflow:hidden;background:#000;border:3px solid #fff;box-shadow:0 4px 16px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;">'
           +'<img src="'+thumb+'" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">'
           +'</div>';
-        var icon=L.divIcon({className:'',html:html,iconSize:[56,56],iconAnchor:[28,28]});
-        var mk=L.marker([lat,lng],{icon:icon,title:title});
-        mk.options.etieLog=log;
-        mk.on('click',function(){openMemoryCard(log);});
-        markers.addLayer(mk);
+        var el=document.createElement('div');
+        el.innerHTML=html;
+        el.firstChild.style.width='56px';el.firstChild.style.height='56px';
+        var mk=new maplibregl.Marker({element:el.firstChild,anchor:'center'}).setLngLat([lng,lat]).addTo(_map);
+        mk.getElement().addEventListener('click',function(){openMemoryCard(log);});
+        markers.push(mk);
       }catch(e){}
     });
-    markers.on('clusterclick',function(e){
-      try{
-        var kids=e.layer.getAllChildMarkers();
-        var logs=(kids||[]).map(function(mk){return mk&&mk.options?mk.options.etieLog:null;}).filter(Boolean);
-        var list=dedupeMemories(logs);
-        if(!list.length)return;
-        if(list.length===1){openMemoryCard(list[0]);return;}
-        _popupMemories=list;
-        e.layer.bindPopup(memoryPopupHtml(list),{maxWidth:290,minWidth:230,className:'mem-popup-wrap'}).openPopup();
-      }catch(e2){}
-    });
     return markers;
-  }catch(e){return null;}
+  }catch(e){return [];}
 }
 function fetchAndRenderMemoryMarkers(mapInstance,onDone){
   try{
@@ -1579,6 +1552,39 @@ var MAP_INTENTS=[{id:'All',label:'All Pins',emoji:'🗺️'},{id:'traveller',lab
 var MAP_VIBES=[{id:'project mbappe, lebron or sth',emoji:'⚽'},{id:'letterboxd date',emoji:'🍿'},{id:'are you a fellow alcoholic?',emoji:'🍺'},{id:'time for a cuppa tea / coffee!',emoji:'☕'},{id:'walking around the city sharing headphones tgt',emoji:'🎧'},{id:'dubious quests and giggles',emoji:'⚡'},{id:'something else on your mind?',emoji:'💡'}];
 var MAP_DISTRICT_LATLNG={'Central and Western':[22.2840,114.1520],'Wan Chai':[22.2770,114.1730],'Eastern':[22.2730,114.2220],'Southern':[22.2380,114.1650],'Yau Tsim Mong':[22.3100,114.1700],'Sham Shui Po':[22.3307,114.1625],'Kowloon City':[22.3280,114.1900],'Wong Tai Sin':[22.3420,114.1980],'Kwun Tong':[22.3080,114.2280],'Tsuen Wan':[22.3700,114.1150],'Tuen Mun':[22.3900,113.9750],'Yuen Long':[22.4450,114.0300],'North':[22.4950,114.1450],'Tai Po':[22.4500,114.1650],'Sha Tin':[22.3850,114.1950],'Sai Kung':[22.3800,114.2700],'Islands':[22.2900,113.9500],'Kwai Tsing':[22.3550,114.1150]};
 var HK_CENTER=[22.2819,114.1581],HK_ZOOM=13;
+var ETIE_MAPTILER_KEY='mWVa9FJ4Nxh6qsIOagwY';
+var ETIE_MAP_STYLE_ID='streets-v2';
+function mapTilerApiKey(){
+  try{
+    if(window.ETIE_CONFIG&&Object.prototype.hasOwnProperty.call(window.ETIE_CONFIG,'MAPTILER_API_KEY')){
+      return String(window.ETIE_CONFIG.MAPTILER_API_KEY||'').trim();
+    }
+  }catch(e){}
+  return String(ETIE_MAPTILER_KEY||'').trim();
+}
+function mapTilerStyleUrl(){
+  var key=mapTilerApiKey();
+  return key?('https://api.maptiler.com/maps/'+ETIE_MAP_STYLE_ID+'/style.json?key='+encodeURIComponent(key)):null;
+}
+function showMapConfigError(container){
+  var el=(typeof container==='string')?document.getElementById(container):container;
+  var message='Map unavailable: MapTiler API key is missing. Set MAPTILER_API_KEY in your deployment environment.';
+  if(el)el.innerHTML='<div class="map-config-error" role="alert"><strong>Map unavailable</strong><br>MapTiler API key is missing.<br>Set MAPTILER_API_KEY in your deployment environment.</div>';
+  try{console.error(message);}catch(e){}
+}
+function showMapConfigError(container){
+  var el=(typeof container==='string')?document.getElementById(container):container;
+  var message='Map unavailable: MapTiler API key is missing. Set MAPTILER_API_KEY in your deployment environment.';
+  if(el)el.innerHTML='<div class="map-config-error" role="alert"><strong>Map unavailable</strong><br>MapTiler API key is missing.<br>Set MAPTILER_API_KEY in your deployment environment.</div>';
+  try{console.error(message);}catch(e){}
+}
+function createEtieMap(container,options){
+  var style=mapTilerStyleUrl();
+  if(!style){showMapConfigError(container);return null;}
+  var opts={};for(var k in options){if(Object.prototype.hasOwnProperty.call(options,k))opts[k]=options[k];}
+  opts.container=container;opts.style=style;
+  return new maplibregl.Map(opts);
+}
 var MAP_FILTER='All',MAP_ROLE='All';
 var _map=null,_mapLayer=null,_openPinId=null,_pinMarkers=[];
 var _dropPoint=null; // {lat,lng} set by tapping the map
@@ -1620,7 +1626,7 @@ function applyDerivedRole(role,why){
           if(!ETIE._anchored&&_map){
             ETIE._anchored=true;
             try{_map.setMaxBounds(anchorBounds(ETIE.anchor));}catch(e){}
-            try{_map.flyTo([fx.lat,fx.lng],13,{duration:1.2});}catch(e){}
+            try{_map.flyTo({center:[fx.lng,fx.lat],zoom:13,duration:1200});}catch(e){}
           }
           try{
             reverseLabel(fx.lat,fx.lng,function(lbl){
@@ -1760,9 +1766,7 @@ function initHKMap(){
     if(_map||!window.maplibregl)return;
     var el=document.getElementById('hkMap');if(!el)return;
     var _anchor=getAnchor();
-    _map=new maplibregl.Map({
-      container:'hkMap',
-      style:'https://api.maptiler.com/maps/streets-v2/style.json?key=mWVa9FJ4Nxh6qsIOagwY',
+    _map=createEtieMap('hkMap',{
       center:[_anchor.lng,_anchor.lat],
       zoom:HK_ZOOM,
       minZoom:2,
@@ -1771,6 +1775,7 @@ function initHKMap(){
       dragRotate:false,
       pitchWithRotate:false
     });
+    if(!_map)return;
     _map.addControl(new maplibregl.NavigationControl({showCompass:false}),'bottom-right');
     _map.on('click',onMapTap);
     _map.on('load',function(){
@@ -1824,6 +1829,8 @@ function renderMapPins(){
   try{
     if(!window.maplibregl||!document.getElementById('hkMap'))return;
     initHKMap();if(!_map)return;
+    _pinMarkers.forEach(function(m){try{m.remove();}catch(e){}});
+    _pinMarkers=[];
     // Clear existing pin layers
     ['pins','pin-clusters'].forEach(function(id){
       if(_map.getLayer(id))_map.removeLayer(id);
@@ -1879,15 +1886,12 @@ function renderMapPins(){
           el.className='sq-pin sq-pin-'+prole+' sq-pin-fresh';
           el.innerHTML=mapCatEmoji(p.category);
           el.style.width='36px';el.style.height='36px';el.style.display='flex';el.style.alignItems='center';el.style.justifyContent='center';el.style.fontSize='18px';
-          var mk=new L.Marker({element:el,anchor:'center'}).setLngLat([center[1]+(radius/111000)*Math.sin(angle)/Math.cos(center[0]*Math.PI/180),center[0]+(radius/111000)*Math.cos(angle)]).addTo(_map);
+          var mk=new maplibregl.Marker({element:el,anchor:'center'}).setLngLat([center[1]+(radius/111000)*Math.sin(angle)/Math.cos(center[0]*Math.PI/180),center[0]+(radius/111000)*Math.cos(angle)]).addTo(_map);
           mk.getElement().addEventListener('click',(function(id){return function(){openPinDetail(id);};})(p.id));
           _pinMarkers.push(mk);
         }catch(e){}
       });
     }
-    // Track pin markers for cleanup
-    _pinMarkers.forEach(function(m){try{m.remove();}catch(e){}});
-    _pinMarkers=[];
   }catch(e){}
 }
 function selectHookCategory(el,v){try{var c=document.getElementById('hookInterestPills');if(c)Array.prototype.forEach.call(c.querySelectorAll('.chip'),function(x){x.classList.remove('active');});if(el)el.classList.add('active');_hookDraft.category=v;_hookDraft.categoryTouched=true;}catch(e){try{_hookDraft.category=v;_hookDraft.categoryTouched=true;}catch(_){}}}
@@ -2754,14 +2758,14 @@ function toggleGlobalView(){
     if(!isGlobal){
       // Go global
       _map.setMaxBounds([[-85,-180],[85,180]]);
-      _map.flyTo([22.3,114.1],3,{duration:1.5});
+      _map.flyTo({center:[114.1,22.3],zoom:3,duration:1500});
       if(btn)btn.classList.add('active');
       toast('🌍 Global view — drag to explore');
     }else{
       // Return to HK
       var a=getAnchor();
       _map.setMaxBounds([[-85,-180],[85,180]]);
-      _map.flyTo([a.lat,a.lng],HK_ZOOM,{duration:1.5});
+      _map.flyTo({center:[a.lng,a.lat],zoom:HK_ZOOM,duration:1500});
       if(btn)btn.classList.remove('active');
       toast('🇭🇰 Back to Hong Kong');
     }
@@ -2771,7 +2775,7 @@ function flyToArea(lat,lng,label){
   try{
     if(!window.maplibregl||!_map)return;
     _map.setMaxBounds([[lat-1.1,lng-1.8],[lat+1.1,lng+1.8]]);
-    _map.flyTo([lat,lng],13,{duration:1.0});
+    _map.flyTo({center:[lng,lat],zoom:13,duration:1000});
     toast(label||'Flying there.');
   }catch(e){}
 }
@@ -2894,22 +2898,7 @@ function loadMainMemoryMarkers(){
         _mainMemoryMarkers=[];
         var photoLogs=window._memoryLogsCache.filter(function(l){return l&&l.lat!=null&&l.lng!=null&&l.photo_url;});
         if(!photoLogs.length)return;
-        var markers=L.markerClusterGroup({
-          iconCreateFunction:function(cluster){
-            var c=cluster.getChildCount();
-            var size=c<10?'small':(c<100?'medium':'large');
-            return L.divIcon({
-              html:'<div class="memory-cluster memory-cluster-'+size+'"><span>'+c+'</span></div>',
-              className:'',
-              iconSize:L.point(40,40),
-              iconAnchor:L.point(20,20)
-            });
-          },
-          spiderfyOnMaxZoom:true,
-          showCoverageOnHover:false,
-          zoomToBoundsOnClick:false,
-          maxClusterRadius:50
-        });
+        var markers=[];
         photoLogs.forEach(function(log){
           try{
             var lat=log.lat, lng=log.lng;
@@ -2917,26 +2906,15 @@ function loadMainMemoryMarkers(){
             var html='<div class="memory-marker" style="width:56px;height:56px;border-radius:12px;overflow:hidden;background:#000;border:3px solid #fff;box-shadow:0 4px 16px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;">'
               +'<img src="'+log.photo_url+'" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">'
               +'</div>';
-            var icon=L.divIcon({className:'',html:html,iconSize:[56,56],iconAnchor:[28,28]});
-            var mk=L.marker([lat,lng],{icon:icon,title:title});
-            mk.options.etieLog=log;
-            mk.on('click',function(){openMemoryCard(log);});
-            markers.addLayer(mk);
+            var el=document.createElement('div');
+            el.innerHTML=html;
+            el.firstChild.style.width='56px';el.firstChild.style.height='56px';
+            var mk=new maplibregl.Marker({element:el.firstChild,anchor:'center'}).setLngLat([log.lng,log.lat]).addTo(_map);
+            mk.getElement().addEventListener('click',function(){openMemoryCard(log);});
+            markers.push(mk);
           }catch(e){}
         });
-        markers.on('clusterclick',function(e){
-          try{
-            var kids=e.layer.getAllChildMarkers();
-            var logs=(kids||[]).map(function(mk){return mk&&mk.options?mk.options.etieLog:null;}).filter(Boolean);
-            var list=dedupeMemories(logs);
-            if(!list.length)return;
-            if(list.length===1){openMemoryCard(list[0]);return;}
-            _popupMemories=list;
-            e.layer.bindPopup(memoryPopupHtml(list),{maxWidth:290,minWidth:230,className:'mem-popup-wrap'}).openPopup();
-          }catch(e2){}
-        });
         _mainMemoryMarkers = markers;
-        _map.addLayer(markers);
         try{renderAreaSidebar();}catch(e){}
       }catch(e){}
     });

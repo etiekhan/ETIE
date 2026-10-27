@@ -178,9 +178,10 @@
     } else if (layer.type === 'line') {
       layer.paint = layer.paint || {};
       layer.paint['line-color'] = color;
-      if (rule.opacity !== undefined) {
-        layer.paint['line-opacity'] = rule.opacity;
-      }
+      // line-opacity removed - not supported in this MapLibre GL version
+      // if (rule.opacity !== undefined) {
+      //   layer.paint['line-opacity'] = rule.opacity;
+      // }
     } else if (layer.type === 'symbol') {
       layer.paint = layer.paint || {};
       if (layer.paint['text-color']) {
@@ -249,10 +250,10 @@
         });
       }
     }
-    // Blur
-    glow.paint['line-blur'] = 2;
-    // Opacity
-    glow.paint['line-opacity'] = 0.35;
+    // Blur - not supported in this MapLibre GL version
+    // glow.paint['line-blur'] = 2;
+    // Opacity - not supported in this MapLibre GL version
+    // glow.paint['line-opacity'] = 0.35;
     // Remove dasharray
     delete glow.paint['line-dasharray'];
     return glow;

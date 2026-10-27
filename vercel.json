@@ -1,5 +1,5 @@
 {
-  "buildCommand": "",
+  "buildCommand": "echo \"window.ETIE_CONFIG = { MAPTILER_API_KEY: '$MAPTILER_API_KEY' };\" > runtime-config.js",
   "outputDirectory": ".",
   "devCommand": "",
   "installCommand": "",

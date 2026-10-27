@@ -2,7 +2,8 @@ version: 1
 frontend:
   phases:
     preBuild:
-      commands: []
+      commands:
+        - echo "window.ETIE_CONFIG = { MAPTILER_API_KEY: '$MAPTILER_API_KEY' };" > runtime-config.js
     build:
       commands:
         - echo "Static site - no build step"

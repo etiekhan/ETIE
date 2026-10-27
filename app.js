@@ -774,13 +774,30 @@ function renderProfileMemoryMap(){
     if(_profileMemoryMap){try{_profileMemoryMap.remove();}catch(e){}_profileMemoryMap=null;}
     container.innerHTML='';
     if(!window.maplibregl){container.innerHTML='<div class="muted" style="padding:20px;text-align:center;">Map loading…</div>';return;}
-    _profileMemoryMap=createEtieMap('memoryMap',{
-      center:[HK_CENTER[1],HK_CENTER[0]],
-      zoom:11,
-      attributionControl:false
-    });
-    if(!_profileMemoryMap)return;
-    _profileMemoryMap.addControl(new maplibregl.NavigationControl({showCompass:false}),'bottom-right');
+    if(window.EtieMapStyle && typeof window.EtieMapStyle.load === 'function'){
+      window.EtieMapStyle.load(function(style){
+        if(!style){showMapConfigError('memoryMap');return;}
+        _profileMemoryMap = new maplibregl.Map({
+          container:'memoryMap',
+          style:style,
+          center:[HK_CENTER[1],HK_CENTER[0]],
+          zoom:11,
+          attributionControl:false
+        });
+        if(!_profileMemoryMap)return;
+        _profileMemoryMap.addControl(new maplibregl.NavigationControl({showCompass:false}),'bottom-right');
+        fetchAndRenderMemoryMarkers(_profileMemoryMap);
+      });
+    } else {
+      _profileMemoryMap=createEtieMap('memoryMap',{
+        center:[HK_CENTER[1],HK_CENTER[0]],
+        zoom:11,
+        attributionControl:false
+      });
+      if(!_profileMemoryMap)return;
+      _profileMemoryMap.addControl(new maplibregl.NavigationControl({showCompass:false}),'bottom-right');
+      fetchAndRenderMemoryMarkers(_profileMemoryMap);
+    }
     fetchAndRenderMemoryMarkers(_profileMemoryMap);
   }catch(e){console.error('renderProfileMemoryMap',e);}
 }
@@ -793,13 +810,36 @@ function renderMemoryMapFull(){
     if(_memoryMapFull){try{_memoryMapFull.remove();}catch(e){}_memoryMapFull=null;}
     container.innerHTML='';
     if(!window.maplibregl){container.innerHTML='<div class="muted" style="padding:20px;text-align:center;">Map loading…</div>';return;}
-    _memoryMapFull=createEtieMap('memoryMapFull',{
-      center:[HK_CENTER[1],HK_CENTER[0]],
-      zoom:11,
-      attributionControl:false
-    });
-    if(!_memoryMapFull)return;
-    _memoryMapFull.addControl(new maplibregl.NavigationControl({showCompass:false}),'bottom-right');
+    if(window.EtieMapStyle && typeof window.EtieMapStyle.load === 'function'){
+      window.EtieMapStyle.load(function(style){
+        if(!style){showMapConfigError('memoryMapFull');return;}
+        _memoryMapFull = new maplibregl.Map({
+          container:'memoryMapFull',
+          style:style,
+          center:[HK_CENTER[1],HK_CENTER[0]],
+          zoom:11,
+          attributionControl:false
+        });
+        if(!_memoryMapFull)return;
+        _memoryMapFull.addControl(new maplibregl.NavigationControl({showCompass:false}),'bottom-right');
+        fetchAndRenderMemoryMarkers(_memoryMapFull, function(count){
+          var el=document.getElementById('memoryMapCount');
+          if(el)el.textContent=count+' memory'+(count===1?'':'s')+' mapped';
+        });
+      });
+    } else {
+      _memoryMapFull=createEtieMap('memoryMapFull',{
+        center:[HK_CENTER[1],HK_CENTER[0]],
+        zoom:11,
+        attributionControl:false
+      });
+      if(!_memoryMapFull)return;
+      _memoryMapFull.addControl(new maplibregl.NavigationControl({showCompass:false}),'bottom-right');
+      fetchAndRenderMemoryMarkers(_memoryMapFull, function(count){
+        var el=document.getElementById('memoryMapCount');
+        if(el)el.textContent=count+' memory'+(count===1?'':'s')+' mapped';
+      });
+    }
     fetchAndRenderMemoryMarkers(_memoryMapFull, function(count){
       var el=document.getElementById('memoryMapCount');
       if(el)el.textContent=count+' memory'+(count===1?'':'s')+' mapped';
@@ -1592,7 +1632,6 @@ var MAP_INTENTS=[{id:'All',label:'All Pins',emoji:''},{id:'traveller',label:'Vis
 var MAP_VIBES=[{id:'project mbappe, lebron or sth',emoji:'⚽'},{id:'letterboxd date',emoji:'🍿'},{id:'are you a fellow alcoholic?',emoji:'🍺'},{id:'time for a cuppa tea / coffee!',emoji:'☕'},{id:'walking around the city sharing headphones tgt',emoji:'🎧'},{id:'dubious quests and giggles',emoji:'⚡'},{id:'something else on your mind?',emoji:'💡'}];
 var MAP_DISTRICT_LATLNG={'Central and Western':[22.2840,114.1520],'Wan Chai':[22.2770,114.1730],'Eastern':[22.2730,114.2220],'Southern':[22.2380,114.1650],'Yau Tsim Mong':[22.3100,114.1700],'Sham Shui Po':[22.3307,114.1625],'Kowloon City':[22.3280,114.1900],'Wong Tai Sin':[22.3420,114.1980],'Kwun Tong':[22.3080,114.2280],'Tsuen Wan':[22.3700,114.1150],'Tuen Mun':[22.3900,113.9750],'Yuen Long':[22.4450,114.0300],'North':[22.4950,114.1450],'Tai Po':[22.4500,114.1650],'Sha Tin':[22.3850,114.1950],'Sai Kung':[22.3800,114.2700],'Islands':[22.2900,113.9500],'Kwai Tsing':[22.3550,114.1150]};
 var HK_CENTER=[22.2819,114.1581],HK_ZOOM=13;
-var ETIE_MAPTILER_KEY='mWVa9FJ4Nxh6qsIOagwY';
 var ETIE_MAP_STYLE_ID='streets-v2';
 function mapTilerApiKey(){
   try{
@@ -1600,7 +1639,7 @@ function mapTilerApiKey(){
       return String(window.ETIE_CONFIG.MAPTILER_API_KEY||'').trim();
     }
   }catch(e){}
-  return String(ETIE_MAPTILER_KEY||'').trim();
+  return '';
 }
 function mapTilerStyleUrl(){
   var key=mapTilerApiKey();
@@ -1800,7 +1839,9 @@ function initHKMap(){
     if(_map||!window.maplibregl)return;
     var el=document.getElementById('hkMap');if(!el)return;
     var _anchor=getAnchor();
-    _map=createEtieMap('hkMap',{
+    var styleUrl = (window.EtieMapStyle && typeof window.EtieMapStyle.load === 'function') ? null : null;
+    var opts = {
+      container:'hkMap',
       center:[_anchor.lng,_anchor.lat],
       zoom:HK_ZOOM,
       minZoom:2,
@@ -1808,14 +1849,33 @@ function initHKMap(){
       attributionControl:false,
       dragRotate:false,
       pitchWithRotate:false
-    });
-    if(!_map)return;
-    _map.addControl(new maplibregl.NavigationControl({showCompass:false}),'bottom-right');
-    _map.on('click',onMapTap);
-    _map.on('load',function(){
-      renderMapFilter();
-      try{renderMapPins();}catch(e){}
-    });
+    };
+    if(window.EtieMapStyle && typeof window.EtieMapStyle.load === 'function'){
+      window.EtieMapStyle.load(function(style){
+        if(!style){showMapConfigError('hkMap');return;}
+        if(_map){return;}
+        opts.style = style;
+        _map = new maplibregl.Map(opts);
+        if(!_map)return;
+        _map.addControl(new maplibregl.NavigationControl({showCompass:false}),'bottom-right');
+        _map.on('click',onMapTap);
+        _map.on('load',function(){
+          renderMapFilter();
+          try{renderMapPins();}catch(e){}
+        });
+      });
+    } else {
+      opts.style = mapTilerStyleUrl();
+      if(!opts.style){showMapConfigError('hkMap');return;}
+      _map = new maplibregl.Map(opts);
+      if(!_map)return;
+      _map.addControl(new maplibregl.NavigationControl({showCompass:false}),'bottom-right');
+      _map.on('click',onMapTap);
+      _map.on('load',function(){
+        renderMapFilter();
+        try{renderMapPins();}catch(e){}
+      });
+    }
   }catch(e){}
 }
 var _pickMode=null; // legacy map-tap mode flag (kept for compat)

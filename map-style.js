@@ -39,6 +39,7 @@
     'Glacier': { type: 'fill', color: 'land' },
     'Grass': { type: 'fill', color: 'land' },
     // Landuse fills -> land/parks
+    'Pedestrian': { type: 'fill', color: 'land' },
     'Residential': { type: 'fill', color: 'land' },
     'Industrial': { type: 'fill', color: 'land' },
     'Cemetery': { type: 'fill', color: 'parks' },

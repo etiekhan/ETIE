@@ -146,8 +146,8 @@
 </div>
 <!-- compat: old #admin id still exists for JS that queries it -->
 <div id="admin" style="display:none;"></div>
-<div class="chat-overlay hidden" id="dropHookModal" onclick="if(event.target===this)closeDropHook()">
-  <div class="chat-popup glass-modal" role="dialog" aria-modal="true" aria-label="Drop a Hook" style="width:min(560px,calc(100vw - 24px));">
+<div class="chat-overlay hidden" id="dropHookModal" onclick="if(event.target===this)closeDropHook()" style="align-items:center;justify-content:center;">
+  <div class="chat-popup glass-modal" role="dialog" aria-modal="true" aria-label="Drop a Hook" style="width:min(640px,calc(100vw - 32px));max-height:85vh;">
     <div class="chat-popup-head"><div><strong>📍 Drop a Hook</strong><div class="muted small">Pin a hangout on the HK map</div></div><button class="secondary" onclick="closeDropHook()" aria-label="Close" style="padding:8px 12px;">✕</button></div>
     <div class="chat-popup-body">
 <div class="field"><label>Quick drop — 1 tap</label><div class="preset-row" id="hookPresets"></div></div>
@@ -219,8 +219,8 @@
     </div>
   </div>
 </div>
-<div class="chat-overlay hidden" id="logHangoutModal" onclick="if(event.target===this)closeLogSheet()">
-  <div class="chat-popup glass-modal" role="dialog" aria-modal="true" aria-label="Log Hangout" style="width:min(480px,calc(100vw - 24px));">
+<div class="chat-overlay hidden" id="logHangoutModal" onclick="if(event.target===this)closeLogSheet()" style="align-items:center;justify-content:center;">
+  <div class="chat-popup glass-modal" role="dialog" aria-modal="true" aria-label="Log Hangout" style="width:min(640px,calc(100vw - 32px));max-height:85vh;">
     <div class="chat-popup-head"><div><strong>📸 Log Hangout</strong><div class="muted small" id="logHookName">—</div></div><button class="secondary" onclick="closeLogSheet()" aria-label="Close" style="padding:8px 12px;">✕</button></div>
     <div class="chat-popup-body" style="background:transparent;">
       <p class="muted small" id="logWindow">—</p>
@@ -358,7 +358,7 @@
   </div>
 </div>
 <!-- Memory Card Modal (for photo pin clicks) -->
-<div class="chat-overlay hidden" id="memoryCardModal" onclick="if(event.target===this)closeMemoryCard()">
+<div class="chat-overlay hidden" id="memoryCardModal" onclick="if(event.target===this)closeMemoryCard()" style="align-items:center;justify-content:center;">
   <div class="chat-popup glass-modal" role="dialog" aria-modal="true" aria-label="Hangout Memory" style="width:min(520px,calc(100vw - 24px));max-height:90vh;">
     <div class="chat-popup-head"><div><strong>🖼️ Hangout Memory</strong></div><button class="secondary" onclick="closeMemoryCard()" aria-label="Close" style="padding:8px 12px;">✕</button></div>
     <div class="chat-popup-body" style="padding:0;background:transparent;overflow:hidden;">
@@ -467,7 +467,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
   <script src="supabase-config.js?v=69"></script>
-  <script src="app.js?v=123"></script>
-  <script src="supabase-sync.js?v=106"></script>
+  <script src="app.js?v=124"></script>
+  <script src="supabase-sync.js?v=107"></script>
 </body>
 </html>

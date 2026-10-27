@@ -164,7 +164,7 @@ header .secondary{background:rgba(255,255,255,.96)!important;color:#171717!impor
 
 /* Interest-Anchored Map Sidequests */
 #hkMap{height:420px;border-radius:18px;border:1px solid rgba(244,63,94,.35);box-shadow:0 0 24px rgba(244,63,94,.10),0 12px 30px rgba(0,0,0,.35);z-index:1;background:#14101c}
-#hkMap.leaflet-container{font:inherit}
+#hkMap{font:inherit}
 #mapFilterBar .chip.active{background:rgba(244,63,94,.18);border-color:rgba(244,63,94,.45);color:#ffe4e6;box-shadow:0 0 12px rgba(244,63,94,.18)}
 .sq-pin{position:relative;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;background:#0c0d10;border:2px solid rgba(255,255,255,.85);box-shadow:0 0 10px rgba(255,255,255,.25);cursor:pointer}
 .sq-pin-traveller{border-color:#00F2FE;box-shadow:0 0 8px 1px rgba(0,242,254,.9),0 0 22px 4px rgba(0,242,254,.45),inset 0 0 6px rgba(0,242,254,.35)}
@@ -289,8 +289,8 @@ html,body{height:100%;width:100%;margin:0;padding:0;overflow:hidden;background:#
 @media(max-width:900px){#hkMap{height:100%}}
 
 .map-credit{position:absolute;left:8px;bottom:8px;z-index:500;font-size:10px;color:rgba(255,255,255,.6);background:rgba(0,0,0,.4);padding:2px 8px;border-radius:99px;pointer-events:none;}
-.leaflet-control-zoom{border:1px solid rgba(255,255,255,.15)!important;box-shadow:none!important;overflow:hidden;border-radius:12px!important;position:fixed!important;right:14px!important;top:50%!important;transform:translateY(-50%)!important;}
-.leaflet-control-zoom a{background:#0c0d10!important;color:#fff!important;border:0!important;box-shadow:none!important;width:34px!important;height:34px!important;line-height:34px!important;}
+.maplibregl-ctrl-zoom{border:1px solid rgba(255,255,255,.15)!important;box-shadow:none!important;overflow:hidden;border-radius:12px!important;position:fixed!important;right:14px!important;top:50%!important;transform:translateY(-50%)!important;}
+.maplibregl-ctrl-zoom a{background:#0c0d10!important;color:#fff!important;border:0!important;box-shadow:none!important;width:34px!important;height:34px!important;line-height:34px!important;}
 /* floating glass header */
 .snav-btn{border:0;background:transparent;cursor:pointer;color:rgba(255,255,255,.75);font-weight:700;font-size:14px;padding:9px 16px;border-radius:11px;white-space:nowrap;}
 .snav-btn:hover{background:rgba(255,255,255,.08);color:#fff;}
@@ -676,8 +676,8 @@ body.has-weekly-quest .map-empty{top:180px;}
 .chips .chip{display:inline-flex;align-items:center;}
 
 /* ===== Memory cluster popup: the feed for one place ===== */
-.leaflet-popup-content-wrapper.mem-popup-wrap{border-radius:16px;padding:0;background:#141416;color:#f5f3ef;border:1px solid rgba(255,255,255,.12);box-shadow:0 12px 40px rgba(0,0,0,.5);}
-.leaflet-popup-content.mem-popup-wrap{margin:0;width:auto!important;}
+.maplibregl-popup-content.mem-popup-wrap{border-radius:16px;padding:0;background:#141416;color:#f5f3ef;border:1px solid rgba(255,255,255,.12);box-shadow:0 12px 40px rgba(0,0,0,.5);}
+.maplibregl-popup-content.mem-popup-wrap{margin:0;width:auto!important;}
 .mem-pop{padding:12px;}
 .mem-pop-head{font-size:12px;font-weight:800;letter-spacing:.02em;opacity:.7;margin:0 2px 8px;}
 .mem-pop-row{display:flex;align-items:center;gap:9px;padding:6px;border-radius:11px;cursor:pointer;}
@@ -698,16 +698,10 @@ body.has-weekly-quest .map-empty{top:180px;}
   justify-content:center;
 }
 
-.leaflet-container { 
-  background: #000000 !important; 
-}
+
 /* Fix attribution and UI elements that got inverted */
-.leaflet-control-attribution { 
-  filter: invert(100%) hue-rotate(180deg) brightness(90%) contrast(140%); 
-}
-.leaflet-control-zoom { 
-  filter: invert(100%) hue-rotate(180deg) brightness(90%) contrast(140%); 
-}
+
+
 
 .pin-drawer{position:fixed;z-index:900;bottom:0;left:0;right:0;margin:0 auto;max-width:640px;max-height:85vh;background:rgba(20,16,28,.96);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.14);border-radius:20px 20px 0 0;overflow:hidden;color:#f5f3ef;display:flex;flex-direction:column;box-shadow:0 -12px 40px rgba(0,0,0,.5);}
 .pin-drawer.hidden{display:none;}

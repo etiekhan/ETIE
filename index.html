@@ -4,14 +4,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Etie — MVP User Flow Prototype</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <!-- Phase 1: split from single-file prototype, no visual changes -->
-  <link rel="stylesheet" href="styles.css?v=77">
+  <link rel="stylesheet" href="styles.css?v=78">
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
 </head>
 <body>
 <div class="app">
 <nav id="spatialNav" class="glass-nav" aria-label="Primary">
-  <span class="logo-inline">etie</span>
+  <span class="logo-inline" style="color:var(--red);text-shadow:0 0 20px rgba(255,59,78,.5);font-family:var(--font-logo);font-weight:800;">etie</span>
+  <span class="tagline" style="font-size:12px;color:var(--muted);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">who doesnt want a friend in every city?</span>
   <div class="nav-links">
     <button class="snav-btn" onclick="showScreen('map')">Map</button>
     <button class="snav-btn" onclick="showScreen('messages')">Messages</button>
@@ -44,13 +48,37 @@
     <button id="weeklyQuestBanner" class="weekly-quest-banner hidden" onclick="openQuestDrawer()" aria-label="Sidequest of the week"><span aria-hidden="true">⚡</span><span id="weeklyQuestBannerText">Sidequest of the week</span><span aria-hidden="true">→</span><span id="weeklyQuestDismiss" role="button" aria-label="Dismiss" onclick="event.stopPropagation();dismissWeeklyQuest()" style="margin-left:6px;opacity:.7;">✕</span></button>
     <div class="map-wrap2">
       <div id="hkMap"></div>
-      <div id="mapEmptyBanner" class="map-empty hidden">No active hooks nearby yet. Be the first to drop a pin around you!</div>
+      <div id="mapEmptyBanner" class="map-empty hidden">No pins here yet. Be the first.</div>
     </div>
     <div id="bottomActions">
-      <div class="map-foot"><span class="muted small" id="mapPinCount"></span><span class="muted small" id="mapTapHint">Tap anywhere on the map to place your pin.</span></div>
+      <div class="map-foot"><span class="muted small" id="mapPinCount"></span><span class="muted small" id="mapTapHint">Click the map to drop a pin and tell travellers what you can show them.</span></div>
     </div>
     <div class="map-credit">© MapTiler © OpenStreetMap contributors</div>
-    <div id="areaSidebar"><div class="area-tabs"><button class="area-tab active" id="areaTabHooks" onclick="setMapMode('hooks')">🪝 Hooks</button><button class="area-tab" id="areaTabMem" onclick="setMapMode('memories')">📸 Memories</button></div><div class="area-head" onclick="toggleAreaSidebar()"><strong id="areaToggle">▾ Areas</strong><button class="fab-globe" onclick="event.stopPropagation();toggleGlobalView()" title="Toggle global view" aria-label="Toggle global view">🌍</button><span class="muted small" id="areaCount"></span></div><div id="areaList"></div></div>
+    <div id="areaSidebar">
+  <div class="area-showme">SHOW ME</div>
+  <div class="area-mode-toggle">
+    <button class="area-mode-btn active" id="areaTabHooks" onclick="setMapMode('hooks')" aria-pressed="true">
+      <span class="area-mode-icon">🪝</span>
+      <span class="area-mode-label">Hooks</span>
+      <span class="area-mode-desc">People going out</span>
+    </button>
+    <button class="area-mode-btn" id="areaTabMem" onclick="setMapMode('memories')" aria-pressed="false">
+      <span class="area-mode-icon">📸</span>
+      <span class="area-mode-label">Memories</span>
+      <span class="area-mode-desc">Where you've been</span>
+    </button>
+  </div>
+  <div class="area-section">
+    <div class="area-section-head">Areas</div>
+    <div class="area-section-caption">Places with connections</div>
+    <div class="area-actions">
+      <button class="area-action-btn" onclick="toggleGlobalView()" aria-label="Worldwide view">Worldwide</button>
+      <button class="area-action-btn" onclick="flyToArea(getAnchor().lat,getAnchor().lng,getAnchor().label||'Back home.')" aria-label="Current city">Current city</button>
+      <button class="area-action-btn" onclick="closeAvatarMenu();showScreen('profile');gotoProfileStep(1);" aria-label="Add area">+ Add area</button>
+    </div>
+    <div id="areaList"></div>
+  </div>
+</div>
   </div>
 </section>
 
@@ -467,7 +495,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
   <script src="supabase-config.js?v=69"></script>
-  <script src="app.js?v=124"></script>
-  <script src="supabase-sync.js?v=107"></script>
+  <script src="app.js?v=125"></script>
+  <script src="supabase-sync.js?v=108"></script>
 </body>
 </html>

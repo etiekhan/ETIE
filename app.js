@@ -1690,7 +1690,7 @@ function renderDerivedBadge(){
     var r=null;try{r=ETIE.derivedRole;}catch(e){}
     if(r==='local'){b.textContent='🇭🇰 Local';b.className='derived-badge derived-local';}
     else if(r==='traveller'){b.textContent='✈️ Traveller';b.className='derived-badge derived-traveller';}
-    else{var denied=false;try{denied=!!ETIE.locDenied;}catch(e){}b.textContent=denied?'📍 Location off':'📍 …';b.className='derived-badge';}
+    else{var denied=false;try{denied=!!ETIE.locDenied;}catch(e){}b.innerHTML=denied?'📍 Share location <span class="loc-pill loc-off">Off</span>':'📍 Share location <span class="loc-pill loc-on">On</span>';b.className='derived-badge';}
   }catch(e){}
 }
 function getAnchor(){
@@ -2900,10 +2900,10 @@ function setMapMode(mode){
   try{
     _mapMode=(mode==='memories')?'memories':'hooks';
     var a=document.getElementById('areaTabHooks'),b=document.getElementById('areaTabMem');
-    if(a)a.classList.toggle('active',_mapMode==='hooks');
-    if(b)b.classList.toggle('active',_mapMode==='memories');
+    if(a){a.classList.toggle('active',_mapMode==='hooks');a.setAttribute('aria-pressed',_mapMode==='hooks'?'true':'false');}
+    if(b){b.classList.toggle('active',_mapMode==='memories');b.setAttribute('aria-pressed',_mapMode==='memories'?'true':'false');}
     try{renderAreaSidebar();}catch(e){}
-    try{var h=document.getElementById('mapTapHint');if(h)h.textContent=_mapMode==='memories'?'Tap anywhere on the map to log a memory here.':'Tap anywhere on the map to place your pin.';}catch(_){}
+    try{var h=document.getElementById('mapTapHint');if(h)h.textContent=_mapMode==='memories'?'Tap anywhere on the map to log a memory here.':'Click the map to drop a pin and tell travellers what you can show them.';}catch(_){}
     applyMapMode();
     toast(_mapMode==='memories'?'📸 Memories — everywhere you have actually been.':'🪝 Hooks — people going out.');
   }catch(e){}

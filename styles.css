@@ -351,7 +351,7 @@ html,body{height:100%;width:100%;margin:0;padding:0;overflow:hidden;background:#
 .map-foot .muted{color:rgba(255,255,255,.7);}
 .map-empty{background:rgba(18,18,20,.85);border:1px solid rgba(244,63,94,.5);border-radius:99px;padding:12px 22px;font-size:14px;}
 /* areas-with-connections sidebar */
-#areaSidebar{position:fixed;left:12px;top:calc(var(--nav-h) + 80px);z-index:var(--z-panel);width:216px;max-height:44vh;display:flex;flex-direction:column;background:rgba(18,18,20,.82);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:10px 12px;color:#f5f3ef;}@media(max-width:700px){#areaSidebar{left:8px;right:auto;width:200px;top:auto;bottom:120px;}}
+#areaSidebar{position:fixed;left:12px;top:calc(var(--nav-h) + 80px);z-index:var(--z-panel);width:216px;max-height:calc(100vh - 140px);overflow-y:auto;display:flex;flex-direction:column;background:rgba(18,18,20,.82);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:10px 12px 16px;color:#f5f3ef;}@media(max-width:700px){#areaSidebar{left:8px;right:auto;width:200px;top:auto;bottom:120px;max-height:30vh;}}
 .area-head{display:flex;justify-content:space-between;align-items:center;gap:8px;cursor:pointer;font-size:13px;}
 .area-head strong{color:#fff;white-space:nowrap;}
 #areaList{overflow-y:auto;display:flex;flex-direction:column;gap:6px;margin-top:8px;}
@@ -797,7 +797,7 @@ h1, h2, h3, h4, h5, h6, .logo-inline {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 200px;
+  max-width: none;
   margin-left: 12px;
 }
 
@@ -833,6 +833,8 @@ h1, h2, h3, h4, h5, h6, .logo-inline {
   transition: all 0.15s ease;
   text-align: left;
   min-height: 44px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .area-mode-btn:hover {
@@ -860,6 +862,11 @@ h1, h2, h3, h4, h5, h6, .logo-inline {
   font-size: 11px;
   color: var(--muted);
   margin-left: auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  flex-shrink: 1;
 }
 
 .area-section {
@@ -1141,7 +1148,7 @@ a:focus-visible {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 200px;
+  max-width: none;
 }
 
 @media (max-width: 1100px) {
@@ -1313,6 +1320,7 @@ body.has-open-card .map-foot { display: none; }
   text-overflow: ellipsis;
   min-width: 0;
   flex: 0 1 auto;
+  max-width: none;
 }
 
 @media (max-width: 1100px) {

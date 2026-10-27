@@ -109,6 +109,26 @@
     'Airport': { type: 'symbol', hide: true },
     // Housenumber - hide
     'Housenumber': { type: 'symbol', hide: true },
+  // Label layers -> muted with dark halo
+    'River labels': { type: 'symbol', color: 'muted' },
+    'Ocean labels': { type: 'symbol', color: 'muted' },
+    'Lake labels': { type: 'symbol', color: 'muted' },
+    'Gondola': { type: 'symbol', color: 'muted' },
+    'Ferry': { type: 'symbol', color: 'muted' },
+    'Oneway': { type: 'symbol', color: 'muted' },
+    'Road labels': { type: 'symbol', color: 'muted' },
+    'Highway junction': { type: 'symbol', color: 'muted' },
+    'Highway shield': { type: 'symbol', color: 'muted' },
+    'Highway shield (US)': { type: 'symbol', color: 'muted' },
+    'Highway shield interstate top (US)': { type: 'symbol', color: 'muted' },
+    'Highway shield interstate (US)': { type: 'symbol', color: 'muted' },
+    'Place labels': { type: 'symbol', color: 'muted' },
+    'State labels': { type: 'symbol', color: 'muted' },
+    'Town labels': { type: 'symbol', color: 'muted' },
+    'City labels': { type: 'symbol', color: 'muted' },
+    'Capital city labels': { type: 'symbol', color: 'muted' },
+    'Country labels': { type: 'symbol', color: 'muted' },
+    'Continent labels': { type: 'symbol', color: 'muted' },
     // Highway shields - keep (road labels)
     // Place labels - handled separately
   };
@@ -203,10 +223,9 @@
       if (Array.isArray(layer.filter) && layer.filter[0] === '!in' && layer.filter[1] === 'class') {
         var excluded = layer.filter[2];
         if (Array.isArray(excluded)) {
-          if (excluded.indexOf('village') === -1) excluded.push('village');
-          if (excluded.indexOf('island') === -1) excluded.push('island');
-          if (excluded.indexOf('hamlet') === -1) excluded.push('hamlet');
-          if (excluded.indexOf('locality') === -1) excluded.push('locality');
+          ['village', 'island', 'hamlet', 'locality', 'neighbourhood', 'suburb', 'quarter', 'isolated_dwelling'].forEach(function(cls) {
+            if (excluded.indexOf(cls) === -1) excluded.push(cls);
+          });
         }
       }
     }

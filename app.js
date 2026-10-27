@@ -1624,7 +1624,7 @@ function restoreAll(){
     renderLiteProfile();
   }catch(e){}
 }
-// ---- Friend in Every City — map-first hooks (Leaflet, Hong Kong) ----
+// ---- Friend in Every City — map-first hooks (MapLibre GL, Hong Kong) ----
 // Pins render ONLY from live hooks: Supabase etie_pins (origin 'cloud') + local testing state.
 // No seed/demo/guide-presence pins. Empty map shows the first-pin banner.
 var MAP_CATS=[{id:'project mbappe, lebron or sth',emoji:'⚽'},{id:'letterboxd date',emoji:'🍿'},{id:'are you a fellow alcoholic?',emoji:'🍺'},{id:'time for a cuppa tea / coffee!',emoji:'☕'},{id:'walking around the city sharing headphones tgt',emoji:'🎧'},{id:'dubious quests and giggles',emoji:'⚡'},{id:'something else on your mind?',emoji:'💡'},{id:'Food',emoji:'🥟'},{id:'Nightlife',emoji:'🍺'},{id:'Photo',emoji:'📸'},{id:'Sports',emoji:'⚽'},{id:'Cafe',emoji:'☕'}];

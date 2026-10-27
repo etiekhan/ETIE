@@ -15,9 +15,11 @@
 alter table public.hangout_logs enable row level security;
 
 drop policy if exists "hangout logs read all" on public.hangout_logs;
+drop policy if exists "hangout logs read participants" on public.hangout_logs;
 create policy "hangout logs read participants" on public.hangout_logs
   for select using (auth.uid() = user_id or auth.uid() = tagged_user_id);
 
+drop policy if exists "hangout logs update own or tagged" on public.hangout_logs;
 drop policy if exists "hangout logs update own or tagged" on public.hangout_logs;
 create policy "hangout logs update own or tagged" on public.hangout_logs
   for update using (auth.uid() = user_id or auth.uid() = tagged_user_id);

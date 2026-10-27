@@ -1588,7 +1588,7 @@ function restoreAll(){
 // Pins render ONLY from live hooks: Supabase etie_pins (origin 'cloud') + local testing state.
 // No seed/demo/guide-presence pins. Empty map shows the first-pin banner.
 var MAP_CATS=[{id:'project mbappe, lebron or sth',emoji:'⚽'},{id:'letterboxd date',emoji:'🍿'},{id:'are you a fellow alcoholic?',emoji:'🍺'},{id:'time for a cuppa tea / coffee!',emoji:'☕'},{id:'walking around the city sharing headphones tgt',emoji:'🎧'},{id:'dubious quests and giggles',emoji:'⚡'},{id:'something else on your mind?',emoji:'💡'},{id:'Food',emoji:'🥟'},{id:'Nightlife',emoji:'🍺'},{id:'Photo',emoji:'📸'},{id:'Sports',emoji:'⚽'},{id:'Cafe',emoji:'☕'}];
-var MAP_INTENTS=[{id:'All',label:'All Pins',emoji:'🗺️'},{id:'traveller',label:'✈️ Visiting Now'},{id:'local',label:'🏠 Hosted by Locals'}];
+var MAP_INTENTS=[{id:'All',label:'All Pins',emoji:''},{id:'traveller',label:'Visiting Now',emoji:''},{id:'local',label:'Hosted by Locals',emoji:''}];
 var MAP_VIBES=[{id:'project mbappe, lebron or sth',emoji:'⚽'},{id:'letterboxd date',emoji:'🍿'},{id:'are you a fellow alcoholic?',emoji:'🍺'},{id:'time for a cuppa tea / coffee!',emoji:'☕'},{id:'walking around the city sharing headphones tgt',emoji:'🎧'},{id:'dubious quests and giggles',emoji:'⚡'},{id:'something else on your mind?',emoji:'💡'}];
 var MAP_DISTRICT_LATLNG={'Central and Western':[22.2840,114.1520],'Wan Chai':[22.2770,114.1730],'Eastern':[22.2730,114.2220],'Southern':[22.2380,114.1650],'Yau Tsim Mong':[22.3100,114.1700],'Sham Shui Po':[22.3307,114.1625],'Kowloon City':[22.3280,114.1900],'Wong Tai Sin':[22.3420,114.1980],'Kwun Tong':[22.3080,114.2280],'Tsuen Wan':[22.3700,114.1150],'Tuen Mun':[22.3900,113.9750],'Yuen Long':[22.4450,114.0300],'North':[22.4950,114.1450],'Tai Po':[22.4500,114.1650],'Sha Tin':[22.3850,114.1950],'Sai Kung':[22.3800,114.2700],'Islands':[22.2900,113.9500],'Kwai Tsing':[22.3550,114.1150]};
 var HK_CENTER=[22.2819,114.1581],HK_ZOOM=13;
@@ -1841,19 +1841,112 @@ function renderMapFilter(){
   try{
     var bar=document.getElementById('mapFilterBar');if(!bar)return;
     bar.innerHTML='';
+    
+    // Status switch group (glowing dots, no emojis)
+    var statusGroup=document.createElement('div');
+    statusGroup.className='filter-status-group';
+    statusGroup.style.display='flex';
+    statusGroup.style.gap='6px';
+    statusGroup.style.alignItems='center';
+    
+    var statusLabels={'All':'All pins','traveller':'Visiting Now','local':'Hosted by Locals'};
+    var statusColors={'All':'var(--blue)','traveller':'var(--amber)','local':'var(--red)'};
+    
     MAP_INTENTS.forEach(function(c){
       var on=(c.id==='All')?(MAP_ROLE==='All'&&MAP_FILTER==='All'):(MAP_ROLE===c.id);
-      var b=document.createElement('button');b.className='chip'+(on?' active':'');b.textContent=(c.emoji?c.emoji+' ':'')+c.label;b.style.padding='8px 12px';
+      var b=document.createElement('button');
+      b.className='chip filter-status-chip'+(on?' active':'');
+      b.style.padding='7px 12px';
+      b.style.display='flex';
+      b.style.alignItems='center';
+      b.style.gap='6px';
+      var dot=document.createElement('span');
+      dot.className='status-dot';
+      dot.style.display='inline-block';
+      dot.style.width='8px';
+      dot.style.height='8px';
+      dot.style.borderRadius='50%';
+      dot.style.background=statusColors[c.id]||'var(--muted)';
+      dot.style.boxShadow='0 0 6px '+(statusColors[c.id]||'var(--muted)');
+      b.appendChild(dot);
+      var label=document.createElement('span');
+      label.textContent=statusLabels[c.id]||c.label;
+      b.appendChild(label);
       b.onclick=(function(id){return function(){selectIntent(id);};})(c.id);
-      bar.appendChild(b);
+      statusGroup.appendChild(b);
     });
-    var sep=document.createElement('span');sep.className='filter-sep';sep.textContent='|';
-    bar.appendChild(sep);
+    
+    bar.appendChild(statusGroup);
+    
+    // TOPICS label
+    var topicsLabel=document.createElement('span');
+    topicsLabel.className='filter-topics-label';
+    topicsLabel.textContent='TOPICS';
+    topicsLabel.style.fontSize='10px';
+    topicsLabel.style.fontWeight='800';
+    topicsLabel.style.letterSpacing='.12em';
+    topicsLabel.style.color='var(--muted)';
+    topicsLabel.style.marginLeft='12px';
+    topicsLabel.style.marginRight='4px';
+    topicsLabel.style.alignSelf='center';
+    bar.appendChild(topicsLabel);
+    
+    // Topic chips row with scroll container
+    var topicScroll=document.createElement('div');
+    topicScroll.className='filter-topic-scroll';
+    topicScroll.style.display='flex';
+    topicScroll.style.gap='6px';
+    topicScroll.style.overflowX='auto';
+    topicScroll.style.scrollbarWidth='none';
+    topicScroll.style.flex='1';
+    topicScroll.style.minWidth='0';
+    topicScroll.style.position='relative';
+    
     MAP_VIBES.forEach(function(c){
-      var b=document.createElement('button');b.className='chip'+(MAP_FILTER===c.id?' active':'');b.textContent=c.emoji+' '+(c.label||c.id);b.style.padding='8px 12px';
+      var b=document.createElement('button');
+      b.className='chip filter-topic-chip'+(MAP_FILTER===c.id?' active':'');
+      b.textContent=c.emoji+' '+(c.label||c.id);
+      b.style.padding='7px 12px';
+      b.style.flexShrink='0';
       b.onclick=(function(id){return function(){setMapFilter(id);};})(c.id);
-      bar.appendChild(b);
+      topicScroll.appendChild(b);
     });
+    
+    bar.appendChild(topicScroll);
+    
+    // Arrow button for scrolling
+    var arrowBtn=document.createElement('button');
+    arrowBtn.className='filter-scroll-arrow';
+    arrowBtn.textContent='→';
+    arrowBtn.style.padding='7px 10px';
+    arrowBtn.style.flexShrink='0';
+    arrowBtn.style.background='rgba(255,255,255,.08)';
+    arrowBtn.style.border='1px solid rgba(255,255,255,.12)';
+    arrowBtn.style.borderRadius='999px';
+    arrowBtn.style.color='var(--text)';
+    arrowBtn.style.cursor='pointer';
+    arrowBtn.style.fontSize='14px';
+    arrowBtn.style.fontWeight='700';
+    arrowBtn.setAttribute('aria-label','Scroll topics');
+    arrowBtn.onclick=function(){
+      topicScroll.scrollBy({left:200,behavior:'smooth'});
+    };
+    bar.appendChild(arrowBtn);
+    
+    // Right-edge fade
+    var fade=document.createElement('div');
+    fade.className='filter-topic-fade';
+    fade.style.position='absolute';
+    fade.style.right='0';
+    fade.style.top='0';
+    fade.style.bottom='0';
+    fade.style.width='40px';
+    fade.style.background='linear-gradient(to right,transparent,var(--ink))';
+    fade.style.pointerEvents='none';
+    fade.style.zIndex='1';
+    topicScroll.style.position='relative';
+    topicScroll.appendChild(fade);
+    
     var rb=document.getElementById('mapRoleBar');
     if(rb)rb.style.display='none';
   }catch(e){}

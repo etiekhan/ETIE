@@ -8,14 +8,16 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <!-- Phase 1: split from single-file prototype, no visual changes -->
-  <link rel="stylesheet" href="styles.css?v=81">
+  <link rel="stylesheet" href="styles.css?v=82">
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
 </head>
 <body>
 <div class="app">
 <nav id="spatialNav" class="glass-nav" aria-label="Primary">
-  <span class="logo-inline" style="color:var(--red);text-shadow:0 0 20px rgba(255,59,78,.5);font-family:var(--font-logo);font-weight:800;">etie</span>
-  <span class="tagline" style="font-size:12px;color:var(--muted);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">who doesnt want a friend in every city?</span>
+  <div class="nav-left">
+    <span class="logo-inline" style="color:var(--red);text-shadow:0 0 20px rgba(255,59,78,.5);font-family:var(--font-logo);font-weight:800;">etie</span>
+    <span class="tagline" style="font-size:12px;color:var(--muted);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;">who doesnt want a friend in every city?</span>
+  </div>
   <div class="nav-links">
     <button class="snav-btn" onclick="showScreen('map')">Map</button>
     <button class="snav-btn" onclick="showScreen('messages')">Messages</button>
@@ -496,6 +498,6 @@
   <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
   <script src="supabase-config.js?v=69"></script>
   <script src="app.js?v=129"></script>
-  <script src="supabase-sync.js?v=112"></script>
+  <script src="supabase-sync.js?v=113"></script>
 </body>
 </html>

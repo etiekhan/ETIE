@@ -1819,8 +1819,10 @@ function initHKMap(){
   }catch(e){}
 }
 var _pickMode=null; // legacy map-tap mode flag (kept for compat)
+var _pinJustClicked=false;
 function onMapTap(e){
   try{
+    if(_pinJustClicked){_pinJustClicked=false;return;}
     var lngLat=e.lngLat;
     var lat=lngLat.lat,lng=lngLat.lng;
     _dropPoint={lat:lat,lng:lng};
@@ -1898,7 +1900,7 @@ function renderMapPins(){
         el.innerHTML=mapCatEmoji(p.category);
         el.style.width='36px';el.style.height='36px';el.style.display='flex';el.style.alignItems='center';el.style.justifyContent='center';el.style.fontSize='18px';
         var mk=new maplibregl.Marker({element:el,anchor:'center'}).setLngLat([coords[1],coords[0]]).addTo(_map);
-        mk.getElement().addEventListener('click',function(e){try{e.stopPropagation();}catch(_){} (function(id){return function(){openPinDetail(id);};})(p.id)();});
+        mk.getElement().addEventListener('click',function(e){try{e.stopPropagation();}catch(_){} _pinJustClicked=true;setTimeout(function(){_pinJustClicked=false;},300); (function(id){return function(){openPinDetail(id);};})(p.id)();});
         _pinMarkers.push(mk);
       }catch(e){}
     }
@@ -1919,7 +1921,7 @@ function renderMapPins(){
           var offsetLat=center[0]+(radius/111000)*Math.cos(angle);
           var offsetLng=center[1]+(radius/111000)*Math.sin(angle)/Math.cos(center[0]*Math.PI/180);
           var mk=new maplibregl.Marker({element:el,anchor:'center'}).setLngLat([offsetLng,offsetLat]).addTo(_map);
-          mk.getElement().addEventListener('click',function(e){try{e.stopPropagation();}catch(_){} (function(id){return function(){openPinDetail(id);};})(p.id)();});
+          mk.getElement().addEventListener('click',function(e){try{e.stopPropagation();}catch(_){} _pinJustClicked=true;setTimeout(function(){_pinJustClicked=false;},300); (function(id){return function(){openPinDetail(id);};})(p.id)();});
           _pinMarkers.push(mk);
         }catch(e){}
       });
@@ -2942,7 +2944,7 @@ function loadMainMemoryMarkers(){
             el.innerHTML=html;
             el.firstChild.style.width='56px';el.firstChild.style.height='56px';
             var mk=new maplibregl.Marker({element:el.firstChild,anchor:'center'}).setLngLat([log.lng,log.lat]).addTo(_map);
-            mk.getElement().addEventListener('click',function(e){try{e.stopPropagation();}catch(_){} openMemoryCard(log);});
+            mk.getElement().addEventListener('click',function(e){try{e.stopPropagation();}catch(_){} _pinJustClicked=true;setTimeout(function(){_pinJustClicked=false;},300); openMemoryCard(log);});
             markers.push(mk);
           }catch(e){}
         });

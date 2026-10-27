@@ -319,6 +319,8 @@
             Object.keys(style.sources).forEach(function(src) {
               if (style.sources[src].url && style.sources[src].url.indexOf('key=') === -1) {
                 style.sources[src].url += '?key=' + encodeURIComponent(key);
+              } else if (style.sources[src].url && style.sources[src].url.indexOf('key={key}') !== -1) {
+                style.sources[src].url = style.sources[src].url.replace('key={key}', 'key=' + encodeURIComponent(key));
               }
               if (style.sources[src].tiles) {
                 style.sources[src].tiles = style.sources[src].tiles.map(function(t) {
@@ -327,8 +329,10 @@
               }
             });
           }
-          if (style.glyphs && style.glyphs.indexOf('key=') === -1) {
+          if (style.glyphs && style.glyphs.indexOf('{key}') !== -1) {
             style.glyphs = style.glyphs.replace('{key}', encodeURIComponent(key));
+          } else if (style.glyphs && style.glyphs.indexOf('key=') === -1) {
+            style.glyphs += '?key=' + encodeURIComponent(key);
           }
           if (style.sprite && style.sprite.indexOf('key=') === -1) {
             style.sprite += '?key=' + encodeURIComponent(key);

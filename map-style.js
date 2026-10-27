@@ -25,146 +25,173 @@
     red: cssVar('--red')
   };
 
-  // Layer classification rules
+  // Layer classification rules (outdoor-v2 style)
   var LAYER_RULES = {
     // Background
     'Background': { type: 'background', color: 'sea' },
-    // Landcover fills -> land
-    'Meadow': { type: 'fill', color: 'land' },
+    // Landcover fills -> land/parks
     'Scrub': { type: 'fill', color: 'land' },
-    'Crop': { type: 'fill', color: 'land' },
-    'Forest': { type: 'fill', color: 'land' },
-    'Sand': { type: 'fill', color: 'land' },
+    'Tree': { type: 'fill', color: 'parks' },
+    'Forest': { type: 'fill', color: 'parks' },
     'Wood': { type: 'fill', color: 'land' },
+    'Grass': { type: 'fill', color: 'parks' },
+    'Sand': { type: 'fill', color: 'land' },
     'Glacier': { type: 'fill', color: 'land' },
-    'Grass': { type: 'fill', color: 'land' },
-    // Landuse fills -> land/parks
-    'Pedestrian': { type: 'fill', color: 'land' },
+    // Landuse fills -> land
     'Residential': { type: 'fill', color: 'land' },
     'Industrial': { type: 'fill', color: 'land' },
+    'Commercial': { type: 'fill', color: 'land' },
+    'Military': { type: 'fill', color: 'land' },
     'Cemetery': { type: 'fill', color: 'parks' },
     'Hospital': { type: 'fill', color: 'land' },
     'Stadium': { type: 'fill', color: 'land' },
-    'School': { type: 'fill', color: 'land' },
+    // Hillshade - keep as is (terrain data)
+    'Hillshade': { type: 'hillshade', keep: true },
+    // Parks
+    'Park': { type: 'fill', color: 'parks' },
+    'Park outline': { type: 'line', color: 'parks' },
+    // Contours - keep as is (terrain data)
+    'Contour index': { type: 'line', color: 'muted', opacity: 0.4 },
+    'Contour': { type: 'line', color: 'muted', opacity: 0.2 },
+    'Glacier contour index': { type: 'line', color: 'muted', opacity: 0.4 },
+    'Glacier contour': { type: 'line', color: 'muted', opacity: 0.2 },
+    'Contour labels': { type: 'symbol', color: 'muted' },
+    'Glacier contour labels': { type: 'symbol', color: 'muted' },
     // Water -> sea
-    'Water': { type: 'fill', color: 'sea' },
-    'Water intermittent': { type: 'fill', color: 'sea' },
-    'River': { type: 'line', color: 'sea' },
     'River tunnel': { type: 'line', color: 'sea' },
-    'Aqueduct': { type: 'line', color: 'sea' },
-    'Aqueduct outline': { type: 'line', color: 'sea' },
-    'Pier': { type: 'fill', color: 'land' },
-    'Pier road': { type: 'line', color: 'land' },
-    // Roads
-    'Minor road': { type: 'line', color: 'violet', opacity: 0.4 },
-    'Minor road outline': { type: 'line', color: 'violet', opacity: 0.2 },
-    'Major road': { type: 'line', color: 'amber', major: true },
-    'Major road outline': { type: 'line', color: 'amber', major: true, outline: true },
-    'Highway': { type: 'line', color: 'amber', major: true },
-    'Highway outline': { type: 'line', color: 'amber', major: true, outline: true },
-    'Bridge': { type: 'fill', color: 'land' },
-    'Bridge outline': { type: 'line', color: 'amber', major: true },
-    'Path': { type: 'line', color: 'violet', opacity: 0.3 },
-    'Path minor': { type: 'line', color: 'violet', opacity: 0.2 },
-    'Path outline': { type: 'line', color: 'violet', opacity: 0.2 },
-    'Road under construction': { type: 'line', color: 'violet', opacity: 0.3 },
-    'Tunnel': { type: 'line', color: 'pink', opacity: 0.6 },
-    'Tunnel outline': { type: 'line', color: 'pink', opacity: 0.3 },
-    'Footway tunnel': { type: 'line', color: 'violet', opacity: 0.3 },
-    'Footway tunnel outline': { type: 'line', color: 'violet', opacity: 0.2 },
-    // Rails
-    'Major rail': { type: 'line', color: 'muted', opacity: 0.5 },
-    'Major rail hatching': { type: 'line', color: 'muted', opacity: 0.3 },
-    'Minor rail': { type: 'line', color: 'muted', opacity: 0.4 },
-    'Minor rail hatching': { type: 'line', color: 'muted', opacity: 0.2 },
-    'Railway tunnel': { type: 'line', color: 'muted', opacity: 0.4 },
-    'Railway tunnel hatching': { type: 'line', color: 'muted', opacity: 0.2 },
+    'River': { type: 'line', color: 'sea' },
+    'Water': { type: 'fill', color: 'sea' },
     // Aeroway
-    'Aeroway': { type: 'line', color: 'muted', opacity: 0.5 },
-    'Heliport': { type: 'fill', color: 'land' },
-    'Airport zone': { type: 'fill', color: 'land' },
+    'Aeroway': { type: 'line', color: 'land' },
+    'Runway': { type: 'line', color: 'land' },
+    'Taxiway': { type: 'line', color: 'land' },
+    // Transportation
+    'Ferry': { type: 'line', color: 'muted', opacity: 0.5 },
+    'Tunnel path': { type: 'line', color: 'pink', opacity: 0.6 },
+    'Tunnel': { type: 'line', color: 'pink', opacity: 0.6 },
+    'Railway tunnel': { type: 'line', color: 'muted', opacity: 0.5 },
+    'Railway tunnel dash': { type: 'line', color: 'muted', opacity: 0.3 },
+    'Bridge': { type: 'fill', color: 'land' },
+    'Pier': { type: 'fill', color: 'land' },
+    // Road network - handled specially (data-driven)
+    'Road network': { type: 'line', color: 'amber', roadNetwork: true },
+    'Steps': { type: 'line', color: 'violet', opacity: 0.4 },
+    'Track': { type: 'line', color: 'violet', opacity: 0.4 },
+    'Path minor': { type: 'line', color: 'violet', opacity: 0.3 },
+    'Path': { type: 'line', color: 'violet', opacity: 0.4 },
+    'Pedestrian outline': { type: 'line', color: 'violet', opacity: 0.3 },
+    'Pedestrian': { type: 'line', color: 'violet', opacity: 0.4 },
+    // Railways
+    'Minor railway': { type: 'line', color: 'muted', opacity: 0.4 },
+    'Minor railway hatching': { type: 'line', color: 'muted', opacity: 0.2 },
+    'Major railway': { type: 'line', color: 'muted', opacity: 0.5 },
+    'Major railway dash': { type: 'line', color: 'muted', opacity: 0.3 },
+    // Trails
+    'Trails outline': { type: 'line', color: 'violet', opacity: 0.3 },
+    'Bicycle outline': { type: 'line', color: 'violet', opacity: 0.3 },
+    'Other trails': { type: 'line', color: 'violet', opacity: 0.3 },
+    'Bicycle local': { type: 'line', color: 'violet', opacity: 0.4 },
+    'Yellow trail': { type: 'line', color: 'amber', opacity: 0.6 },
+    'Green trail': { type: 'line', color: 'parks', opacity: 0.6 },
+    'Blue trail': { type: 'line', color: 'blue', opacity: 0.6 },
+    'Brown trail': { type: 'line', color: 'land', opacity: 0.6 },
+    'Black trail': { type: 'line', color: 'ink', opacity: 0.6 },
+    'Purple trail': { type: 'line', color: 'violet', opacity: 0.6 },
+    'Orange trail': { type: 'line', color: 'amber', opacity: 0.6 },
+    'Red trail': { type: 'line', color: 'red', opacity: 0.6 },
+    'Longdistance trail outline': { type: 'line', color: 'violet', opacity: 0.3 },
+    'Longdistance trail': { type: 'line', color: 'violet', opacity: 0.5 },
+    'Via ferrata outline': { type: 'line', color: 'violet', opacity: 0.3 },
+    'Via ferrata': { type: 'line', color: 'violet', opacity: 0.5 },
+    'Via ferrata symbol': { type: 'symbol', color: 'muted' },
+    'Bicycle longdistance': { type: 'line', color: 'violet', opacity: 0.5 },
+    // Lifts
+    'Minor lift': { type: 'line', color: 'muted', opacity: 0.4 },
+    'Minor lift dash': { type: 'line', color: 'muted', opacity: 0.2 },
+    'Chair lift': { type: 'line', color: 'muted', opacity: 0.4 },
+    'Chair lift dash': { type: 'line', color: 'muted', opacity: 0.2 },
+    'Cable car': { type: 'line', color: 'muted', opacity: 0.4 },
+    'Cable car dash': { type: 'line', color: 'muted', opacity: 0.2 },
+    // Military
+    'Military limit': { type: 'line', color: 'muted', opacity: 0.3 },
     // Borders
     'Other border': { type: 'line', color: 'muted', opacity: 0.3 },
     'Disputed border': { type: 'line', color: 'muted', opacity: 0.3 },
     'Country border': { type: 'line', color: 'muted', opacity: 0.4 },
-    // Cablecar
-    'Cablecar': { type: 'line', color: 'muted', opacity: 0.5 },
-    'Cablecar dash': { type: 'line', color: 'muted', opacity: 0.3 },
-    'Ferry line': { type: 'line', color: 'muted', opacity: 0.4 },
-    // Buildings - hide
+    // Building - hide
     'Building': { type: 'fill', hide: true },
-    'Building 3D': { type: 'fill-extrusion', hide: true },
-    // POI layers - hide
-    'Public': { type: 'symbol', hide: true },
-    'Sport': { type: 'symbol', hide: true },
-    'Education': { type: 'symbol', hide: true },
-    'Tourism': { type: 'symbol', hide: true },
-    'Culture': { type: 'symbol', hide: true },
-    'Shopping': { type: 'symbol', hide: true },
-    'Food': { type: 'symbol', hide: true },
-    'Transport': { type: 'symbol', hide: true },
-    'Park': { type: 'symbol', hide: true },
-    'Healthcare': { type: 'symbol', hide: true },
-    'Station': { type: 'symbol', hide: true },
-    'Airport gate': { type: 'symbol', hide: true },
-    'Airport': { type: 'symbol', hide: true },
-    // Housenumber - hide
-    'Housenumber': { type: 'symbol', hide: true },
-  // Label layers -> muted with dark halo
-    'River labels': { type: 'symbol', color: 'muted' },
+    // Labels - handled separately
+    'River labels': { type: 'symbol', color: 'sea' },
+    'Lakeline labels': { type: 'symbol', color: 'muted' },
     'Ocean labels': { type: 'symbol', color: 'muted' },
+    'Sea labels': { type: 'symbol', color: 'muted' },
     'Lake labels': { type: 'symbol', color: 'muted' },
-    'Gondola': { type: 'symbol', color: 'muted' },
-    'Ferry': { type: 'symbol', color: 'muted' },
-    'Oneway': { type: 'symbol', color: 'muted' },
+    'Aerialway labels': { type: 'symbol', color: 'muted' },
     'Road labels': { type: 'symbol', color: 'muted' },
-    'Highway junction': { type: 'symbol', color: 'muted' },
-    'Highway shield': { type: 'symbol', color: 'muted' },
-    'Highway shield (US)': { type: 'symbol', color: 'muted' },
-    'Highway shield interstate top (US)': { type: 'symbol', color: 'muted' },
-    'Highway shield interstate (US)': { type: 'symbol', color: 'muted' },
+    'Volcano labels (US)': { type: 'symbol', color: 'muted' },
+    'Volcano labels': { type: 'symbol', color: 'muted' },
+    'Peak labels (US)': { type: 'symbol', color: 'muted' },
+    'Peak labels': { type: 'symbol', color: 'muted' },
     'Place labels': { type: 'symbol', color: 'muted' },
-    'State labels': { type: 'symbol', color: 'muted' },
+    'Village labels': { type: 'symbol', hide: true },
+    'Airport labels': { type: 'symbol', color: 'muted' },
+    'Longdistance trail labels': { type: 'symbol', color: 'muted' },
+    'Bicycle longdistance labels': { type: 'symbol', color: 'muted' },
+    'Protected area labels': { type: 'symbol', color: 'muted' },
     'Town labels': { type: 'symbol', color: 'muted' },
+    'State labels': { type: 'symbol', color: 'muted' },
+    'National park labels': { type: 'symbol', color: 'muted' },
     'City labels': { type: 'symbol', color: 'muted' },
-    'Capital city labels': { type: 'symbol', color: 'muted' },
     'Country labels': { type: 'symbol', color: 'muted' },
     'Continent labels': { type: 'symbol', color: 'muted' },
-    // Highway shields - keep (road labels)
-    // Place labels - handled separately
+    'Park labels': { type: 'symbol', color: 'muted' },
+    // POI labels - hide
+    'Outdoor shop': { type: 'symbol', hide: true },
+    'Sport': { type: 'symbol', hide: true },
+    'Outdoor water': { type: 'symbol', hide: true },
+    'Transport': { type: 'symbol', hide: true },
+    'Food': { type: 'symbol', hide: true },
+    'Healthcare': { type: 'symbol', hide: true },
+    'Tourism': { type: 'symbol', hide: true },
+    'Culture': { type: 'symbol', hide: true },
+    'Outdoor': { type: 'symbol', hide: true },
+    'Station': { type: 'symbol', hide: true },
+    'Castle': { type: 'symbol', hide: true },
   };
 
-  // Layers to hide entirely (POI, building, village, island labels)
+  // Layers to hide entirely (POI, building, village labels)
   var HIDE_LAYERS = [
-    'Building', 'Building 3D',
-    'Public', 'Sport', 'Education', 'Tourism', 'Culture', 'Shopping', 'Food',
-    'Transport', 'Park', 'Healthcare', 'Station', 'Airport gate', 'Airport',
-    'Housenumber'
+    'Building',
+    'Outdoor shop', 'Sport', 'Outdoor water', 'Transport', 'Food', 'Healthcare',
+    'Tourism', 'Culture', 'Outdoor', 'Station', 'Castle',
+    'Village labels',
   ];
 
   // Label layers to recolor and set language
   var LABEL_LAYERS = [
-    'River labels', 'Ocean labels', 'Lake labels', 'Road labels',
-    'Highway junction', 'Highway shield', 'Highway shield (US)',
-    'Highway shield interstate top (US)', 'Highway shield interstate (US)',
-    'Gondola', 'Ferry', 'Oneway', 'Place labels',
-    'State labels', 'Town labels', 'City labels', 'Capital city labels',
-    'Country labels', 'Continent labels'
+    'River labels', 'Lakeline labels', 'Ocean labels', 'Sea labels', 'Lake labels',
+    'Road labels', 'Aerialway labels',
+    'Volcano labels (US)', 'Volcano labels', 'Peak labels (US)', 'Peak labels',
+    'Place labels', 'Town labels', 'State labels', 'National park labels',
+    'City labels', 'Country labels', 'Continent labels',
+    'Park labels', 'Longdistance trail labels', 'Bicycle longdistance labels',
+    'Protected area labels', 'Airport labels'
   ];
 
   // Major road layer ids (for glow duplication)
-  var MAJOR_ROAD_LAYERS = ['Major road', 'Highway', 'Major road outline', 'Highway outline', 'Bridge', 'Bridge outline'];
+  var MAJOR_ROAD_LAYERS = ['Road network'];
 
   function applyColor(layer, rule) {
     if (!rule) return;
+    if (rule.keep) return; // Keep original styling
     if (rule.hide) {
       layer.layout = layer.layout || {};
       layer.layout.visibility = 'none';
       return;
     }
     var colorKey = rule.color;
-    var color = PALETTE[colorKey];
-    if (!color) return;
+    var color = colorKey ? PALETTE[colorKey] : null;
+    if (colorKey && !color) return;
 
     if (layer.type === 'background') {
       layer.paint = layer.paint || {};
@@ -177,7 +204,23 @@
       }
     } else if (layer.type === 'line') {
       layer.paint = layer.paint || {};
-      layer.paint['line-color'] = color;
+      if (rule.roadNetwork) {
+        // Data-driven color for Road network based on class
+        layer.paint['line-color'] = [
+          'match', ['get', 'class'],
+          'motorway', PALETTE.amber,
+          'trunk', PALETTE.amber,
+          'primary', PALETTE.amber,
+          'secondary', PALETTE.pink,
+          'tertiary', PALETTE.pink,
+          'minor', PALETTE.violet,
+          'service', PALETTE.violet,
+          'track', PALETTE.violet,
+          PALETTE.muted
+        ];
+      } else {
+        layer.paint['line-color'] = color;
+      }
       // line-opacity removed - not supported in this MapLibre GL version
       // if (rule.opacity !== undefined) {
       //   layer.paint['line-opacity'] = rule.opacity;
@@ -218,42 +261,32 @@
 
   function hideVillageIslandLabels(layer) {
     if (layer.type !== 'symbol') return;
-    if (!layer.filter) return;
-    // Place labels layer includes villages, islands, etc.
+    if (layer.id === 'Village labels') {
+      // Hide village labels entirely
+      hideLayer(layer);
+    }
     if (layer.id === 'Place labels') {
-      // Add village and island to exclusion list
-      if (Array.isArray(layer.filter) && layer.filter[0] === '!in' && layer.filter[1] === 'class') {
-        var excluded = layer.filter[2];
-        if (Array.isArray(excluded)) {
-          ['village', 'island', 'hamlet', 'locality', 'neighbourhood', 'suburb', 'quarter', 'isolated_dwelling'].forEach(function(cls) {
-            if (excluded.indexOf(cls) === -1) excluded.push(cls);
-          });
-        }
-      }
+      // Filter to only show city/town/capital labels, not villages/islands
+      layer.filter = ['all', ['in', 'class', 'city', 'town', 'capital'], ['!=', 'capital', 2]];
     }
   }
 
   function createGlowLayer(layer) {
     if (layer.type !== 'line') return null;
+    if (layer.id !== 'Road network') return null;
     var glow = JSON.parse(JSON.stringify(layer));
     glow.id = layer.id + ' (glow)';
     glow.paint = glow.paint || {};
-    // Wider
+    // Wider - use data-driven expression for width
     if (glow.paint['line-width']) {
       var w = glow.paint['line-width'];
-      if (typeof w === 'number') {
-        glow.paint['line-width'] = w * 3;
-      } else if (Array.isArray(w)) {
-        glow.paint['line-width'] = w.map(function(v) {
-          if (typeof v === 'number') return v * 3;
-          return v;
-        });
+      if (Array.isArray(w)) {
+        // Multiply numeric values in the expression by 3
+        glow.paint['line-width'] = JSON.parse(JSON.stringify(w).replace(/"(\d+(?:\.\d+)?)"/g, function(m, n) {
+          return String(parseFloat(n) * 3);
+        }));
       }
     }
-    // Blur - not supported in this MapLibre GL version
-    // glow.paint['line-blur'] = 2;
-    // Opacity - not supported in this MapLibre GL version
-    // glow.paint['line-opacity'] = 0.35;
     // Remove dasharray
     delete glow.paint['line-dasharray'];
     return glow;
@@ -284,11 +317,10 @@
       setEnglishLabels(layer);
 
       // Add glow for major roads (insert before original)
-      // Glow temporarily disabled for debugging
-      // if (MAJOR_ROAD_LAYERS.indexOf(layer.id) !== -1 && layer.type === 'line') {
-      //   var glow = createGlowLayer(layer);
-      //   if (glow) newLayers.push(glow);
-      // }
+      if (layer.id === 'Road network' && layer.type === 'line') {
+        var glow = createGlowLayer(layer);
+        if (glow) newLayers.push(glow);
+      }
 
       newLayers.push(layer);
     });

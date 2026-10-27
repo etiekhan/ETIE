@@ -1632,7 +1632,7 @@ var MAP_INTENTS=[{id:'All',label:'All Pins',emoji:''},{id:'traveller',label:'Vis
 var MAP_VIBES=[{id:'project mbappe, lebron or sth',emoji:'⚽'},{id:'letterboxd date',emoji:'🍿'},{id:'are you a fellow alcoholic?',emoji:'🍺'},{id:'time for a cuppa tea / coffee!',emoji:'☕'},{id:'walking around the city sharing headphones tgt',emoji:'🎧'},{id:'dubious quests and giggles',emoji:'⚡'},{id:'something else on your mind?',emoji:'💡'}];
 var MAP_DISTRICT_LATLNG={'Central and Western':[22.2840,114.1520],'Wan Chai':[22.2770,114.1730],'Eastern':[22.2730,114.2220],'Southern':[22.2380,114.1650],'Yau Tsim Mong':[22.3100,114.1700],'Sham Shui Po':[22.3307,114.1625],'Kowloon City':[22.3280,114.1900],'Wong Tai Sin':[22.3420,114.1980],'Kwun Tong':[22.3080,114.2280],'Tsuen Wan':[22.3700,114.1150],'Tuen Mun':[22.3900,113.9750],'Yuen Long':[22.4450,114.0300],'North':[22.4950,114.1450],'Tai Po':[22.4500,114.1650],'Sha Tin':[22.3850,114.1950],'Sai Kung':[22.3800,114.2700],'Islands':[22.2900,113.9500],'Kwai Tsing':[22.3550,114.1150]};
 var HK_CENTER=[22.2819,114.1581],HK_ZOOM=13;
-var ETIE_MAP_STYLE_ID='streets-v2';
+var ETIE_MAP_STYLE_ID='outdoor-v2';
 function mapTilerApiKey(){
   try{
     if(window.ETIE_CONFIG&&Object.prototype.hasOwnProperty.call(window.ETIE_CONFIG,'MAPTILER_API_KEY')){

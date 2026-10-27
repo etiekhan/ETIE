@@ -2393,10 +2393,10 @@ function openPinDetail(id){
     if(claim)claim.style.display=(!isHost&&!p.authorId&&isEtieAdmin())?'':'none';
     try{fillMemoryStrip('pinMemories',p.authorId||null);}catch(e){}
     try{fillSpotsStrip('pinSpots',p.authorId||null);}catch(e){}
-    var d=document.getElementById('pinDrawer');if(d){d.classList.remove('hidden');d.classList.toggle('pin-drawer-expired',isPinExpired(p));}
+    var d=document.getElementById('pinDrawer');if(d){d.classList.remove('hidden');d.classList.toggle('pin-drawer-expired',isPinExpired(p));document.body.classList.add('has-open-card');}
   }catch(e){}
 }
-function closePinDetail(){try{_openPinId=null;var d=document.getElementById('pinDrawer');if(d)d.classList.add('hidden');}catch(e){}}
+function closePinDetail(){try{_openPinId=null;var d=document.getElementById('pinDrawer');if(d)d.classList.add('hidden');document.body.classList.remove('has-open-card');}catch(e){}}
 
 // ===== PIN LIFECYCLE STATE =====
 function getPinLifecycleState(p){

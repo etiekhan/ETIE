@@ -89,9 +89,11 @@ header{flex-wrap:nowrap}
 }
 
 /* Section-tinted glass cards — stronger layout presence */
+#profile .card.panel,#local9.card.panel,#discover .card.panel{
   box-shadow:0 12px 30px rgba(232,93,117,.22),inset 0 1px 0 rgba(255,255,255,.12);
   border-left:4px solid var(--discover);
 }
+#trips .card.panel,#messages .card.panel{
   box-shadow:0 12px 30px rgba(78,205,196,.22),inset 0 1px 0 rgba(255,255,255,.12);
   border-left:4px solid var(--trips);
 }

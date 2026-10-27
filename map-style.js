@@ -233,6 +233,7 @@
   }
 
   function createGlowLayer(layer) {
+    if (layer.type !== 'line') return null;
     var glow = JSON.parse(JSON.stringify(layer));
     glow.id = layer.id + ' (glow)';
     glow.paint = glow.paint || {};
@@ -242,7 +243,6 @@
       if (typeof w === 'number') {
         glow.paint['line-width'] = w * 3;
       } else if (Array.isArray(w)) {
-        // Interpolate array
         glow.paint['line-width'] = w.map(function(v) {
           if (typeof v === 'number') return v * 3;
           return v;
@@ -283,10 +283,11 @@
       setEnglishLabels(layer);
 
       // Add glow for major roads (insert before original)
-      if (MAJOR_ROAD_LAYERS.indexOf(layer.id) !== -1) {
-        var glow = createGlowLayer(layer);
-        newLayers.push(glow);
-      }
+      // Glow temporarily disabled for debugging
+      // if (MAJOR_ROAD_LAYERS.indexOf(layer.id) !== -1 && layer.type === 'line') {
+      //   var glow = createGlowLayer(layer);
+      //   if (glow) newLayers.push(glow);
+      // }
 
       newLayers.push(layer);
     });

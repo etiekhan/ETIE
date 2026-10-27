@@ -114,6 +114,8 @@
     'Cable car dash': { type: 'line', color: 'muted', opacity: 0.2 },
     // Military
     'Military limit': { type: 'line', color: 'muted', opacity: 0.3 },
+    'Cliff line': { type: 'line', color: 'muted', opacity: 0.4 },
+    'Cliff': { type: 'line', color: 'muted', opacity: 0.4 },
     // Borders
     'Other border': { type: 'line', color: 'muted', opacity: 0.3 },
     'Disputed border': { type: 'line', color: 'muted', opacity: 0.3 },

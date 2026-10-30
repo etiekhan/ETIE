@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <!-- Phase 1: split from single-file prototype, no visual changes -->
-  <link rel="stylesheet" href="styles.css?v=85">
+  <link rel="stylesheet" href="styles.css?v=86">
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
 </head>
 <body>
@@ -392,7 +392,7 @@
   <div class="chat-popup glass-modal" role="dialog" aria-modal="true" aria-label="Hangout Memory" style="width:min(520px,calc(100vw - 24px));max-height:90vh;">
     <div class="chat-popup-head"><div><strong>🖼️ Hangout Memory</strong></div><button class="secondary" onclick="closeMemoryCard()" aria-label="Close" style="padding:8px 12px;">✕</button></div>
     <div class="chat-popup-body" style="padding:0;background:transparent;overflow:hidden;">
-      <div id="memoryCardDualPhoto" style="display:flex;height:220px;background:#000;overflow:hidden;"></div>
+      <div id="memoryCardDualPhoto" style="display:flex;height:220px;background:#000;overflow:hidden;position:relative;"></div>
       <div style="padding:16px;">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
           <strong id="memoryCardTitle" style="font-size:18px;">—</strong>
@@ -404,7 +404,9 @@
           <div class="quest-week-label" style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,.5);margin-bottom:4px;">Quest</div>
           <div id="memoryCardQuestTitle" style="font-weight:700;color:#fff;"></div>
         </div>
+        <div id="memoryFeed" style="margin-top:12px;max-height:300px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;"></div>
         <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+          <button class="secondary" id="memoryAddBtn" onclick="addMemoryToSpot()">+ Add Memory to spot</button>
           <button class="secondary" onclick="closeMemoryCard()">Close</button>
         </div>
       </div>
@@ -500,7 +502,7 @@
   <script src="runtime-config.js"></script>
   <script src="runtime-config.example.js"></script>
   <script src="map-style.js"></script>
-  <script src="app.js?v=138"></script>
-  <script src="supabase-sync.js?v=123"></script>
+  <script src="app.js?v=139"></script>
+  <script src="supabase-sync.js?v=124"></script>
 </body>
 </html>

@@ -1387,3 +1387,52 @@ body.has-open-card .map-foot { display: none; }
 .memory-spot-marker img.fading {
   opacity: 0;
 }
+
+/* ===== Memory Feed Modal ===== */
+#memoryFeed {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+#memoryFeed::-webkit-scrollbar {
+  width: 4px;
+}
+
+#memoryFeed::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#memoryFeed::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+}
+
+.memory-feed-item {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.memory-feed-item img {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  display: block;
+}
+
+.memory-feed-caption {
+  padding: 10px 12px;
+}
+
+.memory-feed-caption .caption-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 2px;
+}
+
+.memory-feed-caption .caption-date {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+}

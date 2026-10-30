@@ -948,13 +948,12 @@ function openMemorySpotCard(spot){
     if(!m)return;
     m.classList.remove('hidden');
     
-    // Show all photos in the spot
+    // Show first photo in dual photo area
     var dual=document.getElementById('memoryCardDualPhoto');
     if(dual){
       if(spot.photos.length===1){
         dual.innerHTML='<img src="'+spot.photos[0].url+'" style="width:100%;height:100%;object-fit:cover;">';
       }else{
-        // Show first photo with count indicator
         dual.innerHTML='<img src="'+spot.photos[0].url+'" style="width:100%;height:100%;object-fit:cover;">'
           +'<div style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,.7);color:#fff;padding:4px 8px;border-radius:8px;font-size:12px;font-weight:700;">'+spot.photos.length+' photos</div>';
       }
@@ -966,12 +965,52 @@ function openMemorySpotCard(spot){
     var meta=document.getElementById('memoryCardMeta');
     if(meta){
       var taken=spot.photos[0]?.timestamp ? new Date(spot.photos[0].timestamp).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}) : '';
-      meta.textContent=taken;
+      meta.textContent=taken+(spot.photos.length>1?' · '+spot.photos.length+' photos':'');
+    }
+    
+    // Populate vertical feed of all photos
+    var feed=document.getElementById('memoryFeed');
+    if(feed){
+      feed.innerHTML='';
+      spot.photos.forEach(function(photo, idx){
+        var item=document.createElement('div');
+        item.style.cssText='background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:12px;overflow:hidden;';
+        var img=document.createElement('img');
+        img.src=photo.url;
+        img.style.cssText='width:100%;height:180px;object-fit:cover;display:block;';
+        item.appendChild(img);
+        var caption=document.createElement('div');
+        caption.style.cssText='padding:10px 12px;';
+        if(photo.caption){
+          var cap=document.createElement('div');
+          cap.style.cssText='font-size:13px;font-weight:600;color:#fff;margin-bottom:2px;';
+          cap.textContent=photo.caption;
+          caption.appendChild(cap);
+        }
+        if(photo.timestamp){
+          var date=document.createElement('div');
+          date.style.cssText='font-size:11px;color:rgba(255,255,255,.5);';
+          try{date.textContent=new Date(photo.timestamp).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});}catch(e){date.textContent=photo.timestamp;}
+          caption.appendChild(date);
+        }
+        item.appendChild(caption);
+        feed.appendChild(item);
+      });
     }
     
     // Store spot for reference
     window._openMemorySpot=spot;
   }catch(e){console.error('openMemorySpotCard error:',e);}
+}
+
+// Add memory to an existing spot
+function addMemoryToSpot(){
+  try{
+    var spot=window._openMemorySpot;
+    if(!spot){toast('No spot selected.');return;}
+    closeMemoryCard();
+    openLogSheet(null,{lat:spot.coords.lat,lng:spot.coords.lng,label:spot.name});
+  }catch(e){console.error('addMemoryToSpot error:',e);}
 }
 
 var _popupMemories=[];

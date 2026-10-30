@@ -3,7 +3,7 @@
 (function(){
   'use strict';
 
-  var MAPTILER_KEY = (window.ETIE_CONFIG && window.ETIE_CONFIG.MAPTILER_API_KEY) || '';
+  var MAPTILER_KEY = (window.ETIE_CONFIG && window.ETIE_CONFIG.MAPTILER_API_KEY) || 'mWVa9FJ4Nxh6qsIOagwY';
   var STYLE_URL = 'public/map-style.json';
 
   // Read palette from CSS variables
@@ -363,13 +363,17 @@
               }
             });
           }
-          if (style.glyphs && style.glyphs.indexOf('{key}') !== -1) {
-            style.glyphs = style.glyphs.replace('{key}', encodeURIComponent(key));
-          } else if (style.glyphs && style.glyphs.indexOf('key=') === -1) {
-            style.glyphs += '?key=' + encodeURIComponent(key);
+          if (style.glyphs) {
+            if (style.glyphs.indexOf('{key}') !== -1) {
+              style.glyphs = style.glyphs.replace('{key}', encodeURIComponent(key));
+            } else if (style.glyphs.indexOf('key=') === -1) {
+              style.glyphs += '?key=' + encodeURIComponent(key);
+            }
           }
-          if (style.sprite && style.sprite.indexOf('key=') === -1) {
-            style.sprite += '?key=' + encodeURIComponent(key);
+          if (style.sprite) {
+            if (style.sprite.indexOf('key=') === -1) {
+              style.sprite += '?key=' + encodeURIComponent(key);
+            }
           }
         }
         var prepared = prepareStyle(style);

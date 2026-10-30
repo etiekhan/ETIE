@@ -3010,7 +3010,7 @@ function renderAreaSidebar(){
   }catch(e){}
 }
 var _mapMode='hooks';
-var _mainMemoryMarkers=null;
+var _mainMemoryMarkers=[];
 function renderMemoryAreaSidebar(box){
   try{
     var logs=window._memoryLogsCache||[];
@@ -3066,8 +3066,8 @@ function setMapMode(mode){
 function applyMapMode(){
   try{
     if(!window.maplibregl||!_map)return;
-    if(_mainMemoryMarkers&&_mainMemoryMarkers.remove){try{_mainMemoryMarkers.remove();}catch(e){}}
-    _mainMemoryMarkers=null;
+    _mainMemoryMarkers.forEach(function(m){try{m.remove();}catch(e){}});
+    _mainMemoryMarkers=[];
     try{renderMapPins();}catch(e){}
     if(_mapMode==='memories')loadMainMemoryMarkers();
   }catch(e){}

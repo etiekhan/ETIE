@@ -931,6 +931,7 @@ function createMemorySpotMarker(spot,mapInstance){
     
     el.addEventListener('click',function(e){
       try{e.stopPropagation();}catch(_){}
+      console.log('Memory marker clicked, spot:', spot.name, 'photos:', spot.photos.length);
       openMemorySpotCard(spot);
     });
     
@@ -944,6 +945,7 @@ function createMemorySpotMarker(spot,mapInstance){
 // Open memory card for a spot (shows all photos)
 function openMemorySpotCard(spot){
   try{
+    console.log('openMemorySpotCard called, spot:', spot?.name, 'photos:', spot?.photos?.length);
     var m=document.getElementById('memoryCardModal');
     if(!m)return;
     m.classList.remove('hidden');

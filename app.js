@@ -798,7 +798,6 @@ function renderProfileMemoryMap(){
       _profileMemoryMap.addControl(new maplibregl.NavigationControl({showCompass:false}),'bottom-right');
       fetchAndRenderMemoryMarkers(_profileMemoryMap);
     }
-    fetchAndRenderMemoryMarkers(_profileMemoryMap);
   }catch(e){console.error('renderProfileMemoryMap',e);}
 }
 // ===== Full Memory Map (Memories tab) =====
@@ -873,6 +872,108 @@ function dedupeMemories(logs){
     return order;
   }catch(e){return logs||[];}
 }
+
+// Group flat memory rows into spots (one pin per location, multiple photos)
+function groupMemoriesIntoSpots(logs){
+  try{
+    var spots={},order=[];
+    (logs||[]).forEach(function(l){
+      try{
+        if(!l||l.lat==null||l.lng==null||!l.photo_url)return;
+        var key=l.lat.toFixed(4)+','+l.lng.toFixed(4);
+        if(!spots[key]){
+          spots[key]={id:'spot-'+key,name:l.location||l.title||'Hangout',coords:{lat:l.lat,lng:l.lng},photos:[]};
+          order.push(spots[key]);
+        }
+        spots[key].photos.push({url:l.photo_url,caption:l.title||l.location||'',timestamp:l.taken_at||l.created_at||''});
+      }catch(e){}
+    });
+    return order;
+  }catch(e){return [];}
+}
+
+// Rotating square memory marker with neon glow
+function createMemorySpotMarker(spot,mapInstance){
+  try{
+    var el=document.createElement('div');
+    el.className='memory-spot-marker';
+    el.style.width='64px';
+    el.style.height='64px';
+    el.style.borderRadius='8px';
+    el.style.overflow='hidden';
+    el.style.position='relative';
+    el.style.cursor='pointer';
+    
+    var img=document.createElement('img');
+    img.src=spot.photos[0]?.url||'';
+    img.style.width='100%';
+    img.style.height='100%';
+    img.style.objectFit='cover';
+    img.style.transition='opacity 0.5s ease';
+    el.appendChild(img);
+    
+    // Photo cycling if multiple
+    if(spot.photos.length>1){
+      var idx=0;
+      var interval=setInterval(function(){
+        try{
+          idx=(idx+1)%spot.photos.length;
+          img.style.opacity='0';
+          setTimeout(function(){
+            img.src=spot.photos[idx].url;
+            img.style.opacity='1';
+          },250);
+        }catch(e){}
+      },3500);
+      // Store interval for cleanup
+      el._interval=interval;
+    }
+    
+    el.addEventListener('click',function(e){
+      try{e.stopPropagation();}catch(_){}
+      openMemorySpotCard(spot);
+    });
+    
+    var mk=new maplibregl.Marker({element:el,anchor:'center'}).setLngLat([spot.coords.lng,spot.coords.lat]).addTo(mapInstance);
+    mk._spot=spot;
+    mk._interval=el._interval;
+    return mk;
+  }catch(e){console.error('createMemorySpotMarker error:',e);return null;}
+}
+
+// Open memory card for a spot (shows all photos)
+function openMemorySpotCard(spot){
+  try{
+    var m=document.getElementById('memoryCardModal');
+    if(!m)return;
+    m.classList.remove('hidden');
+    
+    // Show all photos in the spot
+    var dual=document.getElementById('memoryCardDualPhoto');
+    if(dual){
+      if(spot.photos.length===1){
+        dual.innerHTML='<img src="'+spot.photos[0].url+'" style="width:100%;height:100%;object-fit:cover;">';
+      }else{
+        // Show first photo with count indicator
+        dual.innerHTML='<img src="'+spot.photos[0].url+'" style="width:100%;height:100%;object-fit:cover;">'
+          +'<div style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,.7);color:#fff;padding:4px 8px;border-radius:8px;font-size:12px;font-weight:700;">'+spot.photos.length+' photos</div>';
+      }
+    }
+    
+    var title=document.getElementById('memoryCardTitle');
+    if(title)title.textContent=spot.name||'Hangout Memory';
+    
+    var meta=document.getElementById('memoryCardMeta');
+    if(meta){
+      var taken=spot.photos[0]?.timestamp ? new Date(spot.photos[0].timestamp).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}) : '';
+      meta.textContent=taken;
+    }
+    
+    // Store spot for reference
+    window._openMemorySpot=spot;
+  }catch(e){console.error('openMemorySpotCard error:',e);}
+}
+
 var _popupMemories=[];
 function openPopupMemory(i){
   try{var l=_popupMemories[i];if(l)openMemoryCard(l);}catch(e){}
@@ -992,9 +1093,15 @@ function fetchAndRenderMemoryMarkers(mapInstance,onDone){
       try{
         var photoLogs=(logs||[]).filter(function(l){return l&&l.lat!=null&&l.lng!=null&&l.photo_url;});
         if(!photoLogs.length){if(onDone)onDone(0);return;}
-        if(mapInstance._etieMemoryCluster&&mapInstance._etieMemoryCluster.remove)mapInstance._etieMemoryCluster.remove();
-        mapInstance._etieMemoryCluster=buildMemoryCluster(photoLogs,mapInstance);
-        if(onDone)onDone(photoLogs.length);
+        var spots=groupMemoriesIntoSpots(photoLogs);
+        var markers=[];
+        spots.forEach(function(spot){
+          try{
+            var mk=createMemorySpotMarker(spot,mapInstance);
+            if(mk)markers.push(mk);
+          }catch(e){console.error('spot marker error:',e);}
+        });
+        if(onDone)onDone(spots.length);
       }catch(e){console.error('fetchAndRenderMemoryMarkers',e);if(onDone)onDone(0);}
     });
   }catch(e){console.error('fetchAndRenderMemoryMarkers outer',e);if(onDone)onDone(0);}
@@ -3081,27 +3188,20 @@ function loadMainMemoryMarkers(){
       try{
         window._memoryLogsCache=dedupeMemories(logs);
         if(_mapMode!=='memories'||!_map)return;
-        _mainMemoryMarkers.forEach(function(m){try{m.remove();}catch(e){}});
+        _mainMemoryMarkers.forEach(function(m){
+          try{if(m._interval)clearInterval(m._interval);}catch(e){}
+          try{m.remove();}catch(e){}
+        });
         _mainMemoryMarkers=[];
         var photoLogs=window._memoryLogsCache.filter(function(l){return l&&l.lat!=null&&l.lng!=null&&l.photo_url;});
         if(!photoLogs.length)return;
-        var markers=[];
-        photoLogs.forEach(function(log){
+        var spots=groupMemoriesIntoSpots(photoLogs);
+        spots.forEach(function(spot){
           try{
-            var lat=log.lat, lng=log.lng;
-            var title=log.title||log.location||'Hangout';
-            var html='<div class="memory-marker" style="width:56px;height:56px;border-radius:12px;overflow:hidden;background:#000;border:3px solid #fff;box-shadow:0 4px 16px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;">'
-              +'<img src="'+log.photo_url+'" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">'
-              +'</div>';
-            var el=document.createElement('div');
-            el.innerHTML=html;
-            el.firstChild.style.width='56px';el.firstChild.style.height='56px';
-            var mk=new maplibregl.Marker({element:el.firstChild,anchor:'center'}).setLngLat([log.lng,log.lat]).addTo(_map);
-            mk.getElement().addEventListener('click',function(e){try{e.stopPropagation();}catch(_){} _pinJustClicked=true;setTimeout(function(){_pinJustClicked=false;},300); openMemoryCard(log);});
-            markers.push(mk);
-          }catch(e){}
+            var mk=createMemorySpotMarker(spot,_map);
+            if(mk)_mainMemoryMarkers.push(mk);
+          }catch(e){console.error('spot marker error:',e);}
         });
-        _mainMemoryMarkers = markers;
         try{renderAreaSidebar();}catch(e){}
       }catch(e){}
     });

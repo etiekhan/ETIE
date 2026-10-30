@@ -771,7 +771,7 @@ function renderProfileMemoryMap(){
   try{
     var container=document.getElementById('memoryMap');
     if(!container)return;
-    if(_profileMemoryMap){try{_profileMemoryMap.remove();}catch(e){}_profileMemoryMap=null;}
+    if(_profileMemoryMap){try{if(_profileMemoryMap._memoryMarkers)_profileMemoryMap._memoryMarkers.forEach(function(m){try{if(m._interval)clearInterval(m._interval);}catch(e){}});}catch(e){}try{_profileMemoryMap.remove();}catch(e){}_profileMemoryMap=null;}
     container.innerHTML='';
     if(!window.maplibregl){container.innerHTML='<div class="muted" style="padding:20px;text-align:center;">Map loading…</div>';return;}
     if(window.EtieMapStyle && typeof window.EtieMapStyle.load === 'function'){
@@ -806,7 +806,7 @@ function renderMemoryMapFull(){
   try{
     var container=document.getElementById('memoryMapFull');
     if(!container)return;
-    if(_memoryMapFull){try{_memoryMapFull.remove();}catch(e){}_memoryMapFull=null;}
+    if(_memoryMapFull){try{if(_memoryMapFull._memoryMarkers)_memoryMapFull._memoryMarkers.forEach(function(m){try{if(m._interval)clearInterval(m._interval);}catch(e){}});}catch(e){}try{_memoryMapFull.remove();}catch(e){}_memoryMapFull=null;}
     container.innerHTML='';
     if(!window.maplibregl){container.innerHTML='<div class="muted" style="padding:20px;text-align:center;">Map loading…</div>';return;}
     if(window.EtieMapStyle && typeof window.EtieMapStyle.load === 'function'){
@@ -1140,6 +1140,7 @@ function fetchAndRenderMemoryMarkers(mapInstance,onDone){
             if(mk)markers.push(mk);
           }catch(e){console.error('spot marker error:',e);}
         });
+        mapInstance._memoryMarkers=markers;
         if(onDone)onDone(spots.length);
       }catch(e){console.error('fetchAndRenderMemoryMarkers',e);if(onDone)onDone(0);}
     });
@@ -3212,7 +3213,10 @@ function setMapMode(mode){
 function applyMapMode(){
   try{
     if(!window.maplibregl||!_map)return;
-    _mainMemoryMarkers.forEach(function(m){try{m.remove();}catch(e){}});
+    _mainMemoryMarkers.forEach(function(m){
+      try{if(m._interval)clearInterval(m._interval);}catch(e){}
+      try{m.remove();}catch(e){}
+    });
     _mainMemoryMarkers=[];
     try{renderMapPins();}catch(e){}
     if(_mapMode==='memories')loadMainMemoryMarkers();

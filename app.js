@@ -2114,9 +2114,22 @@ function renderMapFilter(){
     MAP_VIBES.forEach(function(c){
       var b=document.createElement('button');
       b.className='chip filter-topic-chip'+(MAP_FILTER===c.id?' active':'');
-      b.textContent=c.emoji+' '+(c.label||c.id);
       b.style.padding='7px 12px';
       b.style.flexShrink='0';
+      b.style.display='flex';
+      b.style.alignItems='center';
+      b.style.gap='6px';
+      var dot=document.createElement('span');
+      dot.style.display='inline-block';
+      dot.style.width='6px';
+      dot.style.height='6px';
+      dot.style.borderRadius='50%';
+      dot.style.background='var(--violet)';
+      dot.style.boxShadow='0 0 4px var(--violet)';
+      b.appendChild(dot);
+      var label=document.createElement('span');
+      label.textContent=(c.label||c.id);
+      b.appendChild(label);
       b.onclick=(function(id){return function(){setMapFilter(id);};})(c.id);
       topicScroll.appendChild(b);
     });

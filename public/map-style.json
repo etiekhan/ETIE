@@ -455,21 +455,6 @@
       },
       "paint": {
         "line-color": "hsl(119, 68%, 77%)",
-        "line-opacity": [
-          "interpolate",
-          [
-            "linear"
-          ],
-          [
-            "zoom"
-          ],
-          5,
-          0.5,
-          11,
-          0.4,
-          17,
-          0
-        ],
         "line-width": [
           "interpolate",
           [
@@ -505,22 +490,6 @@
       },
       "paint": {
         "line-color": "hsla(36, 45%, 45%, 0.8)",
-        "line-opacity": [
-          "interpolate",
-          [
-            "exponential",
-            1
-          ],
-          [
-            "zoom"
-          ],
-          9,
-          0.3,
-          14,
-          0.4,
-          18,
-          0.5
-        ],
         "line-width": [
           "interpolate",
           [
@@ -560,21 +529,6 @@
       },
       "paint": {
         "line-color": "hsla(200, 100%, 73%, 0.8)",
-        "line-opacity": [
-          "interpolate",
-          [
-            "linear"
-          ],
-          [
-            "zoom"
-          ],
-          9,
-          0.3,
-          14,
-          0.4,
-          18,
-          0.5
-        ],
         "line-width": {
           "stops": [
             [
@@ -615,24 +569,6 @@
       },
       "paint": {
         "line-color": "hsl(36, 45%, 50%)",
-        "line-opacity": [
-          "step",
-          [
-            "zoom"
-          ],
-          [
-            "match",
-            [
-              "get",
-              "nth_line"
-            ],
-            0,
-            0,
-            0.3
-          ],
-          15,
-          0.3
-        ],
         "line-width": 0.8
       },
       "filter": [
@@ -661,24 +597,6 @@
       },
       "paint": {
         "line-color": "hsl(200, 100%, 80%)",
-        "line-opacity": [
-          "step",
-          [
-            "zoom"
-          ],
-          [
-            "match",
-            [
-              "get",
-              "nth_line"
-            ],
-            0,
-            0,
-            0.3
-          ],
-          15,
-          0.3
-        ],
         "line-width": 0.8
       },
       "filter": [
@@ -704,19 +622,6 @@
       "minzoom": 13,
       "paint": {
         "line-color": "hsl(0, 10%, 55%)",
-        "line-opacity": [
-          "interpolate",
-          [
-            "linear"
-          ],
-          [
-            "zoom"
-          ],
-          13,
-          0.5,
-          17,
-          0.8
-        ],
         "line-width": [
           "interpolate",
           [
@@ -764,19 +669,6 @@
           1.2,
           22,
           5
-        ],
-        "line-opacity": [
-          "interpolate",
-          [
-            "linear"
-          ],
-          [
-            "zoom"
-          ],
-          13,
-          0.3,
-          17,
-          0.6
         ],
         "line-width": [
           "interpolate",
@@ -952,7 +844,6 @@
           2,
           4
         ],
-        "line-opacity": 0.7,
         "line-width": [
           "interpolate",
           [
@@ -1167,21 +1058,6 @@
         "line-dasharray": [
           2,
           2
-        ],
-        "line-opacity": [
-          "interpolate",
-          [
-            "linear"
-          ],
-          [
-            "zoom"
-          ],
-          6,
-          0.5,
-          7,
-          0.8,
-          8,
-          1
         ],
         "line-width": {
           "stops": [
@@ -1460,7 +1336,6 @@
       },
       "paint": {
         "line-color": "hsl(0, 0%, 50%)",
-        "line-opacity": 0.5,
         "line-width": [
           "interpolate",
           [
@@ -1535,7 +1410,6 @@
             ]
           ]
         ],
-        "line-opacity": 0.5,
         "line-width": [
           "interpolate",
           [
@@ -2274,7 +2148,6 @@
       },
       "paint": {
         "line-color": "hsl(0, 0%, 50%)",
-        "line-opacity": 1,
         "line-width": [
           "interpolate",
           [
@@ -2544,7 +2417,6 @@
             0
           ]
         ],
-        "line-opacity": 1,
         "line-width": [
           "interpolate",
           [
@@ -2677,29 +2549,6 @@
           17,
           -7
         ],
-        "line-opacity": [
-          "step",
-          [
-            "zoom"
-          ],
-          0,
-          6,
-          [
-            "match",
-            [
-              "get",
-              "network"
-            ],
-            [
-              "icn",
-              "ncn"
-            ],
-            1,
-            0
-          ],
-          13,
-          1
-        ],
         "line-width": [
           "interpolate",
           [
@@ -2752,21 +2601,6 @@
         "line-dasharray": [
           5,
           2
-        ],
-        "line-opacity": [
-          "interpolate",
-          [
-            "linear"
-          ],
-          [
-            "zoom"
-          ],
-          9,
-          0,
-          10,
-          0.2,
-          11,
-          1
         ],
         "line-width": [
           "interpolate",
@@ -2840,7 +2674,6 @@
           17,
           -7
         ],
-        "line-opacity": 1,
         "line-width": [
           "interpolate",
           [
@@ -2920,21 +2753,6 @@
           18,
           8
         ],
-        "line-opacity": [
-          "interpolate",
-          [
-            "linear"
-          ],
-          [
-            "zoom"
-          ],
-          9,
-          0,
-          10,
-          0.2,
-          11,
-          1
-        ],
         "line-width": [
           "interpolate",
           [
@@ -3003,21 +2821,6 @@
           2.75,
           18,
           6
-        ],
-        "line-opacity": [
-          "interpolate",
-          [
-            "linear"
-          ],
-          [
-            "zoom"
-          ],
-          9,
-          0,
-          10,
-          0.2,
-          11,
-          1
         ],
         "line-width": [
           "interpolate",
@@ -3100,21 +2903,6 @@
           18,
           5
         ],
-        "line-opacity": [
-          "interpolate",
-          [
-            "linear"
-          ],
-          [
-            "zoom"
-          ],
-          9,
-          0,
-          10,
-          0.2,
-          11,
-          1
-        ],
         "line-width": [
           "interpolate",
           [
@@ -3184,21 +2972,6 @@
           18,
           4
         ],
-        "line-opacity": [
-          "interpolate",
-          [
-            "linear"
-          ],
-          [
-            "zoom"
-          ],
-          9,
-          0,
-          10,
-          0.2,
-          11,
-          1
-        ],
         "line-width": [
           "interpolate",
           [
@@ -3267,21 +3040,6 @@
           1.25,
           18,
           3
-        ],
-        "line-opacity": [
-          "interpolate",
-          [
-            "linear"
-          ],
-          [
-            "zoom"
-          ],
-          9,
-          0,
-          10,
-          0.2,
-          11,
-          1
         ],
         "line-width": [
           "interpolate",
@@ -3362,21 +3120,6 @@
           0.75,
           18,
           2
-        ],
-        "line-opacity": [
-          "interpolate",
-          [
-            "linear"
-          ],
-          [
-            "zoom"
-          ],
-          9,
-          0,
-          10,
-          0.2,
-          11,
-          1
         ],
         "line-width": [
           "interpolate",
@@ -3466,21 +3209,6 @@
           18,
           1
         ],
-        "line-opacity": [
-          "interpolate",
-          [
-            "linear"
-          ],
-          [
-            "zoom"
-          ],
-          9,
-          0,
-          10,
-          0.2,
-          11,
-          1
-        ],
         "line-width": [
           "interpolate",
           [
@@ -3546,21 +3274,6 @@
       "paint": {
         "line-color": "hsl(10, 100%, 50%)",
         "line-offset": 0,
-        "line-opacity": [
-          "interpolate",
-          [
-            "linear"
-          ],
-          [
-            "zoom"
-          ],
-          9,
-          0,
-          10,
-          0.2,
-          11,
-          1
-        ],
         "line-width": [
           "interpolate",
           [
@@ -3678,7 +3391,6 @@
           14,
           "hsl(10, 98%, 41%)"
         ],
-        "line-opacity": 1,
         "line-width": [
           "interpolate",
           [
@@ -3733,7 +3445,6 @@
       },
       "paint": {
         "line-color": "hsl(10, 98%, 41%)",
-        "line-opacity": 1,
         "line-width": [
           "interpolate",
           [
@@ -3781,7 +3492,6 @@
           0.5,
           2
         ],
-        "line-opacity": 1,
         "line-width": [
           "interpolate",
           [
@@ -4454,7 +4164,6 @@
           5,
           1
         ],
-        "line-opacity": 1,
         "line-width": [
           "interpolate",
           [
@@ -4510,19 +4219,6 @@
           2,
           2
         ],
-        "line-opacity": [
-          "interpolate",
-          [
-            "linear"
-          ],
-          [
-            "zoom"
-          ],
-          4,
-          0.6,
-          6,
-          1
-        ],
         "line-width": [
           "interpolate",
           [
@@ -4573,19 +4269,6 @@
       },
       "paint": {
         "line-color": "hsl(120, 2%, 50%)",
-        "line-opacity": [
-          "interpolate",
-          [
-            "linear"
-          ],
-          [
-            "zoom"
-          ],
-          4,
-          0.6,
-          6,
-          1
-        ],
         "line-width": [
           "interpolate",
           [

@@ -3,8 +3,10 @@
 :root {
   --ink: #0B0612;
   --sea: #0D0821;
-  --land: #1C1026;
+  --water: #070418;
+  --land: #2A1840;
   --parks: #2A1236;
+  --coast: rgba(139, 92, 246, 0.55);
   --red: #FF3B4E;
   --amber: #FFB45A;
   --pink: #FF3DA5;

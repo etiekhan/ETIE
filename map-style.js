@@ -3,7 +3,7 @@
 (function(){
   'use strict';
 
-  var MAPTILER_KEY = (window.ETIE_CONFIG && window.ETIE_CONFIG.MAPTILER_API_KEY) || 'mWVa9FJ4Nxh6qsIOagwY';
+  var MAPTILER_KEY = (window.ETIE_CONFIG && window.ETIE_CONFIG.MAPTILER_API_KEY) || '';
   var STYLE_URL = 'map-style.json';
 
   // Read palette from CSS variables
@@ -14,6 +14,10 @@
   // Color classification by layer
   var PALETTE = {
     sea: cssVar('--sea'),
+    water: cssVar('--water'),
+    coast: cssVar('--coast'),
+    water: cssVar('--water'),
+    coast: cssVar('--coast'),
     land: cssVar('--land'),
     parks: cssVar('--parks'),
     amber: cssVar('--amber'),
@@ -28,7 +32,7 @@
   // Layer classification rules (outdoor-v2 style)
   var LAYER_RULES = {
     // Background
-    'Background': { type: 'background', color: 'sea' },
+    'Background': { type: 'background', color: 'water' },
     // Landcover fills -> land/parks
     'Scrub': { type: 'fill', color: 'land' },
     'Tree': { type: 'fill', color: 'parks' },
@@ -58,9 +62,9 @@
     'Contour labels': { type: 'symbol', color: 'muted' },
     'Glacier contour labels': { type: 'symbol', color: 'muted' },
     // Water -> sea
-    'River tunnel': { type: 'line', color: 'sea' },
-    'River': { type: 'line', color: 'sea' },
-    'Water': { type: 'fill', color: 'sea' },
+    'River tunnel': { type: 'line', color: 'water' },
+    'River': { type: 'line', color: 'water' },
+    'Water': { type: 'fill', color: 'water' },
     // Aeroway
     'Aeroway': { type: 'line', color: 'land' },
     'Runway': { type: 'line', color: 'land' },
@@ -123,7 +127,7 @@
     // Building - hide
     'Building': { type: 'fill', hide: true },
     // Labels - handled separately
-    'River labels': { type: 'symbol', color: 'sea' },
+    'River labels': { type: 'symbol', color: 'muted' },
     'Lakeline labels': { type: 'symbol', color: 'muted' },
     'Ocean labels': { type: 'symbol', color: 'muted' },
     'Sea labels': { type: 'symbol', color: 'muted' },
@@ -167,6 +171,11 @@
     'Outdoor shop', 'Sport', 'Outdoor water', 'Transport', 'Food', 'Healthcare',
     'Tourism', 'Culture', 'Outdoor', 'Station', 'Castle',
     'Village labels',
+    'Tree',
+    'Peak labels', 'Peak labels (US)', 'Volcano labels', 'Volcano labels (US)',
+    'Protected area labels', 'National park labels', 'Park labels',
+    'Airport labels', 'Longdistance trail labels', 'Bicycle longdistance labels',
+    'Tunnel', 'Tunnel path',
   ];
 
   // Label layers to recolor and set language
@@ -204,6 +213,10 @@
       if (layer.paint['fill-outline-color']) {
         layer.paint['fill-outline-color'] = PALETTE.ink;
       }
+      // Remove zoom-dependent opacity overrides
+      if (layer.paint['fill-opacity'] && Array.isArray(layer.paint['fill-opacity'])) {
+        delete layer.paint['fill-opacity'];
+      }
     } else if (layer.type === 'line') {
       layer.paint = layer.paint || {};
       if (rule.roadNetwork) {
@@ -220,13 +233,24 @@
           'track', PALETTE.violet,
           PALETTE.muted
         ];
+        // Remove zoom-dependent opacity overrides for road network
+        if (layer.paint['line-opacity'] && Array.isArray(layer.paint['line-opacity'])) {
+          delete layer.paint['line-opacity'];
+        }
       } else {
         layer.paint['line-color'] = color;
+        // Apply opacity as line-color alpha if supported, otherwise skip
+        if (rule.opacity !== undefined) {
+          // Try to set opacity, but don't fail if not supported
+          try {
+            layer.paint['line-opacity'] = rule.opacity;
+          } catch(e) {}
+        }
+        // Remove zoom-dependent opacity overrides
+        if (layer.paint['line-opacity'] && Array.isArray(layer.paint['line-opacity'])) {
+          layer.paint['line-opacity'] = rule.opacity !== undefined ? rule.opacity : 1;
+        }
       }
-      // line-opacity removed - not supported in this MapLibre GL version
-      // if (rule.opacity !== undefined) {
-      //   layer.paint['line-opacity'] = rule.opacity;
-      // }
     } else if (layer.type === 'symbol') {
       layer.paint = layer.paint || {};
       if (layer.paint['text-color']) {
@@ -293,6 +317,10 @@
     glow.paint['line-blur'] = 2;
     // Opacity
     glow.paint['line-opacity'] = 0.35;
+    // Blur
+    glow.paint['line-blur'] = 2;
+    // Opacity
+    glow.paint['line-opacity'] = 0.35;
     // Remove dasharray
     delete glow.paint['line-dasharray'];
     return glow;
@@ -326,6 +354,26 @@
       if (layer.id === 'Road network' && layer.type === 'line') {
         var glow = createGlowLayer(layer);
         if (glow) newLayers.push(glow);
+      }
+
+      // Add coastline after Water layer
+      if (layer.id === 'Water' && layer.type === 'fill') {
+        var coast = {
+          id: 'Coastline (generated)',
+          type: 'line',
+          source: layer.source,
+          'source-layer': layer['source-layer'],
+          paint: {
+            'line-color': PALETTE.coast,
+            'line-width': 1.2
+          },
+          layout: {
+            'line-cap': 'round',
+            'line-join': 'round',
+            visibility: 'visible'
+          }
+        };
+        newLayers.push(coast);
       }
 
       newLayers.push(layer);

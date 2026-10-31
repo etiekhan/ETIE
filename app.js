@@ -1796,8 +1796,8 @@ function mapTilerStyleUrl(){
 }
 function showMapConfigError(container){
   var el=(typeof container==='string')?document.getElementById(container):container;
-  var message='Map unavailable: MapTiler API key is missing. Set MAPTILER_API_KEY in your deployment environment.';
-  if(el)el.innerHTML='<div class="map-config-error" role="alert"><strong>Map unavailable</strong><br>MapTiler API key is missing.<br>Set MAPTILER_API_KEY in your deployment environment.</div>';
+  var message='Map unavailable: API key missing or rejected. Set MAPTILER_API_KEY in your deployment environment.';
+  if(el)el.innerHTML='<div class="map-config-error" role="alert"><strong>Map unavailable</strong><br>API key missing or rejected.<br>Set MAPTILER_API_KEY in your deployment environment.</div>';
   try{console.error(message);}catch(e){}
 }
 function createEtieMap(container,options){

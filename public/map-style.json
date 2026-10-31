@@ -454,7 +454,6 @@
         "visibility": "visible"
       },
       "paint": {
-        "line-blur": 1,
         "line-color": "hsl(119, 68%, 77%)",
         "line-opacity": [
           "interpolate",
@@ -2487,7 +2486,6 @@
         "visibility": "visible"
       },
       "paint": {
-        "line-blur": 0.5,
         "line-color": "hsla(0, 0%, 100%, 0.75)",
         "line-offset": [
           "interpolate",

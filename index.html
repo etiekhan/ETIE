@@ -224,8 +224,10 @@
 </div>
 <div id="pinDrawer" class="pin-drawer hidden" role="dialog" aria-label="Hook preview">
   <div class="drawer-grab"></div>
-  <div class="drawer-top"><div class="pin-idrow"><div class="pin-avatar" id="pinAvatar">?</div><div><strong id="pinNick">—</strong> <span id="pinVerified" class="small"></span><div><span id="pinRoleBadge" class="role-badge">—</span></div></div></div><div style="display:flex;gap:4px;align-items:center;"><button class="pin-delete" id="pinDeleteBtn" onclick="deletePinSidequest()" style="display:none;" aria-label="Delete pin">Delete</button><button class="secondary" id="pinClaimBtn" onclick="claimPinHost()" style="display:none;padding:8px 12px;" aria-label="Claim host">Claim host</button><button class="secondary" onclick="closePinDetail()" aria-label="Close" style="padding:8px 12px;">✕</button></div></div>
+  <div class="drawer-top"><div class="pin-idrow"><div class="pin-avatar" id="pinAvatar">?</div><div><strong id="pinNick">—</strong> <span id="pinVerified" class="small"></span><div><span id="pinRoleBadge" class="role-badge">—</span></div></div></div><div style="display:flex;gap:4px;align-items:center;"><button class="pin-delete" id="pinDeleteBtn" onclick="deletePinSidequest()" style="display:none;" aria-label="Delete pin">Delete pin</button><button class="secondary" id="pinClaimBtn" onclick="claimPinHost()" style="display:none;padding:8px 12px;" aria-label="Claim host">Claim host</button><button class="secondary" onclick="closePinDetail()" aria-label="Close" style="padding:8px 12px;">✕</button></div></div>
   <div class="pin-title" id="pinTitle">—</div>
+  <div class="hook-label" style="font-size:10px;font-weight:800;letter-spacing:.15em;color:var(--muted);text-transform:uppercase;margin-top:6px;margin-bottom:2px;">Hook</div>
+  <p class="pin-hook" id="pinHook" style="font-size:14px;color:var(--text);margin:0 0 6px;display:none;"></p>
   <div class="muted small" id="pinLoc">—</div>
   <div class="small" id="pinSyncBadge" style="display:none;margin:2px 0 6px;"></div>
   <div class="muted small" id="pinBio" style="display:none;margin:2px 0 8px;"></div>
@@ -237,7 +239,7 @@
   <div class="muted small" id="pinWindow" style="display:none;margin:4px 0;"></div>
   <div id="pinLogs" style="display:none;margin:6px 0;"></div>
   <div id="pinSpots" class="spot-strip" style="display:none;"></div>
-  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;"><button class="secondary" id="pinChatBtn" onclick="openChatDrawer(_openPinId)" style="display:none;">Open group chat</button><button class="primary" id="pinLogBtn" onclick="openLogSheet(_openPinId)" style="display:none;">📸 Log Hangout</button><button class="primary" id="pinRequestBtn" onclick="requestPinConnect()">Request to Connect</button></div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;"><button class="secondary" id="pinChatBtn" onclick="openChatDrawer(_openPinId)" style="display:none;">Open chat</button><button class="primary" id="pinLogBtn" onclick="openLogSheet(_openPinId)" style="display:none;">Save to Memories</button><button class="primary" id="pinRequestBtn" onclick="requestPinConnect()">Request to Connect</button></div>
 </div>
 <div class="chat-overlay hidden" id="groupModal">
   <div class="chat-popup glass-modal" role="dialog" aria-modal="true" aria-label="Expand group" style="width:min(480px,calc(100vw - 24px));">

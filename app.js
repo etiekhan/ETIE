@@ -2507,9 +2507,10 @@ function paintSyncBadge(el,p){
     var st=pinSyncState(p);
     el.style.display='';
     el.className='small sync-badge sync-'+st;
-    var label=st==='live'?'● Synced':(st==='syncing'?'⏳ Sharing…':'📴 Only on this device');
+    var label=st==='live'?'':(st==='syncing'?'⏳ Sharing…':'📴 Not synced');
     try{if(st!=='live'&&p.syncError)label+=' · '+p.syncError;}catch(e){}
     el.textContent=label;
+    if(!label)el.style.display='none';
   }catch(e){}
 }
 function markPinSynced(pinId,ok){
@@ -2659,12 +2660,12 @@ function checkAndExpireRequests(p){
 }
 function groupBadgeText(p){
   var n=(p.members||[]).length,cap='';
-  try{var c=parseInt(p.capacity,10);if(c>=2&&c<=4){var open=Math.max(0,c-n);cap=' · '+open+(open===1?' spot open':' spots open');}}catch(e){}
+  try{var c=parseInt(p.capacity,10);if(c>=2&&c<=4){var open=Math.max(0,c-n);cap=open===0?' · Full':' · '+open+(open===1?' spot open':' spots open');}}catch(e){}
   if(isPinExpired(p))return 'Ended — log it';
-  try{if(getPinLifecycleState(p)==='requests_closed')return '🔒 Requests closed'+cap;}catch(e){}
+  try{if(getPinLifecycleState(p)==='requests_closed')return 'Requests closed'+cap;}catch(e){}
   if(p.status==='trio'||n>=3)return '3 Connected'+cap;
   if(p.status==='pair'||n===2)return '1-on-1 Meetup'+cap;
-  return '🟢 Active'+cap;
+  return 'Active'+cap;
 }
 var _expiryToasted={};
 function sweepExpiredPins(){
@@ -2717,9 +2718,10 @@ function openPinDetail(id){
     var cb=document.getElementById('pinChatBtn');if(cb)cb.style.display=isMember?'':'none';
     var lb=document.getElementById('pinLogBtn');if(lb)lb.style.display=isMember?'':'none';
     try{renderPinLogs(p.id);}catch(e){}
-    var vb=document.getElementById('pinVerified');if(vb){vb.textContent=p.verified?'✅ Verified':'';vb.style.display=p.verified?'':'none';}
-    var rb=document.getElementById('pinRoleBadge');if(rb){var pr=(p.role==='local')?'local':'traveller';rb.textContent=(pr==='local'?getRegionFlag(p)+' ':'✈️ ')+(pr==='local'?'Local Host':'Traveller');rb.classList.toggle('city-host',pr==='local');}
+    var vb=document.getElementById('pinVerified');if(vb){vb.textContent=p.verified?'Verified':'';vb.style.display=p.verified?'':'none';}
+    var rb=document.getElementById('pinRoleBadge');if(rb){var pr=(p.role==='local')?'local':'traveller';rb.textContent=(pr==='local'?getRegionFlag(p)+' ':'')+(pr==='local'?'Local host':'Visiting');rb.classList.toggle('city-host',pr==='local');}
     var ptt=document.getElementById('pinTitle');if(ptt)ptt.textContent=p.title||p.location||'Hook';
+    var ph=document.getElementById('pinHook');if(ph){var hookTxt=p.hook||'';ph.textContent=hookTxt;ph.style.display=hookTxt?'':'none';}
     var lc=document.getElementById('pinLoc');
     if(lc){var locTxt=String(p.location||'Hong Kong').replace(/^\s*near\s+/i,'');lc.textContent=mapCatEmoji(p.category)+' '+getRegionFlag(p)+' Near '+locTxt;}
     var pb=document.getElementById('pinBio');if(pb){var bb=p.members&&p.members[0]&&p.members[0].bio;pb.textContent=bb||'';pb.style.display=bb?'':'none';}
@@ -2727,7 +2729,7 @@ function openPinDetail(id){
     try{var _lb0=document.getElementById('pinLifecycleBadge');if(_lb0)_lb0.style.display='none';}catch(e){} // merged into group badge
     var sb=document.getElementById('pinSyncBadge');if(sb)paintSyncBadge(sb,p);
     var mem=document.getElementById('pinMembers');
-    if(mem){mem.innerHTML='';(p.members||[]).forEach(function(m){var s=document.createElement('span');s.className='chip';var flag=(m.role==='local')?(m.region?flagForCountry(m.region):getRegionFlag(p)):'✈️ ';s.textContent=flag+m.nick;mem.appendChild(s);});}
+    if(mem){mem.innerHTML='';var ms=p.members||[];if(ms.length===1){var s=document.createElement('span');s.className='chip';s.textContent='Going: '+(ms[0].nick||'');mem.appendChild(s);}else if(ms.length>1){var s2=document.createElement('span');s2.className='chip';s2.textContent='Going ('+ms.length+')';mem.appendChild(s2);}}
     // GUEST VIEW: request status tab
     renderGuestRequestTab(p, myReq, reqStatus, isMember, isHost);
     // HOST VIEW: pending requests with Approve/Decline
@@ -2811,13 +2813,13 @@ function renderGuestRequestTab(p, myReq, reqStatus, isMember, isHost){
   if(reqStatus==='pending'){
     label='⏳ Awaiting host approval';cls='pending';actionHtml='<button class="secondary" style="margin-top:8px;padding:10px 16px;" onclick="cancelMyRequest()">Cancel request</button>';
   }else if(reqStatus==='approved'){
-    label='✅ Approved — you\'re in!';cls='approved';actionHtml='<button class="primary" style="margin-top:8px;padding:10px 16px;width:100%;" onclick="openChatDrawer(_openPinId)">Open group chat</button>';
+    label='✅ Approved — you\'re in!';cls='approved';actionHtml='<button class="primary" style="margin-top:8px;padding:10px 16px;width:100%;" onclick="openChatDrawer(_openPinId)">Join the chat</button>';
   }else if(reqStatus==='declined'){
     label='❌ Request declined';cls='declined';actionHtml='<button class="secondary" style="margin-top:8px;padding:10px 16px;" onclick="clearMyDeclined()">Select another activity</button>';
   }else if(reqStatus==='expired'){
     label='⌛ Request expired (hook filled)';cls='expired';actionHtml='<button class="secondary" style="margin-top:8px;padding:10px 16px;" onclick="clearMyDeclined()">Select another activity</button>';
   }else if(isMember){
-    label='✅ You\'re in this hangout';cls='approved';actionHtml='<button class="primary" style="margin-top:8px;padding:10px 16px;width:100%;" onclick="openChatDrawer(_openPinId)">Open group chat</button>';
+    label='✅ You\'re in this hangout';cls='approved';actionHtml='<button class="primary" style="margin-top:8px;padding:10px 16px;width:100%;" onclick="openChatDrawer(_openPinId)">Open chat</button>';
   }else{
     label='—';cls='';
   }
@@ -3469,7 +3471,7 @@ function openLogSheet(pinId,spot){
     if(t)t.textContent=p?((p.title||p.location||'Hook')):'A hangout off ETIE';
     var w=document.getElementById('logWindow');
     if(w){
-      if(p){var pw=pinWindow(p);w.textContent='Hangout window: '+fmtWhen(pw.start)+' → '+fmtWhen(pw.end)+' (+2h grace for the badge)';}
+      if(p){var pw=pinWindow(p);w.textContent=fmtWhen(pw.start)+'–'+fmtWhen(pw.end);try{var tz=Intl.DateTimeFormat().resolvedOptions().timeZone;if(tz&&tz!=='Asia/Hong_Kong')w.textContent+=' '+tz;}catch(e){}}
       else{w.textContent='No hook, no matching, no approval needed. Photo + who you were with is enough.';}
     }
     var sel=document.getElementById('logActivity');
@@ -4222,7 +4224,7 @@ function renderPinLogs(pinId){
     box.innerHTML='';box.style.display='none';
     var w=pinWindow(p);
     var wt=document.getElementById('pinWindow');
-    if(wt){wt.textContent='Hangout window: '+fmtWhen(w.start)+' → '+fmtWhen(w.end);wt.style.display='';}
+    if(wt){wt.textContent=fmtWhen(w.start)+'–'+fmtWhen(w.end);try{var tz=Intl.DateTimeFormat().resolvedOptions().timeZone;if(tz&&tz!=='Asia/Hong_Kong')wt.textContent+=' '+tz;}catch(e){}wt.style.display='';}
     if(!window.EtieCloud||!window.EtieCloud.fetchHookLogs)return;
     window.EtieCloud.fetchHookLogs(p.cloudId||p.id,function(rows){
       try{

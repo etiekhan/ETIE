@@ -2197,27 +2197,45 @@ function renderMapPins(){
         var fresh=(Date.now()-(p.ts||0))<3600*1000?' sq-pin-fresh':'';
         var expired=isPinExpired(p)?' sq-pin-expired':'';
         var prole=((p.derivedRole||p.role)==='local')?'local':'traveller';
+        // Determine color: red=local, amber=traveller, pink=other, blue=me (when Share location On)
+        var isMe=false;
+        try{var myId=myUid();isMe=!!(myId&&p.authorId&&myId===p.authorId);}catch(e){}
+        var colorClass=isMe?'me':prole;
         var el=document.createElement('div');
-        el.className='sq-pin sq-pin-'+prole+(fresh||'')+(expired||'');
+        el.className='sq-pin sq-pin-'+colorClass+(fresh||'')+(expired||'');
         el.innerHTML=mapCatEmoji(p.category);
         el.style.width='36px';el.style.height='36px';el.style.display='flex';el.style.alignItems='center';el.style.justifyContent='center';el.style.fontSize='18px';
         var mk=new maplibregl.Marker({element:el,anchor:'center'}).setLngLat([coords[1],coords[0]]).addTo(_map);
         mk.getElement().addEventListener('click',function(e){try{e.stopPropagation();}catch(_){} _pinJustClicked=true;setTimeout(function(){_pinJustClicked=false;},300); (function(id){return function(){openPinDetail(id);};})(p.id)();});
         _pinMarkers.push(mk);
+        // Store selected state for later
+        mk._pinId=p.id;
       }catch(e){}
     }
     function renderPinCluster(group){
       var center=pinLatLng(group[0]);
       var count=group.length;
       var radius=30; // pixels from center
+      // Render cluster circle at center
+      var clusterEl=document.createElement('div');
+      clusterEl.className='sq-cluster';
+      clusterEl.innerHTML='<span>'+count+'</span>';
+      clusterEl.style.width='44px';clusterEl.style.height='44px';clusterEl.style.display='flex';clusterEl.style.alignItems='center';clusterEl.style.justifyContent='center';clusterEl.style.fontSize='14px';clusterEl.style.fontWeight='800';
+      var clusterMarker=new maplibregl.Marker({element:clusterEl,anchor:'center'}).setLngLat([center[1],center[0]]).addTo(_map);
+      clusterMarker.getElement().addEventListener('click',function(e){try{e.stopPropagation();}catch(_){} _pinJustClicked=true;setTimeout(function(){_pinJustClicked=false;},300); _map.flyTo({center:[center[1],center[0]],zoom:Math.min(_map.getZoom()+2,16),duration:500});});
+      _pinMarkers.push(clusterMarker);
+      // Render individual pins spread around center
       group.forEach(function(p,i){
         var angle=(i/group.length)*2*Math.PI;
         try{
           var fresh=(Date.now()-(p.ts||0))<3600*1000?' sq-pin-fresh':'';
           var expired=isPinExpired(p)?' sq-pin-expired':'';
           var prole=((p.derivedRole||p.role)==='local')?'local':'traveller';
+          var isMe=false;
+          try{var myId=myUid();isMe=!!(myId&&p.authorId&&myId===p.authorId);}catch(e){}
+          var colorClass=isMe?'me':prole;
           var el=document.createElement('div');
-          el.className='sq-pin sq-pin-'+prole+' sq-pin-fresh';
+          el.className='sq-pin sq-pin-'+colorClass+(fresh||'')+(expired||'');
           el.innerHTML=mapCatEmoji(p.category);
           el.style.width='36px';el.style.height='36px';el.style.display='flex';el.style.alignItems='center';el.style.justifyContent='center';el.style.fontSize='18px';
           var offsetLat=center[0]+(radius/111000)*Math.cos(angle);
@@ -2227,6 +2245,19 @@ function renderMapPins(){
           _pinMarkers.push(mk);
         }catch(e){}
       });
+    }
+    // Auto-fit once on initial load
+    if(!_map._autoFitted && _pinMarkers.length > 0){
+      _map._autoFitted = true;
+      try{
+        var coords = _pinMarkers.map(function(m){return m.getLngLat();});
+        if(coords.length === 1){
+          _map.flyTo({center:[coords[0].lng, coords[0].lat], zoom:14, duration:800});
+        } else {
+          var bounds = coords.reduce(function(b,c){return b.extend(c);}, new maplibregl.LngLatBounds(coords[0], coords[0]));
+          _map.fitBounds(bounds, {padding:{top:80,bottom:80,left:260,right:80}, maxZoom:14, duration:800});
+        }
+      }catch(e){}
     }
   }catch(e){}
 }

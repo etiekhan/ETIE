@@ -1485,3 +1485,74 @@ body.has-open-card .map-foot { display: none; }
   font-size: 11px;
   color: rgba(255, 255, 255, 0.5);
 }
+
+/* Pin detail card polish */
+.pin-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.pin-action-btn {
+  flex: 1 1 auto;
+  min-width: 120px;
+  min-height: 44px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 14px;
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+
+.pin-action-btn.primary {
+  background: var(--red) !important;
+  color: #fff !important;
+  border: 1px solid var(--red) !important;
+  box-shadow: 0 0 16px rgba(255, 59, 78, 0.4);
+}
+
+.pin-action-btn.primary:hover {
+  box-shadow: 0 0 24px rgba(255, 59, 78, 0.6);
+  filter: brightness(1.1);
+}
+
+.pin-action-btn.secondary {
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--glass-border-strong) !important;
+}
+
+.pin-action-btn.secondary:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-color: var(--pink) !important;
+}
+
+.pin-title {
+  font-family: var(--font-logo);
+  font-weight: 700;
+  font-size: 22px;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  margin: 8px 0 2px;
+  color: var(--text);
+}
+
+.hook-label {
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.pin-hook {
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.5;
+  margin: 0 0 8px;
+}

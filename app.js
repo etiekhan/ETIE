@@ -2721,7 +2721,20 @@ function openPinDetail(id){
     var vb=document.getElementById('pinVerified');if(vb){vb.textContent=p.verified?'Verified':'';vb.style.display=p.verified?'':'none';}
     var rb=document.getElementById('pinRoleBadge');if(rb){var pr=(p.role==='local')?'local':'traveller';rb.textContent=(pr==='local'?getRegionFlag(p)+' ':'')+(pr==='local'?'Local host':'Visiting');rb.classList.toggle('city-host',pr==='local');}
     var ptt=document.getElementById('pinTitle');if(ptt)ptt.textContent=p.title||p.location||'Hook';
-    var ph=document.getElementById('pinHook');if(ph){var hookTxt=p.hook||'';ph.textContent=hookTxt;ph.style.display=hookTxt?'':'none';}
+    var ph=document.getElementById('pinHook');var hookTxt=p.hook||'';
+    // Only show hook text if it differs from the title (avoid repetition)
+    if(ph){
+      if(hookTxt && hookTxt !== (p.title||'')){
+        ph.textContent=hookTxt;
+        ph.style.display='';
+        var hl=document.querySelector('.hook-label');
+        if(hl)hl.style.display='';
+      }else{
+        ph.style.display='none';
+        var hl2=document.querySelector('.hook-label');
+        if(hl2)hl2.style.display='none';
+      }
+    }
     var lc=document.getElementById('pinLoc');
     if(lc){var locTxt=String(p.location||'Hong Kong').replace(/^\s*near\s+/i,'');lc.textContent=mapCatEmoji(p.category)+' '+getRegionFlag(p)+' Near '+locTxt;}
     var pb=document.getElementById('pinBio');if(pb){var bb=p.members&&p.members[0]&&p.members[0].bio;pb.textContent=bb||'';pb.style.display=bb?'':'none';}

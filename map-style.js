@@ -289,6 +289,10 @@
         }));
       }
     }
+    // Blur
+    glow.paint['line-blur'] = 2;
+    // Opacity
+    glow.paint['line-opacity'] = 0.35;
     // Remove dasharray
     delete glow.paint['line-dasharray'];
     return glow;

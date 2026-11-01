@@ -682,15 +682,41 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
     return new Promise(function(resolve, reject){
       if(!client||!session){ reject('Not signed in'); return; }
       if(!file){ reject('No file'); return; }
-      var ext = file.name.split('.').pop().toLowerCase();
-      var path = session.user.id + '/' + role + '_' + Date.now() + '.' + ext;
-      client.storage.from('etie-photos').upload(path, file, {cacheControl:'3600', upsert:false}).then(function(up){
-        if(up.error){ reject(up.error.message); return; }
-        client.storage.from('etie-photos').createSignedUrl(path, 60*60*24*365).then(function(su){
-          if(su.error){ reject(su.error.message); return; }
-          resolve(su.data.signedUrl);
-        });
-      }).catch(reject);
+      if(file.size > 10 * 1024 * 1024){ reject('File too large (max 10MB)'); return; }
+      // Strip EXIF + compress before upload (Canvas API removes all metadata)
+      var MAX_PX = 1920;
+      var QUALITY = 0.82;
+      var img = new Image();
+      var url = URL.createObjectURL(file);
+      img.onload = function(){
+        try{
+          var w = img.naturalWidth, h = img.naturalHeight;
+          if(w > MAX_PX || h > MAX_PX){
+            var scale = MAX_PX / Math.max(w, h);
+            w = Math.round(w * scale);
+            h = Math.round(h * scale);
+          }
+          var canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          var ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          URL.revokeObjectURL(url);
+          canvas.toBlob(function(blob){
+            if(!blob){ reject('Compression failed'); return; }
+            var ext = 'jpg';
+            var path = session.user.id + '/' + role + '_' + Date.now() + '.' + ext;
+            client.storage.from('etie-photos').upload(path, blob, {cacheControl:'3600', upsert:false, contentType:'image/jpeg'}).then(function(up){
+              if(up.error){ reject(up.error.message); return; }
+              client.storage.from('etie-photos').createSignedUrl(path, 60*60*24*30).then(function(su){
+                if(su.error){ reject(su.error.message); return; }
+                resolve(su.data.signedUrl);
+              });
+            }).catch(reject);
+          }, 'image/jpeg', QUALITY);
+        }catch(e){ URL.revokeObjectURL(url); reject(e.message || 'Compression failed'); }
+      };
+      img.onerror = function(){ URL.revokeObjectURL(url); reject('Invalid image'); };
+      img.src = url;
     });
   }
   // ---- Map-first hooks: Supabase hooks table (run supabase-schema-hooks.sql once) ----

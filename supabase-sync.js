@@ -719,6 +719,26 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
       img.src = url;
     });
   }
+  function deletePhoto(url){
+    return new Promise(function(resolve, reject){
+      if(!client||!session){ reject('Not signed in'); return; }
+      if(!url){ reject('No URL'); return; }
+      try{
+        // Extract storage path from signed URL
+        var marker = '/etie-photos/';
+        var idx = url.indexOf(marker);
+        if(idx === -1){ reject('Invalid photo URL'); return; }
+        var path = url.substring(idx + marker.length);
+        // Remove query string
+        var q = path.indexOf('?');
+        if(q !== -1) path = path.substring(0, q);
+        client.storage.from('etie-photos').remove([path]).then(function(res){
+          if(res.error){ reject(res.error.message); return; }
+          resolve(true);
+        }).catch(reject);
+      }catch(e){ reject(e.message || 'Delete failed'); }
+    });
+  }
   // ---- Map-first hooks: Supabase hooks table (run supabase-schema-hooks.sql once) ----
   var pinChannel=null, pinPullTimer=null;
   function pinTable(){return 'hooks';}
@@ -1058,6 +1078,14 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
       }catch(e){resolve(null);}
     });
   }
+  function deleteHangoutLog(logId){
+    return new Promise(function(resolve){
+      try{
+        if(!client||!session||!logId){resolve(false);return;}
+        client.from(hangoutTable()).delete().eq('id',String(logId)).then(function(r){resolve(!r||!r.error);}).catch(function(){resolve(false);});
+      }catch(e){resolve(false);}
+    });
+  }
   function fetchTaggedLogs(userId,cb){
     try{
       if(!client||!session||!userId||typeof cb!=='function'){cb([]);return;}
@@ -1125,11 +1153,12 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
     pushHookMessage:pushHookMessage, subscribeHookChat:subscribeHookChat,
     fetchProfile:fetchProfile, fetchOwnProfile:fetchOwnProfile, redeemInvite:redeemInvite,
     pushHangoutLog:pushHangoutLog, fetchHookLogs:fetchHookLogs, fetchUserLogs:fetchUserLogs, updateHangoutLog:updateHangoutLog, fetchTaggedLogs:fetchTaggedLogs,
-    fetchMyMemories:fetchMyMemories, searchPeople:searchPeople,
+    fetchMyMemories:fetchMyMemories, deleteHangoutLog:deleteHangoutLog, searchPeople:searchPeople,
     pushSidequest:pushSidequest, fetchSidequest:fetchSidequest, clearSidequest:clearSidequest,
     syncProfile:syncProfile, pushSharedRequest:pushSharedRequest, pushSharedMessage:pushSharedMessage, pushSharedMeetup:pushSharedMeetup,
     pushSharedReview:pushSharedReview, pushSharedReport:pushSharedReport,
     uploadPhoto:uploadPhoto,
+    deletePhoto:deletePhoto,
     pullShared:pullShared, subscribeReviews:subscribeReviews, subscribeReports:subscribeReports,
     getClient:function(){return client;}, getSession:function(){return session;}, isSharedOn:isSharedOn
   };

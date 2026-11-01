@@ -9,6 +9,7 @@
 -- Users can read their own photos and photos of matched users
 
 -- Policy: users can upload to their own folder
+drop policy if exists "users_upload_own_photos" on storage.objects;
 create policy "users_upload_own_photos" on storage.objects
 for insert with check (
   bucket_id = 'etie-photos' and
@@ -16,6 +17,7 @@ for insert with check (
 );
 
 -- Policy: users can read their own photos
+drop policy if exists "users_read_own_photos" on storage.objects;
 create policy "users_read_own_photos" on storage.objects
 for select using (
   bucket_id = 'etie-photos' and
@@ -24,6 +26,7 @@ for select using (
 
 -- Policy: users can read photos of users they have a match with
 -- (requires a function to check match, simplified for now)
+drop policy if exists "matched_users_read_photos" on storage.objects;
 create policy "matched_users_read_photos" on storage.objects
 for select using (
   bucket_id = 'etie-photos' and

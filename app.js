@@ -885,7 +885,7 @@ function groupMemoriesIntoSpots(logs){
           spots[key]={id:'spot-'+key,name:l.location||l.title||'Hangout',coords:{lat:l.lat,lng:l.lng},photos:[]};
           order.push(spots[key]);
         }
-        spots[key].photos.push({url:l.photo_url,caption:l.title||l.location||'',timestamp:l.taken_at||l.created_at||''});
+        spots[key].photos.push({url:l.photo_url,caption:l.title||l.location||'',timestamp:l.taken_at||l.created_at||'',logId:l.id});
       }catch(e){}
     });
     return order;
@@ -982,19 +982,29 @@ function openMemorySpotCard(spot){
         img.style.cssText='width:100%;height:180px;object-fit:cover;display:block;';
         item.appendChild(img);
         var caption=document.createElement('div');
-        caption.style.cssText='padding:10px 12px;';
+        caption.style.cssText='padding:10px 12px;display:flex;justify-content:space-between;align-items:center;gap:8px;';
+        var left=document.createElement('div');
         if(photo.caption){
           var cap=document.createElement('div');
           cap.style.cssText='font-size:13px;font-weight:600;color:#fff;margin-bottom:2px;';
           cap.textContent=photo.caption;
-          caption.appendChild(cap);
+          left.appendChild(cap);
         }
         if(photo.timestamp){
           var date=document.createElement('div');
           date.style.cssText='font-size:11px;color:rgba(255,255,255,.5);';
           try{date.textContent=new Date(photo.timestamp).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});}catch(e){date.textContent=photo.timestamp;}
-          caption.appendChild(date);
+          left.appendChild(date);
         }
+        caption.appendChild(left);
+        var delBtn=document.createElement('button');
+        delBtn.textContent='🗑';
+        delBtn.style.cssText='background:rgba(255,60,60,.15);border:1px solid rgba(255,60,60,.3);color:#ff6b6b;border-radius:8px;padding:4px 8px;font-size:14px;cursor:pointer;flex-shrink:0;';
+        delBtn.onclick=function(){
+          if(!confirm('Delete this photo?'))return;
+          deleteMemoryPhoto(photo, spot);
+        };
+        caption.appendChild(delBtn);
         item.appendChild(caption);
         feed.appendChild(item);
       });
@@ -1003,6 +1013,28 @@ function openMemorySpotCard(spot){
     // Store spot for reference
     window._openMemorySpot=spot;
   }catch(e){console.error('openMemorySpotCard error:',e);}
+}
+function deleteMemoryPhoto(photo, spot){
+  try{
+    if(!photo||!photo.url){toast('No photo to delete.');return;}
+    // Delete from storage
+    if(window.EtieCloud&&window.EtieCloud.deletePhoto){
+      window.EtieCloud.deletePhoto(photo.url).catch(function(){});
+    }
+    // Delete from database
+    if(photo.logId && window.EtieCloud&&window.EtieCloud.deleteHangoutLog){
+      window.EtieCloud.deleteHangoutLog(photo.logId).then(function(){
+        toast('Photo deleted.');
+        // Refresh memory markers
+        try{if(typeof loadMainMemoryMarkers==='function')loadMainMemoryMarkers();}catch(e){}
+        try{var m=document.getElementById('memoryCardModal');if(m)m.classList.add('hidden');}catch(e){}
+      }).catch(function(){toast('Deleted from storage, DB update failed.');});
+    }else{
+      toast('Photo deleted from storage.');
+      try{if(typeof loadMainMemoryMarkers==='function')loadMainMemoryMarkers();}catch(e){}
+      try{var m=document.getElementById('memoryCardModal');if(m)m.classList.add('hidden');}catch(e){}
+    }
+  }catch(e){console.error('deleteMemoryPhoto error:',e);toast('Delete failed.');}
 }
 
 // Add memory to an existing spot

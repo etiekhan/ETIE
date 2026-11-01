@@ -780,6 +780,7 @@ function renderProfileMemoryMap(){
         if(!style){showMapConfigError('memoryMap');return;}
         _profileMemoryMap = new maplibregl.Map({
           container:'memoryMap',
+          projection:'globe',
           style:style,
           center:[HK_CENTER[1],HK_CENTER[0]],
           zoom:11,
@@ -815,6 +816,7 @@ function renderMemoryMapFull(){
         if(!style){showMapConfigError('memoryMapFull');return;}
         _memoryMapFull = new maplibregl.Map({
           container:'memoryMapFull',
+          projection:'globe',
           style:style,
           center:[HK_CENTER[1],HK_CENTER[0]],
           zoom:11,
@@ -1975,6 +1977,7 @@ function createEtieMap(container,options){
   if(!style){showMapConfigError(container);return null;}
   var opts={};for(var k in options){if(Object.prototype.hasOwnProperty.call(options,k))opts[k]=options[k];}
   opts.container=container;opts.style=style;
+  if(!opts.projection)opts.projection='globe';
   return new maplibregl.Map(opts);
 }
 var MAP_FILTER='All',MAP_ROLE='All';
@@ -2166,8 +2169,9 @@ function initHKMap(){
       minZoom:2,
       maxZoom:20,
       attributionControl:false,
-      dragRotate:false,
-      pitchWithRotate:false
+      projection:'globe',
+      dragRotate:true,
+      pitchWithRotate:true
     };
     if(window.EtieMapStyle && typeof window.EtieMapStyle.load === 'function'){
       window.EtieMapStyle.load(function(style){

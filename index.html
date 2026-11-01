@@ -396,7 +396,7 @@
 <!-- Memory Card Modal (for photo pin clicks) -->
 <div class="chat-overlay hidden" id="memoryCardModal" onclick="if(event.target===this)closeMemoryCard()" style="align-items:center;justify-content:center;">
   <div class="chat-popup glass-modal" role="dialog" aria-modal="true" aria-label="Hangout Memory" style="width:min(520px,calc(100vw - 24px));max-height:90vh;">
-    <div class="chat-popup-head"><div><strong>🖼️ Hangout Memory</strong></div><button class="secondary" onclick="closeMemoryCard()" aria-label="Close" style="padding:8px 12px;">✕</button></div>
+    <div class="chat-popup-head"><div><strong>🖼️ Hangout Memory</strong></div><button class="secondary" onclick="closeMemoryCard()" aria-label="Close" style="padding:8px 12px;min-height:44px;min-width:44px;">✕</button></div>
     <div class="chat-popup-body" style="padding:0;background:transparent;overflow:hidden;">
       <div id="memoryCardDualPhoto" style="display:flex;height:220px;background:#000;overflow:hidden;position:relative;"></div>
       <div style="padding:16px;">
@@ -410,7 +410,21 @@
           <div class="quest-week-label" style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,.5);margin-bottom:4px;">Quest</div>
           <div id="memoryCardQuestTitle" style="font-weight:700;color:#fff;"></div>
         </div>
-        <div id="memoryFeed" style="margin-top:12px;max-height:300px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;"></div>
+        <div id="memoryFeedHeader" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:8px;">
+        <span id="memoryFeedTitle" style="font-size:14px;font-weight:700;color:#fff;">Memories here</span>
+        <div style="display:flex;gap:4px;">
+          <button class="secondary" id="memFilterAll" onclick="setMemFilter('all')" style="padding:4px 10px;font-size:12px;min-height:32px;">All</button>
+          <button class="secondary" id="memFilterMine" onclick="setMemFilter('mine')" style="padding:4px 10px;font-size:12px;min-height:32px;">Mine</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:4px;margin-bottom:8px;">
+        <button class="secondary" id="memViewGrid" onclick="setMemView('grid')" style="padding:4px 10px;font-size:12px;min-height:32px;">Grid</button>
+        <button class="secondary" id="memViewList" onclick="setMemView('list')" style="padding:4px 10px;font-size:12px;min-height:32px;">List</button>
+      </div>
+      <div id="memoryFeed" style="margin-top:4px;max-height:320px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;"></div>
+      <div id="memoryLoadMore" style="display:none;margin-top:8px;text-align:center;">
+        <button class="secondary" onclick="loadMoreMemories()" style="padding:8px 16px;min-height:44px;">Load more</button>
+      </div>
         <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
           <button class="secondary" id="memoryAddBtn" onclick="addMemoryToSpot()">+ Add Memory to spot</button>
           <button class="secondary" onclick="closeMemoryCard()">Close</button>

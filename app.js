@@ -317,6 +317,7 @@ function formatTripDates(f,t){
 
 
 window.ETIE_ADMINS=['kan.ethan.cy@gmail.com'];
+function debugGroupsEnabled(){try{return new URLSearchParams(window.location.search).get('debugGroups')==='1';}catch(e){return false;}}
 function isEtieAdmin(){try{var s=window.EtieCloud&&window.EtieCloud.getSession&&window.EtieCloud.getSession();var em=s&&s.user&&s.user.email;if(em&&window.ETIE_ADMINS.indexOf(em.toLowerCase())!==-1)return true;}catch(e){} try{var q=new URLSearchParams(window.location.search).get('admin');if(q==='1'&&localStorage.getItem('etie-admin-unlock')==='1')return true;}catch(e){} return false;}
 function canManagePin(p){try{var myId=myUid();if(myId&&p&&p.authorId&&myId===p.authorId)return true;}catch(e){}return false;}
 function updateAdminVisibility(){try{var b=document.getElementById('adminBtn');if(b)b.style.display=isEtieAdmin()?'':'none';if(!isEtieAdmin())closeAdmin();}catch(e){}}
@@ -873,22 +874,34 @@ function dedupeMemories(logs){
   }catch(e){return logs||[];}
 }
 
-// Group flat memory rows into spots (one pin per location, multiple photos)
+// MEMORY_GROUP_RADIUS_M: max distance (meters) for two memories to join the same group.
+// Single source of truth — change here only.
+var MEMORY_GROUP_RADIUS_M = 100;
+
+// Group flat memory rows into spots (one pin per location, multiple photos).
+// Greedy haversine grouping: first memory is the anchor and never moves;
+// a memory within range of two anchors joins the nearer one. ~200m max span.
 function groupMemoriesIntoSpots(logs){
   try{
-    var spots={},order=[];
+    var groups=[]; // {anchor:{lat,lng}, spot:{...}}
     (logs||[]).forEach(function(l){
       try{
         if(!l||l.lat==null||l.lng==null||!l.photo_url)return;
-        var key=l.lat.toFixed(4)+','+l.lng.toFixed(4);
-        if(!spots[key]){
-          spots[key]={id:'spot-'+key,name:l.location||l.title||'Hangout',coords:{lat:l.lat,lng:l.lng},photos:[]};
-          order.push(spots[key]);
+        var bestIdx=-1,bestDist=Infinity;
+        for(var i=0;i<groups.length;i++){
+          var g=groups[i];
+          var d=haversineKm(g.anchor.lat,g.anchor.lng,l.lat,l.lng)*1000;
+          if(d<=MEMORY_GROUP_RADIUS_M && d<bestDist){bestDist=d;bestIdx=i;}
         }
-        spots[key].photos.push({url:l.photo_url,caption:l.title||l.location||'',timestamp:l.taken_at||l.created_at||'',logId:l.id});
+        if(bestIdx>=0){
+          groups[bestIdx].spot.photos.push({url:l.photo_url,caption:l.title||l.location||'',timestamp:l.taken_at||l.created_at||'',logId:l.id,owner:l.nickname||'Someone'});
+        }else{
+          var key=l.lat.toFixed(4)+','+l.lng.toFixed(4);
+          groups.push({anchor:{lat:l.lat,lng:l.lng},spot:{id:'spot-'+key,name:l.location||l.title||'Hangout',coords:{lat:l.lat,lng:l.lng},owner:l.nickname||'Someone',photos:[{url:l.photo_url,caption:l.title||l.location||'',timestamp:l.taken_at||l.created_at||'',logId:l.id,owner:l.nickname||'Someone'}]}});
+        }
       }catch(e){}
     });
-    return order;
+    return groups.map(function(g){return g.spot;});
   }catch(e){return [];}
 }
 
@@ -970,15 +983,79 @@ function openMemorySpotCard(spot){
       meta.textContent=taken+(spot.photos.length>1?' · '+spot.photos.length+' photos':'');
     }
     
-    // Populate vertical feed of all photos
+    // Feed header with place name + count
+    var feedTitle=document.getElementById('memoryFeedTitle');
+    if(feedTitle){
+      var placeName=spot.name||'Hangout Memory';
+      feedTitle.textContent=placeName+' · '+spot.photos.length+' '+(spot.photos.length===1?'memory':'memories');
+    }
+    
+    // Store spot for reference
+    window._openMemorySpot=spot;
+    window._memFeedFilter='all';
+    window._memFeedView='list';
+    window._memFeedPage=0;
+    window._memFeedPageSize=20;
+    renderMemoryFeed(spot);
+  }catch(e){console.error('openMemorySpotCard error:',e);}
+}
+function getMemFeedPhotos(spot){
+  try{
+    var photos=(spot&&spot.photos)||[];
+    var filter=window._memFeedFilter||'all';
+    var me=null;try{me=myUid();}catch(e){}
+    if(filter==='mine'){
+      photos=photos.filter(function(p){return p.owner && me && p.owner===me;});
+    }
+    // Sort newest first
+    photos=photos.slice().sort(function(a,b){
+      var ta=a.timestamp?new Date(a.timestamp).getTime():0;
+      var tb=b.timestamp?new Date(b.timestamp).getTime():0;
+      return tb-ta;
+    });
+    return photos;
+  }catch(e){return (spot&&spot.photos)||[];}
+}
+function renderMemoryFeed(spot){
+  try{
+    if(!spot)spot=window._openMemorySpot;
+    if(!spot)return;
     var feed=document.getElementById('memoryFeed');
-    if(feed){
-      feed.innerHTML='';
-      spot.photos.forEach(function(photo, idx){
-        var item=document.createElement('div');
+    if(!feed)return;
+    var photos=getMemFeedPhotos(spot);
+    var page=window._memFeedPage||0;
+    var pageSize=window._memFeedPageSize||20;
+    var end=(page+1)*pageSize;
+    var visible=photos.slice(0,end);
+    var view=window._memFeedView||'list';
+    feed.innerHTML='';
+    if(view==='grid'){
+      feed.style.display='grid';
+      feed.style.gridTemplateColumns='repeat(2,1fr)';
+      feed.style.gap='8px';
+    }else{
+      feed.style.display='flex';
+      feed.style.flexDirection='column';
+      feed.style.gap='12px';
+    }
+    visible.forEach(function(photo, idx){
+      var item=document.createElement('div');
+      if(view==='grid'){
+        item.style.cssText='background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:10px;overflow:hidden;cursor:pointer;';
+        var img=document.createElement('img');
+        img.src=photo.url;
+        img.loading='lazy';
+        img.style.cssText='width:100%;height:120px;object-fit:cover;display:block;';
+        item.appendChild(img);
+        var cap=document.createElement('div');
+        cap.style.cssText='padding:6px 8px;font-size:11px;color:rgba(255,255,255,.7);';
+        cap.textContent=(photo.caption||'').slice(0,40);
+        item.appendChild(cap);
+      }else{
         item.style.cssText='background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:12px;overflow:hidden;';
         var img=document.createElement('img');
         img.src=photo.url;
+        img.loading='lazy';
         img.style.cssText='width:100%;height:180px;object-fit:cover;display:block;';
         item.appendChild(img);
         var caption=document.createElement('div');
@@ -996,23 +1073,64 @@ function openMemorySpotCard(spot){
           try{date.textContent=new Date(photo.timestamp).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});}catch(e){date.textContent=photo.timestamp;}
           left.appendChild(date);
         }
+        if(photo.owner){
+          var owner=document.createElement('div');
+          owner.style.cssText='font-size:11px;color:rgba(255,255,255,.4);margin-top:2px;';
+          owner.textContent='by '+photo.owner;
+          left.appendChild(owner);
+        }
         caption.appendChild(left);
         var delBtn=document.createElement('button');
         delBtn.textContent='🗑';
-        delBtn.style.cssText='background:rgba(255,60,60,.15);border:1px solid rgba(255,60,60,.3);color:#ff6b6b;border-radius:8px;padding:4px 8px;font-size:14px;cursor:pointer;flex-shrink:0;';
+        delBtn.style.cssText='background:rgba(255,60,60,.15);border:1px solid rgba(255,60,60,.3);color:#ff6b6b;border-radius:8px;padding:4px 8px;font-size:14px;cursor:pointer;flex-shrink:0;min-height:32px;';
         delBtn.onclick=function(){
           if(!confirm('Delete this photo?'))return;
           deleteMemoryPhoto(photo, spot);
         };
         caption.appendChild(delBtn);
         item.appendChild(caption);
-        feed.appendChild(item);
-      });
+      }
+      item.onclick=(function(p){return function(){openMemoryCardFromFeed(p,spot);};})(photo);
+      feed.appendChild(item);
+    });
+    // Load more button
+    var lm=document.getElementById('memoryLoadMore');
+    if(lm){
+      if(end<photos.length){lm.style.display='';}else{lm.style.display='none';}
     }
-    
-    // Store spot for reference
-    window._openMemorySpot=spot;
-  }catch(e){console.error('openMemorySpotCard error:',e);}
+  }catch(e){console.error('renderMemoryFeed error:',e);}
+}
+function setMemFilter(f){
+  try{
+    window._memFeedFilter=f||'all';
+    window._memFeedPage=0;
+    var a=document.getElementById('memFilterAll'),b=document.getElementById('memFilterMine');
+    if(a)a.classList.toggle('active',f==='all');
+    if(b)b.classList.toggle('active',f==='mine');
+    renderMemoryFeed(window._openMemorySpot);
+  }catch(e){}
+}
+function setMemView(v){
+  try{
+    window._memFeedView=v||'list';
+    var g=document.getElementById('memViewGrid'),l=document.getElementById('memViewList');
+    if(g)g.classList.toggle('active',v==='grid');
+    if(l)l.classList.toggle('active',v==='list');
+    renderMemoryFeed(window._openMemorySpot);
+  }catch(e){}
+}
+function loadMoreMemories(){
+  try{
+    window._memFeedPage=(window._memFeedPage||0)+1;
+    renderMemoryFeed(window._openMemorySpot);
+  }catch(e){}
+}
+function openMemoryCardFromFeed(photo, spot){
+  try{
+    // Build a log-like object for openMemoryCard
+    var log={photo_url:photo.url,title:photo.caption,location:spot.name,taken_at:photo.timestamp};
+    openMemoryCard(log);
+  }catch(e){}
 }
 function deleteMemoryPhoto(photo, spot){
   try{
@@ -1175,6 +1293,26 @@ function fetchAndRenderMemoryMarkers(mapInstance,onDone){
           }catch(e){console.error('spot marker error:',e);}
         });
         mapInstance._memoryMarkers=markers;
+        // Debug: draw radius circles
+        if(debugGroupsEnabled() && mapInstance && mapInstance.addSource){
+          try{
+            spots.forEach(function(spot){
+              var c=spot.coords;
+              // Draw a circle using a geojson source
+              var pts=[];
+              var r=MEMORY_GROUP_RADIUS_M/111320; // approx degrees
+              for(var i=0;i<=64;i++){
+                var a=(i/64)*2*Math.PI;
+                pts.push([c.lng+Math.cos(a)*r/Math.cos(c.lat*Math.PI/180), c.lat+Math.sin(a)*r]);
+              }
+              var srcId='dbg-'+spot.id;
+              if(mapInstance.getSource(srcId))mapInstance.removeSource(srcId);
+              mapInstance.addSource(srcId,{type:'geojson',data:{type:'Feature',geometry:{type:'Polygon',coordinates:[pts]}}});
+              mapInstance.addLayer({id:srcId,type:'fill',source:srcId,paint:{'fill-color':'#f43f5e','fill-opacity':0.08}});
+              mapInstance.addLayer({id:srcId+'-line',type:'line',source:srcId,paint:{'line-color':'#f43f5e','line-opacity':0.3,'line-width':1}});
+            });
+          }catch(e){}
+        }
         if(onDone)onDone(spots.length);
       }catch(e){console.error('fetchAndRenderMemoryMarkers',e);if(onDone)onDone(0);}
     });
@@ -3338,6 +3476,25 @@ function loadMainMemoryMarkers(){
             if(mk)_mainMemoryMarkers.push(mk);
           }catch(e){console.error('spot marker error:',e);}
         });
+        // Debug: draw radius circles
+        if(debugGroupsEnabled() && _map && _map.addSource){
+          try{
+            spots.forEach(function(spot){
+              var c=spot.coords;
+              var pts=[];
+              var r=MEMORY_GROUP_RADIUS_M/111320;
+              for(var i=0;i<=64;i++){
+                var a=(i/64)*2*Math.PI;
+                pts.push([c.lng+Math.cos(a)*r/Math.cos(c.lat*Math.PI/180), c.lat+Math.sin(a)*r]);
+              }
+              var srcId='dbg-'+spot.id;
+              if(_map.getSource(srcId))_map.removeSource(srcId);
+              _map.addSource(srcId,{type:'geojson',data:{type:'Feature',geometry:{type:'Polygon',coordinates:[pts]}}});
+              _map.addLayer({id:srcId,type:'fill',source:srcId,paint:{'fill-color':'#f43f5e','fill-opacity':0.08}});
+              _map.addLayer({id:srcId+'-line',type:'line',source:srcId,paint:{'line-color':'#f43f5e','line-opacity':0.3,'line-width':1}});
+            });
+          }catch(e){}
+        }
         try{renderAreaSidebar();}catch(e){}
       }catch(e){}
     });
@@ -3816,7 +3973,8 @@ function openMemoryCard(log){
     if(meta){
       var taken=log.taken_at ? new Date(log.taken_at).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}) : '';
       var loc=log.location||'';
-      meta.textContent=(taken||'')+(loc?' · '+loc:'');
+      var owner=log.nickname||log.owner||'';
+      meta.textContent=(taken||'')+(loc?' · '+loc:'')+(owner?' · by '+owner:'');
     }
     var cos=document.getElementById('memoryCardCosigners');
     if(cos && log.cosigners && log.cosigners.length){
@@ -4318,7 +4476,7 @@ document.addEventListener('DOMContentLoaded',function(){
   try{ refreshGate(); }catch(e){}
   try{ processPhotoOutbox(); }catch(e){}
   try{ window.addEventListener('online',function(){try{processPhotoOutbox();}catch(e){}}); }catch(e){}
-  document.addEventListener('keydown',function(e){if(e.key==='Escape'){try{closeQuestDrawer();}catch(e2){}try{closeProfileDrawer();}catch(e2b){}try{closeAdmin();}catch(e3){}try{closeAvatarMenu();}catch(e4){}try{closeChatDrawer();}catch(e5){}try{closePinDetail();}catch(e6){}try{closeGroupModal();}catch(e7){}try{closeDropHook();}catch(e8){}try{closeLogSheet();}catch(e9){}}});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'){try{closeQuestDrawer();}catch(e2){}try{closeProfileDrawer();}catch(e2b){}try{closeAdmin();}catch(e3){}try{closeAvatarMenu();}catch(e4){}try{closeChatDrawer();}catch(e5){}try{closePinDetail();}catch(e6){}try{closeGroupModal();}catch(e7){}try{closeDropHook();}catch(e8){}try{closeLogSheet();}catch(e9){}try{closeMemoryCard();}catch(e10){}}});
   document.addEventListener('click',function(e){try{var m=document.getElementById('avatarMenu');if(m&&e.target&&!m.contains(e.target))closeAvatarMenu();}catch(err){}});
   // re-sync header whenever the tab regains focus (session may have landed elsewhere)
   try{

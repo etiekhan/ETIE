@@ -945,7 +945,9 @@ function createMemorySpotMarker(spot,mapInstance){
     }
     
     el.addEventListener('click',function(e){
-      try{e.stopPropagation();}catch(_){}
+      try{e.stopPropagation();e.preventDefault();}catch(_){}
+      _pinJustClicked=true;
+      setTimeout(function(){_pinJustClicked=false;},300);
       console.log('Memory marker clicked, spot:', spot.name, 'photos:', spot.photos.length);
       openMemorySpotCard(spot);
     });
@@ -1207,7 +1209,7 @@ function memoryPhotoMarker(log,mapInstance){
   var wrap=document.createElement('div');wrap.innerHTML=html;
   var el=wrap.firstChild;
   var mk=new maplibregl.Marker({element:el,anchor:'center'}).setLngLat([lng,lat]).addTo(mapInstance);
-  el.addEventListener('click',function(ev){try{ev.stopPropagation();}catch(e){}openMemoryCard(log);});
+  el.addEventListener('click',function(ev){try{ev.stopPropagation();ev.preventDefault();}catch(e){}_pinJustClicked=true;setTimeout(function(){_pinJustClicked=false;},300);openMemoryCard(log);});
   return mk;
 }
 function clusterMemoryLogs(logs,mapInstance){
@@ -1262,7 +1264,7 @@ function buildMemoryCluster(rawLogs,mapInstance){
         el.innerHTML='<span>'+count+'</span>';
         var mk=new maplibregl.Marker({element:el,anchor:'center'})
           .setLngLat(mapInstance.unproject([group.x,group.y])).addTo(mapInstance);
-        el.addEventListener('click',function(ev){try{ev.stopPropagation();}catch(e){}openCluster(group);});
+        el.addEventListener('click',function(ev){try{ev.stopPropagation();ev.preventDefault();}catch(e){}_pinJustClicked=true;setTimeout(function(){_pinJustClicked=false;},300);openCluster(group);});
         state.markers.push(mk);
       }catch(e){}
     });

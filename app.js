@@ -967,7 +967,11 @@ function openMemorySpotCard(spot){
     console.log('modal element:', m, 'has hidden:', m ? m.classList.contains('hidden') : 'N/A');
     if(!m){console.error('memoryCardModal not found in DOM!');return;}
     m.classList.remove('hidden');
+    m.style.zIndex='99999';
+    m.style.background='rgba(255,0,0,0.3)';
     console.log('after remove hidden, has hidden:', m.classList.contains('hidden'));
+    console.log('modal display:', window.getComputedStyle(m).display);
+    console.log('modal zIndex:', window.getComputedStyle(m).zIndex);
     
     // Show first photo in dual photo area
     var dual=document.getElementById('memoryCardDualPhoto');

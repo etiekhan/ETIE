@@ -964,8 +964,10 @@ function openMemorySpotCard(spot){
   try{
     console.log('openMemorySpotCard called, spot:', spot?.name, 'photos:', spot?.photos?.length);
     var m=document.getElementById('memoryCardModal');
-    if(!m)return;
+    console.log('modal element:', m, 'has hidden:', m ? m.classList.contains('hidden') : 'N/A');
+    if(!m){console.error('memoryCardModal not found in DOM!');return;}
     m.classList.remove('hidden');
+    console.log('after remove hidden, has hidden:', m.classList.contains('hidden'));
     
     // Show first photo in dual photo area
     var dual=document.getElementById('memoryCardDualPhoto');

@@ -456,8 +456,8 @@ function updateAuthHeader(){
     try{ if(typeof updateAdminVisibility==='function') updateAdminVisibility(); }catch(e){}
   }catch(e){}
 }
-function toggleAvatarMenu(e){ try{ if(e&&e.stopPropagation) e.stopPropagation(); var d=document.getElementById('avatarDropdown'); if(d) d.classList.toggle('hidden'); }catch(_){} }
-function closeAvatarMenu(){ try{ var d=document.getElementById('avatarDropdown'); if(d) d.classList.add('hidden'); }catch(_){} }
+function toggleAvatarMenu(e){ try{ if(e&&e.stopPropagation) e.stopPropagation(); var btn=document.getElementById('headerProfile'); var d=document.getElementById('avatarDropdown'); if(d) d.classList.toggle('hidden'); if(btn) btn.setAttribute('aria-expanded', d && !d.classList.contains('hidden') ? 'true' : 'false'); }catch(_){} }
+function closeAvatarMenu(){ try{ var d=document.getElementById('avatarDropdown'); if(d) d.classList.add('hidden'); var btn=document.getElementById('headerProfile'); if(btn) btn.setAttribute('aria-expanded','false'); }catch(_){} }
 // tapping anywhere outside the profile button dismisses the header dropdown
 document.addEventListener('click',function(){try{closeAvatarMenu();}catch(_){}});
 function closeAllModals(){

@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <!-- Phase 1: split from single-file prototype, no visual changes -->
-  <link rel="stylesheet" href="styles.css?v=94">
+  <link rel="stylesheet" href="styles.css?v=95">
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
 </head>
 <body>
@@ -29,7 +29,7 @@
     <button class="secondary" id="googleBtn" onclick="if(window.EtieCloud&&EtieCloud.signInWithGoogle)EtieCloud.signInWithGoogle();else alert('App scripts still loading — hard-refresh the page and try again.')">Sign in with Google</button>
     <button class="secondary" id="adminBtn" style="display:none;" onclick="toggleAdmin()">Admin</button>
     <div class="avatar-menu" id="avatarMenu" style="display:none;">
-      <button class="header-profile" id="headerProfile" onclick="toggleAvatarMenu(event)" aria-haspopup="true" title="Your account"><span class="header-avatar" id="headerAvatar">+</span><span id="headerName">Guest</span><span aria-hidden="true">▾</span></button>
+      <button class="header-profile" id="headerProfile" onclick="toggleAvatarMenu(event)" aria-haspopup="true" aria-expanded="false" title="Your account"><span class="header-avatar" id="headerAvatar">+</span><span id="headerName">Guest</span><span aria-hidden="true">▾</span></button>
       <div class="avatar-dropdown hidden" id="avatarDropdown" role="menu">
         <button class="menu-item" id="navMapBtn" onclick="closeAvatarMenu();closeAllModals();showScreen('map')">🗺️ Map</button>
         <button class="menu-item" id="navProfileBtn" onclick="closeAvatarMenu();showScreen('profile')">Profile</button>

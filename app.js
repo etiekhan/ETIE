@@ -963,54 +963,23 @@ function createMemorySpotMarker(spot,mapInstance){
 function openMemorySpotCard(spot){
   try{
     console.log('openMemorySpotCard called, spot:', spot?.name, 'photos:', spot?.photos?.length);
-    var m=document.getElementById('memoryCardModal');
-    if(!m)return;
-    m.classList.remove('hidden');
-    m.style.position='fixed';
-    m.style.top='0';
-    m.style.left='0';
-    m.style.right='0';
-    m.style.bottom='0';
-    m.style.zIndex='999999';
-    m.style.display='flex';
-    m.style.alignItems='center';
-    m.style.justifyContent='center';
-    m.style.background='rgba(255,0,0,0.5)';
-    
-    // Show first photo in dual photo area
-    var dual=document.getElementById('memoryCardDualPhoto');
-    if(dual){
-      if(spot.photos.length===1){
-        dual.innerHTML='<img src="'+spot.photos[0].url+'" style="width:100%;height:100%;object-fit:cover;">';
-      }else{
-        dual.innerHTML='<img src="'+spot.photos[0].url+'" style="width:100%;height:100%;object-fit:cover;">'
-          +'<div style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,.7);color:#fff;padding:4px 8px;border-radius:8px;font-size:12px;font-weight:700;">'+spot.photos.length+' photos</div>';
-      }
-    }
-    
-    var title=document.getElementById('memoryCardTitle');
-    if(title)title.textContent=spot.name||'Hangout Memory';
-    
-    var meta=document.getElementById('memoryCardMeta');
-    if(meta){
-      var taken=spot.photos[0]?.timestamp ? new Date(spot.photos[0].timestamp).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}) : '';
-      meta.textContent=taken+(spot.photos.length>1?' · '+spot.photos.length+' photos':'');
-    }
-    
-    // Feed header with place name + count
-    var feedTitle=document.getElementById('memoryFeedTitle');
-    if(feedTitle){
-      var placeName=spot.name||'Hangout Memory';
-      feedTitle.textContent=placeName+' · '+spot.photos.length+' '+(spot.photos.length===1?'memory':'memories');
-    }
-    
-    // Store spot for reference
-    window._openMemorySpot=spot;
-    window._memFeedFilter='all';
-    window._memFeedView='list';
-    window._memFeedPage=0;
-    window._memFeedPageSize=20;
-    renderMemoryFeed(spot);
+    // Remove any existing overlay
+    var old=document.getElementById('memCardOverlay');if(old)old.remove();
+    // Create a fresh overlay appended to body
+    var overlay=document.createElement('div');
+    overlay.id='memCardOverlay';
+    overlay.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);';
+    var card=document.createElement('div');
+    card.style.cssText='background:#1a1428;border:2px solid #f43f5e;border-radius:16px;padding:20px;max-width:500px;width:90%;max-height:80vh;overflow-y:auto;color:#fff;';
+    var html='<h2 style="margin:0 0 12px;color:#f43f5e;">'+(spot.name||'Memory')+' ('+spot.photos.length+' photos)</h2>';
+    spot.photos.forEach(function(p){
+      html+='<div style="margin-bottom:12px;"><img src="'+p.url+'" style="width:100%;border-radius:8px;margin-bottom:4px;"><div style="font-size:13px;">'+(p.caption||'')+'</div><div style="font-size:11px;color:rgba(255,255,255,.5);">'+(p.owner||'')+'</div></div>';
+    });
+    html+='<button onclick="document.getElementById(&quot;memCardOverlay&quot;).remove()" style="margin-top:12px;padding:10px 20px;background:#f43f5e;color:#fff;border:0;border-radius:8px;cursor:pointer;">Close</button>';
+    card.innerHTML=html;
+    overlay.appendChild(card);
+    overlay.onclick=function(e){if(e.target===overlay)overlay.remove();};
+    document.body.appendChild(overlay);
   }catch(e){console.error('openMemorySpotCard error:',e);}
 }
 function getMemFeedPhotos(spot){

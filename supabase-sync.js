@@ -1141,6 +1141,86 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
       qy.then(function(r){run(r&&!r.error?r.data:[]);}).catch(function(){cb([]);});
     }catch(e){try{cb([]);}catch(_){}}
   }
+  // ---- Connections + Memory Tags (M2/M3) ----
+  function fetchConnections(cb){
+    try{
+      if(!client||!session||typeof cb!=='function'){cb([]);return;}
+      var me=session.user.id;
+      client.from('connections').select('*').or('user_low.eq.'+me+',user_high.eq.'+me)
+        .eq('status','accepted').then(function(r){
+          try{
+            var rows=r&&!r.error?r.data||[]:[];
+            var out=rows.map(function(c){
+              var other = c.user_low===me ? c.user_high : c.user_low;
+              return {user_id:other, created_via:c.created_via, created_at:c.created_at};
+            });
+            cb(out);
+          }catch(e){cb([]);}
+        }).catch(function(){cb([]);});
+    }catch(e){try{cb([]);}catch(_){}}
+  }
+  function exactMatchUser(displayName, cb){
+    try{
+      if(!client||!session||typeof cb!=='function'){cb(null);return;}
+      var q=String(displayName||'').trim();
+      if(!q){cb(null);return;}
+      client.from('etie_profiles').select('user_id,display_name,city')
+        .ilike('display_name', q).then(function(r){
+          try{
+            var rows=r&&!r.error?r.data||[]:[];
+            // Exact match only (case-insensitive)
+            var match=null;
+            rows.forEach(function(row){
+              if(row.display_name && row.display_name.toLowerCase()===q.toLowerCase()){
+                match={user_id:row.user_id, name:row.display_name, city:row.city||''};
+              }
+            });
+            cb(match);
+          }catch(e){cb(null);}
+        }).catch(function(){cb(null);});
+    }catch(e){try{cb(null);}catch(_){}}
+  }
+  function tagUser(memoryId, userId, cb){
+    try{
+      if(!client||!session){if(cb)cb({ok:false,error:'not signed in'});return;}
+      client.rpc('tag_user',{p_memory_id:memoryId, p_tagged_user_id:userId}).then(function(r){
+        try{if(cb)cb(r&&!r.error?r.data:{ok:false,error:r&&r.error?r.error.message:'rpc failed'});}catch(e){if(cb)cb({ok:false,error:e.message});}
+      }).catch(function(e){if(cb)cb({ok:false,error:e&&e.message});});
+    }catch(e){if(cb)cb({ok:false,error:e&&e.message});}
+  }
+  function respondToTag(memoryId, action, cb){
+    try{
+      if(!client||!session){if(cb)cb({ok:false,error:'not signed in'});return;}
+      client.rpc('respond_to_tag',{p_memory_id:memoryId, p_action:action}).then(function(r){
+        try{if(cb)cb(r&&!r.error?r.data:{ok:false,error:r&&r.error?r.error.message:'rpc failed'});}catch(e){if(cb)cb({ok:false,error:e.message});}
+      }).catch(function(e){if(cb)cb({ok:false,error:e&&e.message});});
+    }catch(e){if(cb)cb({ok:false,error:e&&e.message});}
+  }
+  function fetchPendingTags(cb){
+    try{
+      if(!client||!session||typeof cb!=='function'){cb([]);return;}
+      client.from('memory_tags').select('*').eq('tagged_user_id',session.user.id).eq('status','pending').then(function(r){
+        try{cb(r&&!r.error?r.data||[]:[]);}catch(e){cb([]);}
+      }).catch(function(){cb([]);});
+    }catch(e){try{cb([]);}catch(_){}}
+  }
+  function fetchMemoryTags(memoryId, cb){
+    try{
+      if(!client||!session||typeof cb!=='function'){cb([]);return;}
+      client.from('memory_tags').select('*').eq('memory_id',memoryId).then(function(r){
+        try{cb(r&&!r.error?r.data||[]:[]);}catch(e){cb([]);}
+      }).catch(function(){cb([]);});
+    }catch(e){try{cb([]);}catch(_){}}
+  }
+  function acceptHookConnection(hostId, requesterId, cb){
+    try{
+      if(!client||!session){if(cb)cb({ok:false});return;}
+      client.rpc('accept_hook_connection',{p_host_id:hostId, p_requester_id:requesterId}).then(function(r){
+        try{if(cb)cb(r&&!r.error?r.data:{ok:false});}catch(e){if(cb)cb({ok:false});}
+      }).catch(function(){if(cb)cb({ok:false});});
+    }catch(e){if(cb)cb({ok:false});}
+  }
+
   // TODO(OAuth): Set up custom domain (e.g. auth.etie.app) in Supabase OAuth settings
 // to replace the raw supabase.co redirect URL on Google login.
 // Configure in Supabase Dashboard > Authentication > URL Configuration > Site URL & Redirect URLs.
@@ -1154,6 +1234,9 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
     fetchProfile:fetchProfile, fetchOwnProfile:fetchOwnProfile, redeemInvite:redeemInvite,
     pushHangoutLog:pushHangoutLog, fetchHookLogs:fetchHookLogs, fetchUserLogs:fetchUserLogs, updateHangoutLog:updateHangoutLog, fetchTaggedLogs:fetchTaggedLogs,
     fetchMyMemories:fetchMyMemories, deleteHangoutLog:deleteHangoutLog, searchPeople:searchPeople,
+    fetchConnections:fetchConnections, exactMatchUser:exactMatchUser, tagUser:tagUser,
+    respondToTag:respondToTag, fetchPendingTags:fetchPendingTags, fetchMemoryTags:fetchMemoryTags,
+    acceptHookConnection:acceptHookConnection,
     pushSidequest:pushSidequest, fetchSidequest:fetchSidequest, clearSidequest:clearSidequest,
     syncProfile:syncProfile, pushSharedRequest:pushSharedRequest, pushSharedMessage:pushSharedMessage, pushSharedMeetup:pushSharedMeetup,
     pushSharedReview:pushSharedReview, pushSharedReport:pushSharedReport,

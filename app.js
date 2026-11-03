@@ -981,12 +981,102 @@ function openMemorySpotCard(spot){
     spot.photos.forEach(function(p){
       html+='<div style="margin-bottom:12px;"><img src="'+p.url+'" style="width:100%;border-radius:8px;margin-bottom:4px;"><div style="font-size:13px;">'+(p.caption||'')+'</div><div style="font-size:11px;color:rgba(255,255,255,.5);">'+(p.owner||'')+'</div></div>';
     });
+    // Tag picker section (owner-only, loaded async)
+    html+='<div id="memTagSection" style="margin-top:16px;padding-top:12px;border-top:1px solid rgba(255,255,255,.1);"></div>';
     html+='<button onclick="document.getElementById(&quot;memCardOverlay&quot;).remove()" style="margin-top:12px;padding:10px 20px;background:#f43f5e;color:#fff;border:0;border-radius:8px;cursor:pointer;">Close</button>';
     card.innerHTML=html;
+    // Load tag section async
+    try{loadMemTagSection(spot);}catch(e){}
     overlay.appendChild(card);
     overlay.onclick=function(e){if(e.target===overlay)overlay.remove();};
     document.body.appendChild(overlay);
   }catch(e){console.error('openMemorySpotCard error:',e);}
+}
+function loadMemTagSection(spot){
+  try{
+    var section=document.getElementById('memTagSection');
+    if(!section||!spot||!spot.photos||!spot.photos.length)return;
+    // Use the first photo's logId as the memory ID for tagging
+    var memoryId=spot.photos[0].logId;
+    if(!memoryId){section.innerHTML='<div style="font-size:12px;color:rgba(255,255,255,.4);">Tagging requires cloud sync.</div>';return;}
+    // Check if current user is the owner
+    var myId=null;try{myId=myUid();}catch(e){}
+    // We'll show tag UI for the owner. For simplicity, show for all (owner check via RPC).
+    section.innerHTML='<div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:8px;">Tag people in this memory</div>'
+      +'<div style="display:flex;gap:8px;margin-bottom:8px;">'
+      +'<input id="memTagInput" placeholder="Type exact name" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:#fff;font-size:13px;">'
+      +'<button onclick="submitMemTag(\''+memoryId+'\')" style="padding:8px 14px;background:#f43f5e;color:#fff;border:0;border-radius:8px;cursor:pointer;font-size:13px;">Tag</button>'
+      +'</div>'
+      +'<div id="memTagStatus" style="font-size:12px;color:rgba(255,255,255,.5);"></div>'
+      +'<div id="memTagList" style="margin-top:8px;"></div>';
+    // Load existing tags
+    if(window.EtieCloud&&window.EtieCloud.fetchMemoryTags){
+      window.EtieCloud.fetchMemoryTags(memoryId, function(tags){
+        try{
+          var list=document.getElementById('memTagList');
+          if(!list)return;
+          if(!tags||!tags.length){list.innerHTML='';return;}
+          list.innerHTML=tags.map(function(t){
+            var status=t.status==='approved'?'on their map':t.status==='pending'?'pending':'sat this one out';
+            var color=t.status==='approved'?'#4ade80':t.status==='pending'?'#fbbf24':'#f87171';
+            return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.06);">'
+              +'<span style="font-size:13px;color:#fff;">'+(t.tagged_user_id||'').substring(0,8)+'…</span>'
+              +'<span style="font-size:11px;color:'+color+';">'+status+'</span>'
+              +'</div>';
+          }).join('');
+        }catch(e){}
+      });
+    }
+    // Load connections for suggestions
+    if(window.EtieCloud&&window.EtieCloud.fetchConnections){
+      window.EtieCloud.fetchConnections(function(conns){
+        try{
+          var input=document.getElementById('memTagInput');
+          if(!input||!conns||!conns.length)return;
+          // Show connections as hint
+          var hint=document.createElement('div');
+          hint.style.cssText='font-size:11px;color:rgba(255,255,255,.4);margin-top:4px;';
+          hint.textContent='Connected: '+conns.map(function(c){return c.user_id.substring(0,6);}).join(', ');
+          section.appendChild(hint);
+        }catch(e){}
+      });
+    }
+  }catch(e){console.error('loadMemTagSection error:',e);}
+}
+function submitMemTag(memoryId){
+  try{
+    var input=document.getElementById('memTagInput');
+    var status=document.getElementById('memTagStatus');
+    if(!input||!memoryId)return;
+    var name=input.value.trim();
+    if(!name){if(status)status.textContent='Type a name first.';return;}
+    if(status)status.textContent='Looking up...';
+    if(window.EtieCloud&&window.EtieCloud.exactMatchUser){
+      window.EtieCloud.exactMatchUser(name, function(user){
+        try{
+          if(!user){if(status)status.textContent='No exact match found. Check spelling.';return;}
+          if(status)status.textContent='Tagging '+user.name+'...';
+          if(window.EtieCloud&&window.EtieCloud.tagUser){
+            window.EtieCloud.tagUser(memoryId, user.user_id, function(res){
+              try{
+                if(res&&res.ok){
+                  if(status)status.textContent='Tagged '+user.name+'! They\'ll see an invite.';
+                  input.value='';
+                  // Reload tag list
+                  loadMemTagSection(window._openMemorySpot);
+                }else if(res&&res.error==='cooldown'){
+                  var hrs=Math.ceil(res.hours_remaining||72);
+                  if(status)status.textContent='You can tag '+user.name+' again in '+hrs+' hours.';
+                }else{
+                  if(status)status.textContent='Tag failed: '+(res&&res.error||'unknown');
+                }
+              }catch(e){}
+            });
+          }
+        }catch(e){}
+      });
+    }
+  }catch(e){console.error('submitMemTag error:',e);}
 }
 function getMemFeedPhotos(spot){
   try{
@@ -3161,6 +3251,13 @@ function approveHookRequest(pinId,idx){
     }
     storePin(p);openPinDetail(p.id);renderMapPins();
     toast('Approved! '+req.nick+' can now join the chat.');
+    // Create connection (hangout) between host and approved requester
+    try{
+      var hostId=null;try{hostId=myUid();}catch(e){}
+      if(hostId&&req.uid&&window.EtieCloud&&window.EtieCloud.acceptHookConnection){
+        window.EtieCloud.acceptHookConnection(hostId, req.uid, function(){});
+      }
+    }catch(e){}
     try{if(window.EtieCloud&&window.EtieCloud.pushSharedRequest)window.EtieCloud.pushSharedRequest(p.id);}catch(e){}
   }catch(e){toast('Could not approve.');}
 }
@@ -3561,14 +3658,115 @@ function leaveHookChat(pinId){
     toast('Left the hangout.');
   }catch(e){}
 }
+function renderRequestsRow(box){
+  try{
+    // Memory tag invites
+    if(window.EtieCloud&&window.EtieCloud.fetchPendingTags){
+      window.EtieCloud.fetchPendingTags(function(tags){
+        try{
+          if(!tags||!tags.length)return;
+          // For each pending tag, fetch the memory to show thumbnail
+          tags.forEach(function(tag){
+            try{
+              // Fetch memory details
+              if(window.EtieCloud&&window.EtieCloud.fetchMyMemories){
+                window.EtieCloud.fetchMyMemories(function(logs){
+                  try{
+                    var mem=null;
+                    (logs||[]).forEach(function(l){if(l.id===tag.memory_id)mem=l;});
+                    if(!mem)return;
+                    var row=document.createElement('div');
+                    row.className='list-item';
+                    row.style.cssText='border-left:3px solid #f43f5e;';
+                    var thumb=document.createElement('img');
+                    thumb.src=mem.photo_url||'';
+                    thumb.style.cssText='width:48px;height:48px;border-radius:8px;object-fit:cover;flex-shrink:0;';
+                    row.appendChild(thumb);
+                    var info=document.createElement('div');
+                    info.style.flex='1;min-width:0;';
+                    info.innerHTML='<strong style="color:#fff;">'+(mem.nickname||'Someone')+' tagged you in a memory</strong>'
+                      +'<br><span class="muted small">'+(mem.location||'')+'</span>';
+                    row.appendChild(info);
+                    var actions=document.createElement('div');
+                    actions.style.cssText='display:flex;gap:6px;flex-shrink:0;';
+                    var addBtn=document.createElement('button');
+                    addBtn.className='primary';addBtn.style.padding='6px 12px';addBtn.style.fontSize='12px';addBtn.textContent='Add to my map';
+                    addBtn.onclick=function(){
+                      if(window.EtieCloud&&window.EtieCloud.respondToTag){
+                        window.EtieCloud.respondToTag(tag.memory_id,'approve',function(res){
+                          try{
+                            if(res&&res.ok){toast('Added to your map!');renderHookChatList();}
+                            else{toast('Could not add: '+(res&&res.error||'unknown'));}
+                          }catch(e){}
+                        });
+                      }
+                    };
+                    var declineBtn=document.createElement('button');
+                    declineBtn.className='secondary';declineBtn.style.padding='6px 12px';declineBtn.style.fontSize='12px';declineBtn.textContent='Not for me';
+                    declineBtn.onclick=function(){
+                      if(window.EtieCloud&&window.EtieCloud.respondToTag){
+                        window.EtieCloud.respondToTag(tag.memory_id,'decline',function(res){
+                          try{
+                            if(res&&res.ok){toast('Declined.');renderHookChatList();}
+                            else{toast('Could not decline: '+(res&&res.error||'unknown'));}
+                          }catch(e){}
+                        });
+                      }
+                    };
+                    actions.appendChild(addBtn);actions.appendChild(declineBtn);
+                    row.appendChild(actions);
+                    box.appendChild(row);
+                  }catch(e){}
+                });
+              }
+            }catch(e){}
+          });
+        }catch(e){}
+      });
+    }
+  }catch(e){}
+}
+
 function renderHookChatList(){
   try{
     var box=document.getElementById('hookChatList');if(!box)return;
     box.innerHTML='';
+    // Requests row (memory tag invites + hangout join requests)
+    renderRequestsRow(box);
     var me=hookNick();
     // Show all pins user is a member of (including vanished/archived) so chat stays accessible
     var mine=(ETIE.mapPins||[]).filter(function(p){return p&&(p.members||[]).some(function(m){return m.nick===me;});});
     if(!mine.length){var e=document.createElement('div');e.className='muted small';e.textContent='No hook chats yet — connect on a pin to start one.';box.appendChild(e);return;}
+    // People list (accepted connections)
+    try{
+      if(window.EtieCloud&&window.EtieCloud.fetchConnections){
+        window.EtieCloud.fetchConnections(function(conns){
+          try{
+            if(!conns||!conns.length)return;
+            var peopleHeader=document.createElement('div');
+            peopleHeader.className='eyebrow';
+            peopleHeader.style.marginTop='16px';
+            peopleHeader.textContent='People';
+            box.appendChild(peopleHeader);
+            conns.forEach(function(c){
+              try{
+                var row=document.createElement('div');
+                row.className='list-item';
+                row.innerHTML='<div><strong></strong></div><button class="secondary" style="padding:8px 14px;font-size:12px;">Message</button>';
+                row.querySelector('strong').textContent=c.user_id.substring(0,8)+'…';
+                var btn=row.querySelector('button');
+                btn.onclick=function(){
+                  // M4: open direct chat (placeholder for now)
+                  toast('Direct chat coming in M4.');
+                };
+                box.appendChild(row);
+              }catch(e){}
+            });
+          }catch(e){}
+        });
+      }
+    }catch(e){}
+
     mine.forEach(function(p){
       try{
         var last=(p.chat||[])[(p.chat||[]).length-1];

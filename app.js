@@ -964,14 +964,8 @@ function openMemorySpotCard(spot){
   try{
     console.log('openMemorySpotCard called, spot:', spot?.name, 'photos:', spot?.photos?.length);
     var m=document.getElementById('memoryCardModal');
-    console.log('modal element:', m, 'has hidden:', m ? m.classList.contains('hidden') : 'N/A');
-    if(!m){console.error('memoryCardModal not found in DOM!');return;}
+    if(!m)return;
     m.classList.remove('hidden');
-    m.style.zIndex='99999';
-    m.style.background='rgba(255,0,0,0.3)';
-    console.log('after remove hidden, has hidden:', m.classList.contains('hidden'));
-    console.log('modal display:', window.getComputedStyle(m).display);
-    console.log('modal zIndex:', window.getComputedStyle(m).zIndex);
     
     // Show first photo in dual photo area
     var dual=document.getElementById('memoryCardDualPhoto');
@@ -1833,6 +1827,15 @@ function addHomeCity(){
     arr.unshift(name);arr=arr.slice(0,5);
     ETIE.local.cities=arr;ETIE.local.city=arr[0];
     inp.value='';saveState();renderHomeCityChips();
+    // Geocode the new home city and set as anchor
+    geocodeCity(name,function(lat,lng){
+      if(lat!=null&&lng!=null){
+        ETIE.anchor={lat:lat,lng:lng,label:name};
+        saveState();
+        // Re-center map if it exists
+        try{if(_map)_map.flyTo({center:[lng,lat],zoom:HK_ZOOM,duration:1500});}catch(e){}
+      }
+    });
     try{if(ETIE.profileComplete&&!isProfileComplete())ETIE.profileComplete=false;}catch(e){}
   }catch(e){}
 }
@@ -2062,6 +2065,28 @@ function renderDerivedBadge(){
     else{var denied=false;try{denied=!!ETIE.locDenied;}catch(e){}b.innerHTML=denied?'📍 Share location <span class="loc-pill loc-off">Off</span>':'📍 Share location <span class="loc-pill loc-on">On</span>';b.className='derived-badge';}
   }catch(e){}
 }
+function geocodeCity(cityName, cb){
+  try{
+    ETIE.geoCache=ETIE.geoCache||{};
+    var key='city:'+cityName.toLowerCase();
+    if(ETIE.geoCache[key]){
+      var c=ETIE.geoCache[key];
+      try{cb(c.lat,c.lng);}catch(e){}
+      return;
+    }
+    fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&q='+encodeURIComponent(cityName)+'&limit=1').then(function(r){return r.json();}).then(function(j){
+      try{
+        if(j&&j.length&&j[0].lat&&j[0].lon){
+          var lat=parseFloat(j[0].lat),lng=parseFloat(j[0].lon);
+          ETIE.geoCache[key]={lat:lat,lng:lng};
+          try{saveState();}catch(e){}
+          try{cb(lat,lng);}catch(e){}
+        }else{try{cb(null,null);}catch(e){}}
+      }catch(e){try{cb(null,null);}catch(e2){}}
+    }).catch(function(){try{cb(null,null);}catch(e){}});
+  }catch(e){try{cb(null,null);}catch(e2){}}
+}
+
 function getAnchor(){
   try{if(ETIE.anchor&&ETIE.anchor.lat!=null)return ETIE.anchor;}catch(e){}
   return {lat:HK_CENTER[0],lng:HK_CENTER[1],label:'Hong Kong'};
@@ -2169,6 +2194,19 @@ function initHKMap(){
     if(_map||!window.maplibregl)return;
     var el=document.getElementById('hkMap');if(!el)return;
     var _anchor=getAnchor();
+    // If anchor is default HK but user has a different home city, geocode it
+    try{
+      var hc=homeCities()[0];
+      if(hc && hc!=='Hong Kong' && (!_anchor || _anchor.label==='Hong Kong' || !_anchor.label)){
+        geocodeCity(hc,function(lat,lng){
+          if(lat!=null&&lng!=null){
+            ETIE.anchor={lat:lat,lng:lng,label:hc};
+            saveState();
+            try{if(_map)_map.flyTo({center:[lng,lat],zoom:HK_ZOOM,duration:1500});}catch(e){}
+          }
+        });
+      }
+    }catch(e){}
     var styleUrl = (window.EtieMapStyle && typeof window.EtieMapStyle.load === 'function') ? null : null;
     var opts = {
       container:'hkMap',
@@ -2193,6 +2231,7 @@ function initHKMap(){
         _map.on('load',function(){
           renderMapFilter();
           try{renderMapPins();}catch(e){}
+          try{startGlobeSpin();}catch(e){}
         });
       });
     } else {
@@ -2205,6 +2244,7 @@ function initHKMap(){
       _map.on('load',function(){
         renderMapFilter();
         try{renderMapPins();}catch(e){}
+        try{startGlobeSpin();}catch(e){}
       });
     }
   }catch(e){}

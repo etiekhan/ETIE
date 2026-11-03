@@ -374,7 +374,7 @@ html,body{height:100%;width:100%;margin:0;padding:0;overflow:hidden;background:#
 .area-me{border-color:rgba(34,211,238,.45);}
 
 /* overlay panels (flows, trips, messages, profile) */
-.overlay-panel{display:none;position:fixed;top:70px;left:50%;transform:translateX(-50%);width:min(880px,94vw);max-height:calc(100vh - 168px);overflow-y:auto;z-index:var(--z-panel);background:rgba(18,18,20,.9);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:22px;color:#f5f3ef;}
+.overlay-panel{display:none;position:fixed;top:70px;left:50%;transform:translateX(-50%);width:min(880px,94vw);max-height:calc(100vh - 168px);overflow-y:auto;z-index:9999;background:rgba(18,18,20,.9);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:22px;color:#f5f3ef;}
 .overlay-panel.panel-open{display:block;}
 .overlay-panel .card{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.12);color:#f5f3ef;box-shadow:none;}
 .overlay-panel h2,.overlay-panel h3,.overlay-panel strong{color:#fff;}

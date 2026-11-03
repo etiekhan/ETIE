@@ -288,6 +288,12 @@ function showScreen(id){
     var panels=['messages','profile'];
     var want=[id];
     panels.forEach(function(p){var el=document.getElementById(p);if(el)el.classList.toggle('panel-open',want.indexOf(p)!==-1);});
+    // Disable map pointer events when a panel is open so map doesn't block
+    var mapEl=document.getElementById('map');
+    if(mapEl){
+      if(id==='map'){mapEl.style.pointerEvents='';}
+      else{mapEl.style.pointerEvents='none';}
+    }
     if(id==='profile'){renderLiteProfile();}
     if(id==='messages'){try{renderHookChatList();}catch(e){}}
     if(id==='map'){try{initHKMap();if(window.maplibregl&&_map){setTimeout(function(){try{_map.resize();}catch(e){}},120);}renderMapPins();}catch(e){}}

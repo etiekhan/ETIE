@@ -966,6 +966,16 @@ function openMemorySpotCard(spot){
     var m=document.getElementById('memoryCardModal');
     if(!m)return;
     m.classList.remove('hidden');
+    m.style.position='fixed';
+    m.style.top='0';
+    m.style.left='0';
+    m.style.right='0';
+    m.style.bottom='0';
+    m.style.zIndex='999999';
+    m.style.display='flex';
+    m.style.alignItems='center';
+    m.style.justifyContent='center';
+    m.style.background='rgba(255,0,0,0.5)';
     
     // Show first photo in dual photo area
     var dual=document.getElementById('memoryCardDualPhoto');

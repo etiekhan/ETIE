@@ -456,8 +456,8 @@ function updateAuthHeader(){
     try{ if(typeof updateAdminVisibility==='function') updateAdminVisibility(); }catch(e){}
   }catch(e){}
 }
-function toggleAvatarMenu(e){ try{ if(e&&e.stopPropagation) e.stopPropagation(); var btn=document.getElementById('headerProfile'); var d=document.getElementById('avatarDropdown'); if(d) d.classList.toggle('hidden'); if(btn) btn.setAttribute('aria-expanded', d && !d.classList.contains('hidden') ? 'true' : 'false'); }catch(_){} }
-function closeAvatarMenu(){ try{ var d=document.getElementById('avatarDropdown'); if(d) d.classList.add('hidden'); var btn=document.getElementById('headerProfile'); if(btn) btn.setAttribute('aria-expanded','false'); }catch(_){} }
+function toggleAvatarMenu(e){ try{ if(e&&e.stopPropagation) e.stopPropagation(); var btn=document.getElementById('headerProfile'); var d=document.getElementById('avatarDropdown'); if(!d||!btn)return; var opening=d.classList.contains('hidden'); if(opening){ d.classList.remove('hidden'); btn.setAttribute('aria-expanded','true'); document.body.appendChild(d); var r=btn.getBoundingClientRect(); d.style.position='fixed'; d.style.top=(r.bottom+8)+'px'; d.style.right=(window.innerWidth-r.right)+'px'; d.style.left='auto'; }else{ d.classList.add('hidden'); btn.setAttribute('aria-expanded','false'); var am=document.getElementById('avatarMenu'); if(am && d.parentNode!==am) am.appendChild(d); d.style.position=''; d.style.top=''; d.style.right=''; d.style.left=''; } }catch(_){} }
+function closeAvatarMenu(){ try{ var d=document.getElementById('avatarDropdown'); if(d){ d.classList.add('hidden'); var am=document.getElementById('avatarMenu'); if(am && d.parentNode!==am) am.appendChild(d); d.style.position=''; d.style.top=''; d.style.right=''; d.style.left=''; } var btn=document.getElementById('headerProfile'); if(btn) btn.setAttribute('aria-expanded','false'); }catch(_){} }
 // tapping anywhere outside the profile button dismisses the header dropdown
 document.addEventListener('click',function(){try{closeAvatarMenu();}catch(_){}});
 function closeAllModals(){
@@ -4514,7 +4514,7 @@ document.addEventListener('DOMContentLoaded',function(){
   try{ processPhotoOutbox(); }catch(e){}
   try{ window.addEventListener('online',function(){try{processPhotoOutbox();}catch(e){}}); }catch(e){}
   document.addEventListener('keydown',function(e){if(e.key==='Escape'){try{closeQuestDrawer();}catch(e2){}try{closeProfileDrawer();}catch(e2b){}try{closeAdmin();}catch(e3){}try{closeAvatarMenu();}catch(e4){}try{closeChatDrawer();}catch(e5){}try{closePinDetail();}catch(e6){}try{closeGroupModal();}catch(e7){}try{closeDropHook();}catch(e8){}try{closeLogSheet();}catch(e9){}try{closeMemoryCard();}catch(e10){}}});
-  document.addEventListener('click',function(e){try{var m=document.getElementById('avatarMenu');if(m&&e.target&&!m.contains(e.target))closeAvatarMenu();}catch(err){}});
+  document.addEventListener('click',function(e){try{var d=document.getElementById('avatarDropdown');var btn=document.getElementById('headerProfile');if(d&&!d.classList.contains('hidden')&&e.target!==btn&&!d.contains(e.target)&&e.target!==btn)closeAvatarMenu();}catch(err){}});
   // re-sync header whenever the tab regains focus (session may have landed elsewhere)
   try{
     document.addEventListener('visibilitychange',function(){if(!document.hidden){try{updateAuthHeader();renderHeaderProfile();}catch(e){}try{if(window.EtieCloud&&window.EtieCloud.pullPins)window.EtieCloud.pullPins();}catch(e){}try{if(typeof refreshWeeklyBanner==='function')refreshWeeklyBanner();}catch(e){}}});

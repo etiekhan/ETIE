@@ -985,11 +985,13 @@ function openMemorySpotCard(spot){
     html+='<div id="memTagSection" style="margin-top:16px;padding-top:12px;border-top:1px solid rgba(255,255,255,.1);"></div>';
     html+='<button onclick="document.getElementById(&quot;memCardOverlay&quot;).remove()" style="margin-top:12px;padding:10px 20px;background:#f43f5e;color:#fff;border:0;border-radius:8px;cursor:pointer;">Close</button>';
     card.innerHTML=html;
-    // Load tag section async
-    try{loadMemTagSection(spot);}catch(e){}
     overlay.appendChild(card);
     overlay.onclick=function(e){if(e.target===overlay)overlay.remove();};
     document.body.appendChild(overlay);
+    // Store spot for reference
+    window._openMemorySpot=spot;
+    // Load tag section async (after DOM is ready)
+    try{loadMemTagSection(spot);}catch(e){console.error('tag section load error:',e);}
   }catch(e){console.error('openMemorySpotCard error:',e);}
 }
 function loadMemTagSection(spot){

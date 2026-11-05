@@ -1221,6 +1221,121 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
     }catch(e){if(cb)cb({ok:false});}
   }
 
+  // ---- Direct Chat Threads (M4) ----
+  function getOrCreateDirectThread(otherUserId, cb){
+    try{
+      if(!client||!session||!otherUserId){if(cb)cb(null);return;}
+      var me=session.user.id;
+      // Check if thread already exists between these two users
+      client.from('chat_participants').select('thread_id').eq('user_id',me).then(function(r1){
+        try{
+          var myThreads=(r1&&!r1.error?r1.data||[]:[]).map(function(x){return x.thread_id;});
+          if(!myThreads.length){createDirectThread(me,otherUserId,cb);return;}
+          client.from('chat_participants').select('thread_id').eq('user_id',otherUserId)
+            .in('thread_id',myThreads).then(function(r2){
+              try{
+                var shared=(r2&&!r2.error?r2.data||[]:[]).map(function(x){return x.thread_id;});
+                if(shared.length){
+                  // Verify it's a direct thread
+                  client.from('chat_threads').select('id').eq('id',shared[0]).eq('context_type','direct').then(function(r3){
+                    try{
+                      if(r3&&!r3.error&&r3.data&&r3.data.length){if(cb)cb(r3.data[0].id);return;}
+                      createDirectThread(me,otherUserId,cb);
+                    }catch(e){createDirectThread(me,otherUserId,cb);}
+                  }).catch(function(){createDirectThread(me,otherUserId,cb);});
+                }else{
+                  createDirectThread(me,otherUserId,cb);
+                }
+              }catch(e){createDirectThread(me,otherUserId,cb);}
+            }).catch(function(){createDirectThread(me,otherUserId,cb);});
+        }catch(e){createDirectThread(me,otherUserId,cb);}
+      }).catch(function(){createDirectThread(me,otherUserId,cb);});
+    }catch(e){if(cb)cb(null);}
+  }
+  function createDirectThread(me, otherUserId, cb){
+    try{
+      client.from('chat_threads').insert({context_type:'direct',context_id:null}).select('id').single().then(function(r){
+        try{
+          if(r&&r.error){if(cb)cb(null);return;}
+          var tid=r.data&&r.data.id;
+          if(!tid){if(cb)cb(null);return;}
+          // Add both participants
+          client.from('chat_participants').insert([
+            {thread_id:tid,user_id:me},
+            {thread_id:tid,user_id:otherUserId}
+          ]).then(function(){
+            try{if(cb)cb(tid);}catch(e){}
+          }).catch(function(){if(cb)cb(tid);});
+        }catch(e){if(cb)cb(null);}
+      }).catch(function(){if(cb)cb(null);});
+    }catch(e){if(cb)cb(null);}
+  }
+  function fetchThreadMessages(threadId, cb){
+    try{
+      if(!client||!session||!threadId||typeof cb!=='function'){cb([]);return;}
+      client.from(msgTable()).select('*').eq('thread_id',threadId).order('created_at',{ascending:true}).limit(100).then(function(r){
+        try{cb(r&&!r.error?r.data||[]:[]);}catch(e){cb([]);}
+      }).catch(function(){cb([]);});
+    }catch(e){try{cb([]);}catch(_){}}
+  }
+  function sendThreadMessage(threadId, text, memoryId, cb){
+    try{
+      if(!client||!session||!threadId){if(cb)cb(false);return;}
+      client.from(msgTable()).insert({
+        thread_id:threadId, sender_id:session.user.id,
+        sender_nick: (window.ETIE&&window.ETIE.traveller&&window.ETIE.traveller.nickname)||'Someone',
+        sender_role: (window.ETIE&&window.ETIE.activeRole)||'traveller',
+        text:String(text||'').slice(0,2000),
+        memory_id: memoryId||null
+      }).then(function(r){
+        try{if(cb)cb(!r||!r.error);}catch(e){if(cb)cb(false);}
+      }).catch(function(){if(cb)cb(false);});
+    }catch(e){if(cb)cb(false);}
+  }
+  function fetchMyThreads(cb){
+    try{
+      if(!client||!session||typeof cb!=='function'){cb([]);return;}
+      var me=session.user.id;
+      client.from('chat_participants').select('thread_id').eq('user_id',me).then(function(r){
+        try{
+          var tids=(r&&!r.error?r.data||[]:[]).map(function(x){return x.thread_id;});
+          if(!tids.length){cb([]);return;}
+          client.from('chat_threads').select('*').in('id',tids).then(function(r2){
+            try{
+              var threads=r2&&!r2.error?r2.data||[]:[];
+              // For each thread, get the other participant
+              var out=[];
+              var done=0;
+              if(!threads.length){cb([]);return;}
+              threads.forEach(function(th){
+                try{
+                  client.from('chat_participants').select('user_id').eq('thread_id',th.id).neq('user_id',me).then(function(r3){
+                    try{
+                      var other=(r3&&!r3.error&&r3.data&&r3.data.length)?r3.data[0].user_id:null;
+                      out.push({id:th.id, context_type:th.context_type, context_id:th.context_id, other_user:other, created_at:th.created_at});
+                    }catch(e){}
+                    done++;
+                    if(done>=threads.length)cb(out);
+                  }).catch(function(){done++;if(done>=threads.length)cb(out);});
+                }catch(e){done++;if(done>=threads.length)cb(out);}
+              });
+            }catch(e){cb([]);}
+          }).catch(function(){cb([]);});
+        }catch(e){cb([]);}
+      }).catch(function(){cb([]);});
+    }catch(e){try{cb([]);}catch(_){}}
+  }
+  function subscribeThread(threadId, cb){
+    try{
+      if(!client||!session||!threadId||typeof cb!=='function')return function(){};
+      var channel=client.channel('thread-'+threadId)
+        .on('postgres_changes',{event:'INSERT',schema:'public',table:msgTable(),filter:'thread_id=eq.'+threadId},function(payload){
+          try{cb(payload&&payload.new?payload.new:null);}catch(e){}
+        }).subscribe();
+      return function(){try{client.removeChannel(channel);}catch(e){}};
+    }catch(e){return function(){};}
+  }
+
   // TODO(OAuth): Set up custom domain (e.g. auth.etie.app) in Supabase OAuth settings
 // to replace the raw supabase.co redirect URL on Google login.
 // Configure in Supabase Dashboard > Authentication > URL Configuration > Site URL & Redirect URLs.
@@ -1237,6 +1352,8 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
     fetchConnections:fetchConnections, exactMatchUser:exactMatchUser, tagUser:tagUser,
     respondToTag:respondToTag, fetchPendingTags:fetchPendingTags, fetchMemoryTags:fetchMemoryTags,
     acceptHookConnection:acceptHookConnection,
+    getOrCreateDirectThread:getOrCreateDirectThread, fetchThreadMessages:fetchThreadMessages,
+    sendThreadMessage:sendThreadMessage, fetchMyThreads:fetchMyThreads, subscribeThread:subscribeThread,
     pushSidequest:pushSidequest, fetchSidequest:fetchSidequest, clearSidequest:clearSidequest,
     syncProfile:syncProfile, pushSharedRequest:pushSharedRequest, pushSharedMessage:pushSharedMessage, pushSharedMeetup:pushSharedMeetup,
     pushSharedReview:pushSharedReview, pushSharedReport:pushSharedReport,

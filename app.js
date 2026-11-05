@@ -981,7 +981,9 @@ function openMemorySpotCard(spot){
     spot.photos.forEach(function(p){
       html+='<div style="margin-bottom:12px;"><img src="'+p.url+'" style="width:100%;border-radius:8px;margin-bottom:4px;"><div style="font-size:13px;">'+(p.caption||'')+'</div><div style="font-size:11px;color:rgba(255,255,255,.5);">'+(p.owner||'')+'</div></div>';
     });
-    // Tag picker section (owner-only, loaded async)
+    // Message privately button (owner + tagged+approved)
+    html+='<div style="margin-top:12px;"><button onclick="openDirectChatFromMemory(\''+spot.photos[0].logId+'\',\''+(spot.owner||'')+'\')" style="padding:8px 16px;background:rgba(34,211,238,.15);border:1px solid rgba(34,211,238,.3);color:#22d3ee;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;">💬 Message privately</button></div>';
+    // Tag picker section
     html+='<div id="memTagSection" style="margin-top:16px;padding-top:12px;border-top:1px solid rgba(255,255,255,.1);"></div>';
     html+='<button onclick="document.getElementById(&quot;memCardOverlay&quot;).remove()" style="margin-top:12px;padding:10px 20px;background:#f43f5e;color:#fff;border:0;border-radius:8px;cursor:pointer;">Close</button>';
     card.innerHTML=html;
@@ -993,6 +995,155 @@ function openMemorySpotCard(spot){
     // Load tag section async (after DOM is ready)
     try{loadMemTagSection(spot);}catch(e){console.error('tag section load error:',e);}
   }catch(e){console.error('openMemorySpotCard error:',e);}
+}
+var _directChatThreadId=null;
+var _directChatUnsub=null;
+function openDirectChatFromMemory(memoryId, ownerName){
+  try{
+    // For now, we need the other user's ID. The owner name is a nickname, not a user ID.
+    // In M3, tagged users see invites. For M4, we need to look up the owner's user_id.
+    // For simplicity, show a toast for now and implement full chat in M4b.
+    toast('Direct chat: connecting...');
+    // Try to find the owner's user_id from the memory
+    if(window.EtieCloud&&window.EtieCloud.fetchMyMemories){
+      window.EtieCloud.fetchMyMemories(function(logs){
+        try{
+          var mem=null;
+          (logs||[]).forEach(function(l){if(l.id===memoryId)mem=l;});
+          if(!mem){toast('Memory not found.');return;}
+          var otherId=mem.user_id;
+          if(!otherId){toast('Cannot message this user.');return;}
+          // Check if current user is the owner - if so, message the tagged user
+          var myId=null;try{myId=myUid();}catch(e){}
+          if(otherId===myId){
+            // Owner wants to message tagged user - find tagged user from memory_tags
+            if(window.EtieCloud&&window.EtieCloud.fetchMemoryTags){
+              window.EtieCloud.fetchMemoryTags(memoryId, function(tags){
+                try{
+                  if(!tags||!tags.length){toast('No tagged users to message.');return;}
+                  // Find approved tags
+                  var approved=tags.filter(function(t){return t.status==='approved';});
+                  if(!approved.length){toast('No approved tags to message.');return;}
+                  // Message the first approved tagged user
+                  openDirectChatThread(approved[0].tagged_user_id, memoryId);
+                }catch(e){}
+              });
+            }
+            return;
+          }
+          openDirectChatThread(otherId, memoryId);
+        }catch(e){toast('Chat failed.');}
+      });
+    }
+  }catch(e){toast('Chat failed.');}
+}
+function openDirectChatThread(otherUserId, memoryId){
+  try{
+    if(!window.EtieCloud||!window.EtieCloud.getOrCreateDirectThread){toast('Cloud not ready.');return;}
+    window.EtieCloud.getOrCreateDirectThread(otherUserId, function(threadId){
+      try{
+        if(!threadId){toast('Could not create chat.');return;}
+        _directChatThreadId=threadId;
+        // Show direct chat overlay
+        showDirectChatOverlay(threadId, memoryId);
+      }catch(e){toast('Chat failed.');}
+    });
+  }catch(e){toast('Chat failed.');}
+}
+function showDirectChatOverlay(threadId, memoryId){
+  try{
+    var old=document.getElementById('directChatOverlay');if(old)old.remove();
+    var overlay=document.createElement('div');
+    overlay.id='directChatOverlay';
+    overlay.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);';
+    var card=document.createElement('div');
+    card.style.cssText='background:#1a1428;border:2px solid #22d3ee;border-radius:16px;padding:20px;max-width:500px;width:90%;max-height:80vh;display:flex;flex-direction:column;color:#fff;';
+    card.innerHTML='<h3 style="margin:0 0 12px;color:#22d3ee;">Direct Chat</h3>'
+      +'<div id="directChatMsgs" style="flex:1;overflow-y:auto;max-height:300px;margin-bottom:12px;display:flex;flex-direction:column;gap:8px;"></div>'
+      +'<div style="display:flex;gap:8px;">'
+      +'<input id="directChatInput" placeholder="Type a message..." style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:#fff;font-size:13px;">'
+      +'<button onclick="sendDirectChatMsg(\''+threadId+'\',\''+(memoryId||'')+'\')" style="padding:8px 14px;background:#22d3ee;color:#000;border:0;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;">Send</button>'
+      +'</div>'
+      +'<button onclick="document.getElementById(\'directChatOverlay\').remove()" style="margin-top:12px;padding:8px 16px;background:rgba(255,255,255,.1);color:#fff;border:0;border-radius:8px;cursor:pointer;font-size:12px;">Close</button>';
+    overlay.appendChild(card);
+    overlay.onclick=function(e){if(e.target===overlay)overlay.remove();};
+    document.body.appendChild(overlay);
+    // Load messages
+    loadDirectChatMessages(threadId);
+    // Subscribe to new messages
+    if(window.EtieCloud&&window.EtieCloud.subscribeThread){
+      if(_directChatUnsub)try{_directChatUnsub();}catch(e){}
+      _directChatUnsub=window.EtieCloud.subscribeThread(threadId, function(row){
+        try{if(row)appendDirectChatMsg(row);}catch(e){}
+      });
+    }
+  }catch(e){console.error('showDirectChatOverlay error:',e);toast('Chat failed.');}
+}
+function loadDirectChatMessages(threadId){
+  try{
+    if(!window.EtieCloud||!window.EtieCloud.fetchThreadMessages)return;
+    window.EtieCloud.fetchThreadMessages(threadId, function(msgs){
+      try{
+        var box=document.getElementById('directChatMsgs');
+        if(!box)return;
+        box.innerHTML='';
+        if(!msgs||!msgs.length){box.innerHTML='<div class="muted small">No messages yet.</div>';return;}
+        msgs.forEach(function(m){appendDirectChatMsg(m);});
+        box.scrollTop=box.scrollHeight;
+      }catch(e){}
+    });
+  }catch(e){}
+}
+function appendDirectChatMsg(m){
+  try{
+    var box=document.getElementById('directChatMsgs');
+    if(!box)return;
+    // Remove "no messages" placeholder
+    var placeholder=box.querySelector('.muted');if(placeholder)placeholder.remove();
+    var div=document.createElement('div');
+    var mine=m.sender_id===myUid();
+    div.style.cssText='padding:8px 12px;border-radius:10px;max-width:80%;'+(mine?'margin-left:auto;background:rgba(34,211,238,.15);':'background:rgba(255,255,255,.08);');
+    var who=document.createElement('div');
+    who.style.cssText='font-size:10px;color:rgba(255,255,255,.5);margin-bottom:2px;';
+    who.textContent=(m.sender_nick||'Someone')+(m.memory_id?' 📎':'');
+    div.appendChild(who);
+    var text=document.createElement('div');
+    text.style.cssText='font-size:13px;color:#fff;';
+    text.textContent=m.text||'';
+    div.appendChild(text);
+    // If memory attached, show thumbnail
+    if(m.memory_id){
+      var thumb=document.createElement('div');
+      thumb.style.cssText='margin-top:4px;padding:6px;background:rgba(255,255,255,.05);border-radius:6px;font-size:11px;color:rgba(255,255,255,.6);';
+      thumb.textContent='📎 Memory attached';
+      div.appendChild(thumb);
+    }
+    box.appendChild(div);
+    box.scrollTop=box.scrollHeight;
+  }catch(e){}
+}
+function sendDirectChatMsg(threadId, memoryId){
+  try{
+    var input=document.getElementById('directChatInput');
+    if(!input)return;
+    var text=input.value.trim();
+    if(!text)return;
+    input.value='';
+    // Send with memory_id only for the first message
+    var mid=memoryId||null;
+    if(window.EtieCloud&&window.EtieCloud.sendThreadMessage){
+      window.EtieCloud.sendThreadMessage(threadId, text, mid, function(ok){
+        try{
+          if(ok){
+            // Append optimistically
+            appendDirectChatMsg({sender_id:myUid(),sender_nick:hookNick(),text:text,memory_id:mid,created_at:new Date().toISOString()});
+          }else{toast('Send failed.');}
+        }catch(e){}
+      });
+    }
+    // Clear memory_id after first send so it's not attached to every message
+    // (handled by not passing it again)
+  }catch(e){}
 }
 function loadMemTagSection(spot){
   try{
@@ -3739,6 +3890,38 @@ function renderHookChatList(){
     // Show all pins user is a member of (including vanished/archived) so chat stays accessible
     var mine=(ETIE.mapPins||[]).filter(function(p){return p&&(p.members||[]).some(function(m){return m.nick===me;});});
     if(!mine.length){var e=document.createElement('div');e.className='muted small';e.textContent='No hook chats yet — connect on a pin to start one.';box.appendChild(e);return;}
+    // Direct chat threads
+    try{
+      if(window.EtieCloud&&window.EtieCloud.fetchMyThreads){
+        window.EtieCloud.fetchMyThreads(function(threads){
+          try{
+            if(!threads||!threads.length)return;
+            var directHeader=document.createElement('div');
+            directHeader.className='eyebrow';
+            directHeader.style.marginTop='16px';
+            directHeader.textContent='Direct chats';
+            box.appendChild(directHeader);
+            threads.forEach(function(th){
+              try{
+                if(th.context_type!=='direct')return;
+                var row=document.createElement('div');
+                row.className='list-item';
+                row.style.cursor='pointer';
+                row.style.borderLeft='3px solid #22d3ee';
+                row.innerHTML='<div><strong></strong><br><span class="muted small"></span></div><span class="status" style="background:rgba(34,211,238,.15);color:#22d3ee;">Direct</span>';
+                row.querySelector('strong').textContent='Direct chat';
+                row.querySelector('span.muted').textContent='Tap to open';
+                row.onclick=function(){
+                  showDirectChatOverlay(th.id, null);
+                };
+                box.appendChild(row);
+              }catch(e){}
+            });
+          }catch(e){}
+        });
+      }
+    }catch(e){}
+
     // People list (accepted connections)
     try{
       if(window.EtieCloud&&window.EtieCloud.fetchConnections){
@@ -3779,6 +3962,11 @@ function renderHookChatList(){
         row.querySelector('strong').textContent=mapCatEmoji(p.category)+' '+getRegionFlag(p)+' '+(p.title||p.location||'Hook')+lifecycleLabel;
         row.querySelector('span.muted').textContent=last?((last.nick||'')+': '+(last.text||'').slice(0,60)):'Tap to open chat';
         row.querySelector('span.status').textContent=groupBadgeText(p);
+        // Add Hangout label
+        var hangoutLabel=document.createElement('span');
+        hangoutLabel.style.cssText='font-size:10px;padding:2px 6px;border-radius:4px;background:rgba(251,191,36,.15);color:#fbbf24;margin-left:6px;';
+        hangoutLabel.textContent='Hangout';
+        row.querySelector('div').appendChild(hangoutLabel);
         (function(pin){
           row.onclick=function(){showScreen('map');openChatDrawer(pin.id);};
           // expired hangouts get their own delete: leave the hangout (members + chat cleared)

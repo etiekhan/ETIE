@@ -174,6 +174,7 @@ alter table public.etie_messages add column if not exists memory_id uuid referen
 
 -- 8. REPLACE etie_messages RLS with participant-based policies
 drop policy if exists "messages read auth" on public.etie_messages;
+drop policy if exists "messages read participant" on public.etie_messages;
 create policy "messages read participant" on public.etie_messages
   for select using (
     thread_id is null or
@@ -181,6 +182,7 @@ create policy "messages read participant" on public.etie_messages
   );
 
 drop policy if exists "messages insert auth" on public.etie_messages;
+drop policy if exists "messages insert participant" on public.etie_messages;
 create policy "messages insert participant" on public.etie_messages
   for insert with check (
     auth.uid() = sender_id and

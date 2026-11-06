@@ -438,6 +438,30 @@ function refreshAdminLive(){
       }
       if(hint) hint.textContent='Live · '+new Date().toLocaleTimeString();
     });
+  // Fetch reports
+  try{
+    if(window.EtieCloud&&window.EtieCloud.fetchReports){
+      window.EtieCloud.fetchReports(function(reps){
+        try{
+          var rc=document.getElementById('adminReportsCount');if(rc)rc.textContent=reps?reps.length:'0';
+          var rl=document.getElementById('adminReportsList');
+          if(rl){
+            rl.innerHTML='';
+            if(!reps||!reps.length){rl.innerHTML='<div class="muted small">No pending reports.</div>';return;}
+            reps.forEach(function(r){
+              var row=document.createElement('div');
+              row.className='list-item';
+              row.innerHTML='<div><strong></strong><br><span class="muted small"></span></div><span class="status"></span>';
+              row.querySelector('strong').textContent='Report: '+(r.reason||'unspecified');
+              row.querySelector('span.muted').textContent=new Date(r.created_at).toLocaleString();
+              row.querySelector('span.status').textContent=r.status;
+              rl.appendChild(row);
+            });
+          }
+        }catch(e){}
+      });
+    }
+  }catch(e){}
   }catch(e){ try{ var h=document.getElementById('adminLiveHint'); if(h) h.textContent='Live refresh failed.'; }catch(e2){}}
 }
 
@@ -902,10 +926,10 @@ function groupMemoriesIntoSpots(logs){
           if(d<=MEMORY_GROUP_RADIUS_M && d<bestDist){bestDist=d;bestIdx=i;}
         }
         if(bestIdx>=0){
-          groups[bestIdx].spot.photos.push({url:l.photo_url,caption:l.title||l.location||'',timestamp:l.taken_at||l.created_at||'',logId:l.id,owner:l.nickname||'Someone'});
+          groups[bestIdx].spot.photos.push({url:l.photo_url,caption:l.title||l.location||'',timestamp:l.taken_at||l.created_at||'',logId:l.id,owner:l.nickname||'Someone',ownerId:l.user_id});
         }else{
           var key=l.lat.toFixed(4)+','+l.lng.toFixed(4);
-          groups.push({anchor:{lat:l.lat,lng:l.lng},spot:{id:'spot-'+key,name:l.location||l.title||'Hangout',coords:{lat:l.lat,lng:l.lng},owner:l.nickname||'Someone',photos:[{url:l.photo_url,caption:l.title||l.location||'',timestamp:l.taken_at||l.created_at||'',logId:l.id,owner:l.nickname||'Someone'}]}});
+          groups.push({anchor:{lat:l.lat,lng:l.lng},spot:{id:'spot-'+key,name:l.location||l.title||'Hangout',coords:{lat:l.lat,lng:l.lng},owner:l.nickname||'Someone',ownerId:l.user_id,photos:[{url:l.photo_url,caption:l.title||l.location||'',timestamp:l.taken_at||l.created_at||'',logId:l.id,owner:l.nickname||'Someone',ownerId:l.user_id}]}});
         }
       }catch(e){}
     });
@@ -983,6 +1007,11 @@ function openMemorySpotCard(spot){
     });
     // Message privately button (owner + tagged+approved)
     html+='<div style="margin-top:12px;"><button onclick="openDirectChatFromMemory(\''+spot.photos[0].logId+'\',\''+(spot.owner||'')+'\')" style="padding:8px 16px;background:rgba(34,211,238,.15);border:1px solid rgba(34,211,238,.3);color:#22d3ee;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;">💬 Message privately</button></div>';
+    // Safety buttons (report + block)
+    html+='<div style="margin-top:12px;display:flex;gap:8px;">'
+      +'<button onclick="reportMemoryPrompt(\''+spot.photos[0].logId+'\')" style="padding:6px 12px;background:rgba(255,60,60,.1);border:1px solid rgba(255,60,60,.2);color:#f87171;border-radius:6px;cursor:pointer;font-size:12px;">🚩 Report</button>'
+      +'<button onclick="blockMemoryOwner(\''+(spot.ownerId||'')+'\')" style="padding:6px 12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.6);border-radius:6px;cursor:pointer;font-size:12px;">🚫 Block</button>'
+      +'</div>';
     // Tag picker section
     html+='<div id="memTagSection" style="margin-top:16px;padding-top:12px;border-top:1px solid rgba(255,255,255,.1);"></div>';
     html+='<button onclick="document.getElementById(&quot;memCardOverlay&quot;).remove()" style="margin-top:12px;padding:10px 20px;background:#f43f5e;color:#fff;border:0;border-radius:8px;cursor:pointer;">Close</button>';
@@ -995,6 +1024,28 @@ function openMemorySpotCard(spot){
     // Load tag section async (after DOM is ready)
     try{loadMemTagSection(spot);}catch(e){console.error('tag section load error:',e);}
   }catch(e){console.error('openMemorySpotCard error:',e);}
+}
+function reportMemoryPrompt(memoryId){
+  try{
+    var reason=prompt('Why are you reporting this memory? (spam, inappropriate, etc.)');
+    if(!reason)return;
+    if(window.EtieCloud&&window.EtieCloud.reportMemory){
+      window.EtieCloud.reportMemory(memoryId, reason, function(ok){
+        try{toast(ok?'Report submitted.':'Report failed.');}catch(e){}
+      });
+    }
+  }catch(e){}
+}
+function blockMemoryOwner(ownerId){
+  try{
+    if(!ownerId){toast('Cannot block: no user ID.');return;}
+    if(!confirm('Block this user? You won\'t see their memories or be able to message them.'))return;
+    if(window.EtieCloud&&window.EtieCloud.blockUser){
+      window.EtieCloud.blockUser(ownerId, function(ok){
+        try{toast(ok?'User blocked.':'Block failed.');}catch(e){}
+      });
+    }
+  }catch(e){}
 }
 var _directChatThreadId=null;
 var _directChatUnsub=null;

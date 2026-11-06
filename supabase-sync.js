@@ -1336,6 +1336,40 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
     }catch(e){return function(){};}
   }
 
+  // ---- Safety (M5) ----
+  function reportMemory(memoryId, reason, cb){
+    try{
+      if(!client||!session){if(cb)cb(false);return;}
+      client.from('reports').insert({reporter_id:session.user.id, memory_id:memoryId, reason:reason||'unspecified'}).then(function(r){
+        try{if(cb)cb(!r||!r.error);}catch(e){if(cb)cb(false);}
+      }).catch(function(){if(cb)cb(false);});
+    }catch(e){if(cb)cb(false);}
+  }
+  function blockUser(userId, cb){
+    try{
+      if(!client||!session||!userId){if(cb)cb(false);return;}
+      client.from('blocks').insert({blocker_id:session.user.id, blocked_id:userId}).then(function(r){
+        try{if(cb)cb(!r||!r.error);}catch(e){if(cb)cb(false);}
+      }).catch(function(){if(cb)cb(false);});
+    }catch(e){if(cb)cb(false);}
+  }
+  function unblockUser(userId, cb){
+    try{
+      if(!client||!session||!userId){if(cb)cb(false);return;}
+      client.from('blocks').delete().eq('blocker_id',session.user.id).eq('blocked_id',userId).then(function(r){
+        try{if(cb)cb(!r||!r.error);}catch(e){if(cb)cb(false);}
+      }).catch(function(){if(cb)cb(false);});
+    }catch(e){if(cb)cb(false);}
+  }
+  function fetchReports(cb){
+    try{
+      if(!client||!session||typeof cb!=='function'){cb([]);return;}
+      client.from('reports').select('*').eq('status','pending').order('created_at',{ascending:false}).limit(50).then(function(r){
+        try{cb(r&&!r.error?r.data||[]:[]);}catch(e){cb([]);}
+      }).catch(function(){cb([]);});
+    }catch(e){try{cb([]);}catch(_){}}
+  }
+
   // TODO(OAuth): Set up custom domain (e.g. auth.etie.app) in Supabase OAuth settings
 // to replace the raw supabase.co redirect URL on Google login.
 // Configure in Supabase Dashboard > Authentication > URL Configuration > Site URL & Redirect URLs.
@@ -1354,6 +1388,7 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
     acceptHookConnection:acceptHookConnection,
     getOrCreateDirectThread:getOrCreateDirectThread, fetchThreadMessages:fetchThreadMessages,
     sendThreadMessage:sendThreadMessage, fetchMyThreads:fetchMyThreads, subscribeThread:subscribeThread,
+    reportMemory:reportMemory, blockUser:blockUser, unblockUser:unblockUser, fetchReports:fetchReports,
     pushSidequest:pushSidequest, fetchSidequest:fetchSidequest, clearSidequest:clearSidequest,
     syncProfile:syncProfile, pushSharedRequest:pushSharedRequest, pushSharedMessage:pushSharedMessage, pushSharedMeetup:pushSharedMeetup,
     pushSharedReview:pushSharedReview, pushSharedReport:pushSharedReport,

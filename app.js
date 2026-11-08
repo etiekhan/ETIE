@@ -1020,7 +1020,7 @@ function openMemorySpotCard(spot){
     header.style.cssText='display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;flex-shrink:0;';
     var headerLeft=document.createElement('div');
     var label=document.createElement('div');
-    label.style.cssText='font-size:10px;text-transform:uppercase;letter-spacing:.15em;color:rgba(255,255,255,.5);font-weight:800;margin-bottom:4px;';
+    label.style.cssText='font-size:10px;text-transform:uppercase;letter-spacing:.15em;color:rgba(255,255,255,.6);font-weight:800;margin-bottom:4px;';
     label.textContent='MEMORIES HERE';
     headerLeft.appendChild(label);
     var title=document.createElement('div');
@@ -1028,7 +1028,7 @@ function openMemorySpotCard(spot){
     title.textContent=spot.name||'Hangout Memory';
     headerLeft.appendChild(title);
     var sub=document.createElement('div');
-    sub.style.cssText='font-size:12px;color:rgba(255,255,255,.5);';
+    sub.style.cssText='font-size:12px;color:rgba(255,255,255,.6);';
     sub.textContent=spot.photos.length+' memor'+(spot.photos.length===1?'y':'ies')+' \u00b7 '+peopleCount+' '+(peopleCount===1?'person':'people');
     headerLeft.appendChild(sub);
     header.appendChild(headerLeft);
@@ -1075,7 +1075,7 @@ function openMemorySpotCard(spot){
       });
       sectionOrder.forEach(function(sec){
         var h=document.createElement('div');
-        h.style.cssText='font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,.5);font-weight:700;margin:12px 0 6px;';
+        h.style.cssText='font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,.6);font-weight:700;margin:12px 0 6px;';
         h.textContent=sec;
         gridWrap.appendChild(h);
         var grid=document.createElement('div');
@@ -1179,7 +1179,7 @@ function makeTile(photo, idx, spot){
 
   // Tag button (small, top-left)
   var tagBtn=document.createElement('button');
-  tagBtn.style.cssText='position:absolute;top:6px;left:6px;padding:2px 6px;background:rgba(244,63,94,.7);border:0;border-radius:4px;color:#fff;font-size:9px;font-weight:700;cursor:pointer;opacity:0;transition:opacity .2s;';
+  tagBtn.style.cssText='position:absolute;top:6px;left:6px;padding:4px 8px;min-height:24px;background:rgba(244,63,94,.7);border:0;border-radius:4px;color:#fff;font-size:9px;font-weight:700;cursor:pointer;opacity:0;transition:opacity .2s;';
   tagBtn.textContent='Tag';
   tagBtn.setAttribute('aria-label','Tag people in this memory');
   tagBtn.onclick=function(e){e.stopPropagation();openMemorySingleView(idx, spot);};
@@ -1294,7 +1294,7 @@ function openMemorySingleView(idx, spot){
           var approved=tags.filter(function(t){return t.status==='approved';});
           if(!approved.length)return;
           var withLabel=document.createElement('div');
-          withLabel.style.cssText='font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,.5);font-weight:700;margin-top:4px;';
+          withLabel.style.cssText='font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,.6);font-weight:700;margin-top:4px;';
           withLabel.textContent='With:';
           details.appendChild(withLabel);
           var chips=document.createElement('div');
@@ -1403,9 +1403,9 @@ function loadMemTagSection(spot, photoIdx){
       +'<input id="memTagInput" placeholder="Or type a name" style="width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:#fff;font-size:13px;box-sizing:border-box;" oninput="suggestTagUsers(this.value,\''+memoryId+'\')">'
       +'<div id="memTagSuggestions" style="position:absolute;top:100%;left:0;right:0;background:rgba(20,16,28,.98);border:1px solid rgba(255,255,255,.16);border-radius:8px;margin-top:2px;max-height:160px;overflow-y:auto;z-index:10;display:none;"></div>'
       +'</div>'
-      +'<button onclick="submitMemTag(\''+memoryId+'\')" style="padding:8px 14px;background:#f43f5e;color:#fff;border:0;border-radius:8px;cursor:pointer;font-size:13px;">Tag</button>'
+      +'<button onclick="submitMemTag(\''+memoryId+'\')" style="padding:8px 14px;min-height:44px;background:#f43f5e;color:#fff;border:0;border-radius:8px;cursor:pointer;font-size:13px;">Tag</button>'
       +'</div>'
-      +'<div id="memTagStatus" style="font-size:12px;color:rgba(255,255,255,.5);"></div>'
+      +'<div id="memTagStatus" style="font-size:12px;color:rgba(255,255,255,.6);"></div>'
       +'<div id="memTagList" style="margin-top:8px;"></div>';
     // Load existing tags
     if(window.EtieCloud&&window.EtieCloud.fetchMemoryTags){
@@ -1423,7 +1423,7 @@ function loadMemTagSection(spot, photoIdx){
                 var color=t.status==='approved'?'#4ade80':t.status==='pending'?'#fbbf24':'#f87171';
                 var name=(nameMap&&nameMap[t.tagged_user_id])||t.tagged_user_id.substring(0,8)+'…';
                 var cancelBtn=t.status==='pending'
-                  ? ' <button onclick="cancelPendingTag(\''+memoryId+'\',\''+t.tagged_user_id+'\')" style="margin-left:6px;padding:1px 6px;background:rgba(255,60,60,.15);border:1px solid rgba(255,60,60,.3);color:#f87171;border-radius:3px;cursor:pointer;font-size:10px;" title="Cancel tag">\u2715</button>'
+                  ? ' <button onclick="cancelPendingTag(\''+memoryId+'\',\''+t.tagged_user_id+'\')" style="margin-left:6px;padding:4px 8px;min-height:32px;background:rgba(255,60,60,.15);border:1px solid rgba(255,60,60,.3);color:#f87171;border-radius:3px;cursor:pointer;font-size:10px;" title="Cancel tag" aria-label="Cancel tag">\u2715</button>'
                   : '';
                 return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.06);">'
                   +'<span style="font-size:13px;color:#fff;">'+name+cancelBtn+'</span>'
@@ -1461,7 +1461,7 @@ function loadMemTagSection(spot, photoIdx){
                 try{
                   var name=(nameMap&&nameMap[c.user_id])||c.user_id.substring(0,8)+'...';
                   var btn=document.createElement('button');
-                  btn.style.cssText='padding:4px 10px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:#fff;border-radius:6px;cursor:pointer;font-size:12px;';
+                  btn.style.cssText='padding:6px 12px;min-height:36px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:#fff;border-radius:6px;cursor:pointer;font-size:12px;';
                   btn.textContent=name;
                   btn.onclick=function(){
                     if(status)status.textContent='Tagging '+name+'...';
@@ -1651,7 +1651,7 @@ function renderMemoryFeed(spot){
         }
         if(photo.timestamp){
           var date=document.createElement('div');
-          date.style.cssText='font-size:11px;color:rgba(255,255,255,.5);';
+          date.style.cssText='font-size:11px;color:rgba(255,255,255,.6);';
           try{date.textContent=new Date(photo.timestamp).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});}catch(e){date.textContent=photo.timestamp;}
           left.appendChild(date);
         }
@@ -1664,7 +1664,8 @@ function renderMemoryFeed(spot){
         caption.appendChild(left);
         var delBtn=document.createElement('button');
         delBtn.textContent='🗑';
-        delBtn.style.cssText='background:rgba(255,60,60,.15);border:1px solid rgba(255,60,60,.3);color:#ff6b6b;border-radius:8px;padding:4px 8px;font-size:14px;cursor:pointer;flex-shrink:0;min-height:32px;';
+        delBtn.setAttribute('aria-label','Delete photo');
+        delBtn.style.cssText='background:rgba(255,60,60,.15);border:1px solid rgba(255,60,60,.3);color:#ff6b6b;border-radius:8px;padding:6px 10px;font-size:14px;cursor:pointer;flex-shrink:0;min-height:44px;';
         delBtn.onclick=function(){
           if(!confirm('Delete this photo?'))return;
           deleteMemoryPhoto(photo, spot);
@@ -3047,7 +3048,7 @@ function checkMemoryEmptyState(){
           var empty=document.getElementById('mapEmptyBanner');
           if(empty){
             empty.classList.remove('hidden');
-            empty.innerHTML='No memories yet. Add your first. <button onclick="openStandaloneLog()" style="margin-left:8px;padding:6px 14px;background:#f43f5e;color:#fff;border:0;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;">+ Add</button>';
+            empty.innerHTML='No memories yet. Add your first. <button onclick="openStandaloneLog()" style="margin-left:8px;padding:8px 16px;min-height:44px;background:#f43f5e;color:#fff;border:0;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;">+ Add</button>';
           }
         }else{
           var empty=document.getElementById('mapEmptyBanner');

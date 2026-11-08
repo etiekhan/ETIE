@@ -294,7 +294,7 @@ function showScreen(id){
       if(id==='map'){mapEl.style.pointerEvents='';}
       else{mapEl.style.pointerEvents='none';}
     }
-    if(id==='profile'){renderLiteProfile();}
+    if(id==='profile'){renderLiteProfile();try{addQuestionArchiveLink();}catch(e){}}
     if(id==='messages'){try{renderHookChatList();}catch(e){}}
     if(id==='map'){try{initHKMap();if(window.maplibregl&&_map){setTimeout(function(){try{_map.resize();}catch(e){}},120);}renderMapPins();}catch(e){}}
   }catch(e){}
@@ -515,6 +515,24 @@ function renderHeaderProfile(){
     if(nm) nm.textContent=(flag?flag+' ':'')+(name||'Traveller');
   }catch(e){}
 }
+function addQuestionArchiveLink(){
+  try{
+    var view=document.getElementById('profileDrawerView');
+    if(!view)return;
+    if(document.getElementById('qArchiveLink'))return;
+    var link=document.createElement('button');
+    link.id='qArchiveLink';
+    link.className='secondary';
+    link.style.cssText='margin-top:16px;padding:10px 16px;width:100%;text-align:left;min-height:44px;';
+    link.textContent='\ud83d\udcac Question Exchanges';
+    link.onclick=function(){openQuestionArchiveFromProfile();};
+    view.appendChild(link);
+  }catch(e){}
+}
+function openQuestionArchiveFromProfile(){
+  try{closeProfileDrawer();openQuestionArchive();}catch(e){}
+}
+
 function renderLiteProfile(){
   try{
     var signed=false; try{signed=isSignedIn();}catch(e){}
@@ -1199,6 +1217,203 @@ function checkQuestionGate(pinId){
     }
     return true;
   }catch(e){return true;}
+}
+
+// ===== Q3: Reveal and Archive =====
+var _questionArchiveOpen=false;
+var _hiddenExchanges={}; // question_id -> true (user hid this exchange)
+
+function openQuestionArchive(){
+  try{
+    var old=document.getElementById('questionArchiveOverlay');if(old)old.remove();
+    var overlay=document.createElement('div');
+    overlay.id='questionArchiveOverlay';
+    overlay.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);';
+    var card=document.createElement('div');
+    card.style.cssText='background:#1a1428;border:1px solid rgba(255,255,255,.14);border-radius:16px;padding:20px;max-width:640px;width:90%;max-height:85vh;overflow-y:auto;color:#fff;';
+    card.innerHTML='<h3 style="margin:0 0 16px;color:#f43f5e;">Question Exchanges</h3><div id="questionArchiveList"><div class="muted small">Loading...</div></div>'
+      +'<button onclick="document.getElementById(\'questionArchiveOverlay\').remove()" style="margin-top:16px;padding:8px 16px;background:rgba(255,255,255,.08);color:#fff;border:0;border-radius:8px;cursor:pointer;font-size:12px;">Close</button>';
+    overlay.appendChild(card);
+    overlay.onclick=function(e){if(e.target===overlay)overlay.remove();};
+    document.body.appendChild(overlay);
+    loadQuestionArchive();
+  }catch(e){}
+}
+
+function loadQuestionArchive(){
+  try{
+    var list=document.getElementById('questionArchiveList');
+    if(!list)return;
+    if(!window.EtieCloud||!window.EtieCloud.fetchMyQuestions){list.innerHTML='<div class="muted small">Cloud not ready.</div>';return;}
+    window.EtieCloud.fetchMyQuestions(function(questions){
+      try{
+        if(!questions||!questions.length){list.innerHTML='<div class="muted small">No question exchanges yet.</div>';return;}
+        // Filter out hidden exchanges
+        var visible=questions.filter(function(q){return !_hiddenExchanges[q.id];});
+        if(!visible.length){list.innerHTML='<div class="muted small">All exchanges hidden.</div>';return;}
+        // Group by person
+        var myId=null;try{myId=myUid();}catch(e){}
+        var byPerson={};
+        visible.forEach(function(q){
+          var other=q.asker_id===myId?q.answerer_id:q.asker_id;
+          if(!byPerson[other])byPerson[other]=[];
+          byPerson[other].push(q);
+        });
+        // Fetch display names
+        var otherIds=Object.keys(byPerson);
+        var renderArchive=function(nameMap){
+          try{
+            list.innerHTML='';
+            otherIds.forEach(function(otherId){
+              var personName=(nameMap&&nameMap[otherId])||otherId.substring(0,8)+'...';
+              var header=document.createElement('div');
+              header.style.cssText='font-size:14px;font-weight:700;color:#fff;margin-top:16px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid rgba(255,255,255,.1);';
+              header.textContent=personName;
+              list.appendChild(header);
+              byPerson[otherId].forEach(function(q){
+                var row=document.createElement('div');
+                row.style.cssText='padding:10px;background:rgba(255,255,255,.05);border-radius:8px;margin-bottom:8px;';
+                var now=Date.now();
+                var revealTime=q.reveal_at?new Date(q.reveal_at).getTime():0;
+                var isRevealed=now>=revealTime;
+                var state='';
+                var stateColor='';
+                if(q.status==='reported'){
+                  state='Reported';stateColor='#f87171';
+                }else if(!isRevealed){
+                  if(q.answerer_id===myId&&q.status==='asked'){
+                    state='Needs your answer';stateColor='#fbbf24';
+                  }else{
+                    state='Sealed';stateColor='#a78bfa';
+                  }
+                }else{
+                  if(q.status==='asked'){
+                    state='Your turn to ask';stateColor='#f43f5e';
+                  }else if(q.status==='answered'){
+                    state='Unlocked';stateColor='#4ade80';
+                  }
+                }
+                var hrsLeft=Math.max(0,Math.ceil((revealTime-now)/3600000));
+                row.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;">'
+                  +'<div style="flex:1;min-width:0;">'
+                  +'<div style="font-size:12px;color:#fff;margin-bottom:2px;">'+(q.question_text||'').substring(0,60)+(q.question_text&&q.question_text.length>60?'...':'')+'</div>'
+                  +'<div style="font-size:11px;color:rgba(255,255,255,.5);">'+(q.status==='answered'?'Answered':'Asked')+'</div>'
+                  +'</div>'
+                  +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">'
+                  +'<span style="font-size:11px;color:'+stateColor+';font-weight:700;">'+state+'</span>'
+                  +(state==='Sealed'?'<span style="font-size:10px;color:rgba(255,255,255,.5);">Unlocks in '+hrsLeft+'h</span>':'')
+                  +'<button onclick="openRevealScreen(\''+q.id+'\')" style="padding:4px 10px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:#fff;border-radius:4px;cursor:pointer;font-size:11px;">View</button>'
+                  +'<button onclick="hideExchange(\''+q.id+'\')" style="padding:2px 6px;background:transparent;border:0;color:rgba(255,255,255,.4);cursor:pointer;font-size:11px;" title="Remove from view">Hide</button>'
+                  +'</div>'
+                  +'</div>';
+                list.appendChild(row);
+              });
+            });
+          }catch(e){}
+        };
+        if(window.EtieCloud&&window.EtieCloud.fetchDisplayNames&&otherIds.length){
+          window.EtieCloud.fetchDisplayNames(otherIds, renderArchive);
+        }else{
+          renderArchive({});
+        }
+      }catch(e){list.innerHTML='<div class="muted small">Error loading.</div>';}
+    });
+  }catch(e){}
+}
+
+function readItBack(questionId){
+  try{
+    // Show the answerer's own version (they can always see their own)
+    if(window.EtieCloud&&window.EtieCloud.fetchMyVersions){
+      window.EtieCloud.fetchMyVersions(questionId, function(versions){
+        try{
+          var box=document.getElementById('revealContent');
+          if(!box)return;
+          if(!versions||!versions.length){box.innerHTML='<div class="muted small">No versions yet.</div>';return;}
+          var latest=versions[0];
+          box.innerHTML='<div style="margin-bottom:16px;">'
+            +'<div style="font-size:14px;color:#22d3ee;font-weight:700;margin-bottom:8px;">Your answer (as they\'ll see it)</div>'
+            +'<div style="font-size:15px;color:#fff;background:rgba(255,255,255,.05);padding:12px;border-radius:8px;">'+(latest.answer_text||'')+'</div>'
+            +'<div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:8px;">This is how your answer will appear after reveal. You can still edit until the reveal time.</div>'
+            +'</div>';
+        }catch(e){}
+      });
+    }
+  }catch(e){}
+}
+
+function hideExchange(questionId){
+  try{
+    _hiddenExchanges[questionId]=true;
+    loadQuestionArchive();
+    toast('Exchange hidden.');
+  }catch(e){}
+}
+
+function openRevealScreen(questionId){
+  try{
+    var old=document.getElementById('revealOverlay');if(old)old.remove();
+    var overlay=document.createElement('div');
+    overlay.id='revealOverlay';
+    overlay.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);';
+    var card=document.createElement('div');
+    card.style.cssText='background:#1a1428;border:1px solid rgba(255,255,255,.14);border-radius:16px;padding:20px;max-width:520px;width:90%;max-height:85vh;overflow-y:auto;color:#fff;';
+    card.innerHTML='<div id="revealContent"><div class="muted small">Loading...</div></div>'
+      +'<button onclick="document.getElementById(\'revealOverlay\').remove()" style="margin-top:16px;padding:8px 16px;background:rgba(255,255,255,.08);color:#fff;border:0;border-radius:8px;cursor:pointer;font-size:12px;">Close</button>';
+    overlay.appendChild(card);
+    overlay.onclick=function(e){if(e.target===overlay)overlay.remove();};
+    document.body.appendChild(overlay);
+    loadRevealContent(questionId);
+  }catch(e){}
+}
+
+function loadRevealContent(questionId){
+  try{
+    var box=document.getElementById('revealContent');
+    if(!box)return;
+    if(!window.EtieCloud||!window.EtieCloud.getLatestAnswer){box.innerHTML='<div class="muted small">Cloud not ready.</div>';return;}
+    window.EtieCloud.getLatestAnswer(questionId, function(res){
+      try{
+        if(!res||!res.ok){
+          if(res&&res.error==='sealed'){
+            var hrs=Math.max(0,Math.ceil((new Date(res.reveal_at).getTime()-Date.now())/3600000));
+            box.innerHTML='<div style="text-align:center;padding:20px;">'
+              +'<div style="font-size:16px;color:#a78bfa;margin-bottom:8px;">Answered. Unlocks in '+hrs+'h.</div>'
+              +'<div style="font-size:12px;color:rgba(255,255,255,.5);margin-bottom:12px;">The answer is sealed until the reveal time.</div>'
+              +'<div style="font-size:10px;color:rgba(255,255,255,.3);margin-top:8px;">We track edit counts and timing for quality. Never your words.</div>'
+              +'<button onclick="readItBack(\''+questionId+'\')" style="padding:8px 16px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:#fff;border-radius:8px;cursor:pointer;font-size:12px;">Read it back as they\'ll see it</button>'
+              +'</div>';
+          }else{
+            box.innerHTML='<div class="muted small">Cannot load: '+(res&&res.error||'unknown')+'</div>';
+          }
+          return;
+        }
+        // Revealed — show answer
+        box.innerHTML='<div style="margin-bottom:16px;">'
+          +'<div style="font-size:14px;color:#f43f5e;font-weight:700;margin-bottom:8px;">Question</div>'
+          +'<div style="font-size:15px;color:#fff;margin-bottom:16px;">'+(res.question_text||'(question not shown)')+'</div>'
+          +'<div style="font-size:14px;color:#22d3ee;font-weight:700;margin-bottom:8px;">Answer</div>'
+          +'<div style="font-size:15px;color:#fff;background:rgba(255,255,255,.05);padding:12px;border-radius:8px;">'+(res.answer_text||'(no answer yet)')+'</div>'
+          +'</div>'
+          +'<div style="margin-top:12px;"><button onclick="reportQuestionPrompt(\''+questionId+'\')" style="padding:6px 12px;background:rgba(255,60,60,.1);border:1px solid rgba(255,60,60,.2);color:#f87171;border-radius:6px;cursor:pointer;font-size:12px;">🚩 Report question</button></div>';
+      }catch(e){box.innerHTML='<div class="muted small">Error loading reveal.</div>';}
+    });
+  }catch(e){}
+}
+
+// Report a question (Q4 stub — will be expanded in Q4)
+function reportQuestionPrompt(questionId){
+  try{
+    if(!confirm('Report this question? It will be removed from your obligations and flagged for admin review.'))return;
+    if(window.EtieCloud&&window.EtieCloud.reportQuestion){
+      window.EtieCloud.reportQuestion(questionId, function(ok){
+        try{
+          if(ok){toast('Question reported.');loadQuestionArchive();}
+          else{toast('Report failed.');}
+        }catch(e){}
+      });
+    }
+  }catch(e){}
 }
 
 function openMemorySpotCard(spot){

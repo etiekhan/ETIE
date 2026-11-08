@@ -1122,7 +1122,7 @@ function cancelPendingTag(memoryId, taggedUserId){
     if(window.EtieCloud&&window.EtieCloud.cancelTag){
       window.EtieCloud.cancelTag(memoryId, taggedUserId, function(ok){
         try{
-          if(ok){toast('Tag cancelled.');loadMemTagSection(window._openMemorySpot);}
+          if(ok){toast('Tag cancelled.');loadMemTagSection(window._openMemorySpot, window._memSingleIdx||0);}
           else{toast('Cancel failed. (Needs cancel_tag RPC in Supabase)');}
         }catch(e){}
       });
@@ -1197,6 +1197,7 @@ function openMemorySingleView(idx, spot){
     if(idx<0)idx=0;
     if(idx>=photos.length)idx=photos.length-1;
     window._memSingleIdx=idx;
+    window._memSingleSpot=spot;
     var photo=photos[idx];
 
     var old=document.getElementById('memSingleOverlay');if(old)old.remove();
@@ -1362,12 +1363,14 @@ function openMemorySingleView(idx, spot){
     }
 
     overlay.appendChild(card);
+
+    if(isOwner){
+      try{loadMemTagSection(spot, idx);}catch(e){}
+    }
     overlay.onclick=function(e){if(e.target===overlay)overlay.remove();};
     document.body.appendChild(overlay);
 
-    if(isOwner){
-      try{loadMemTagSection(spot);}catch(e){}
-    }
+
 
     // Keyboard navigation
     var keyHandler=function(e){
@@ -1382,12 +1385,13 @@ function openMemorySingleView(idx, spot){
   }catch(e){console.error('openMemorySingleView error:',e);}
 }
 
-function loadMemTagSection(spot){
+function loadMemTagSection(spot, photoIdx){
   try{
     var section=document.getElementById('memTagSection');
     if(!section||!spot||!spot.photos||!spot.photos.length)return;
-    // Use the first photo's logId as the memory ID for tagging
-    var memoryId=spot.photos[0].logId;
+    if(photoIdx==null)photoIdx=0;
+    // Use the specific photo's logId as the memory ID for tagging
+    var memoryId=spot.photos[photoIdx].logId;
     if(!memoryId){section.innerHTML='<div style="font-size:12px;color:rgba(255,255,255,.4);">Tagging requires cloud sync.</div>';return;}
     // Check if current user is the owner
     var myId=null;try{myId=myUid();}catch(e){}
@@ -1466,7 +1470,7 @@ function loadMemTagSection(spot){
                         try{
                           if(res&&res.ok){
                             if(status)status.textContent='Tagged '+name+'! They\'ll see an invite.';
-                            loadMemTagSection(window._openMemorySpot);
+                            loadMemTagSection(window._openMemorySpot, window._memSingleIdx||0);
                           }else if(res&&res.error==='cooldown'){
                             var hrs=Math.ceil(res.hours_remaining||72);
                             if(status)status.textContent='You can tag '+name+' again in '+hrs+' hours.';
@@ -1523,7 +1527,7 @@ function suggestTagUsers(query, memoryId){
                   if(res&&res.ok){
                     if(status)status.textContent='Tagged '+u.name+'! They\'ll see an invite.';
                     var inp=document.getElementById('memTagInput');if(inp)inp.value='';
-                    loadMemTagSection(window._openMemorySpot);
+                    loadMemTagSection(window._openMemorySpot, window._memSingleIdx||0);
                   }else if(res&&res.error==='cooldown'){
                     var hrs=Math.ceil(res.hours_remaining||72);
                     if(status)status.textContent='You can tag '+u.name+' again in '+hrs+' hours.';
@@ -1562,7 +1566,7 @@ function submitMemTag(memoryId){
                   if(status)status.textContent='Tagged '+user.name+'! They\'ll see an invite.';
                   input.value='';
                   // Reload tag list
-                  loadMemTagSection(window._openMemorySpot);
+                  loadMemTagSection(window._openMemorySpot, window._memSingleIdx||0);
                 }else if(res&&res.error==='cooldown'){
                   var hrs=Math.ceil(res.hours_remaining||72);
                   if(status)status.textContent='You can tag '+user.name+' again in '+hrs+' hours.';

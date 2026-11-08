@@ -1375,8 +1375,9 @@ function loadMemTagSection(spot){
     var myId=null;try{myId=myUid();}catch(e){}
     // We'll show tag UI for the owner. For simplicity, show for all (owner check via RPC).
     section.innerHTML='<div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:8px;">Tag people in this memory</div>'
+      +'<div id="memTagConnections" style="margin-bottom:8px;"></div>'
       +'<div style="display:flex;gap:8px;margin-bottom:8px;">'
-      +'<input id="memTagInput" placeholder="Type exact name" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:#fff;font-size:13px;">'
+      +'<input id="memTagInput" placeholder="Or type exact name" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:#fff;font-size:13px;">'
       +'<button onclick="submitMemTag(\''+memoryId+'\')" style="padding:8px 14px;background:#f43f5e;color:#fff;border:0;border-radius:8px;cursor:pointer;font-size:13px;">Tag</button>'
       +'</div>'
       +'<div id="memTagStatus" style="font-size:12px;color:rgba(255,255,255,.5);"></div>'
@@ -1411,17 +1412,58 @@ function loadMemTagSection(spot){
         }catch(e){}
       });
     }
-    // Load connections for suggestions
+    // Load connections as clickable tag buttons
     if(window.EtieCloud&&window.EtieCloud.fetchConnections){
       window.EtieCloud.fetchConnections(function(conns){
         try{
-          var input=document.getElementById('memTagInput');
-          if(!input||!conns||!conns.length)return;
-          // Show connections as hint
-          var hint=document.createElement('div');
-          hint.style.cssText='font-size:11px;color:rgba(255,255,255,.4);margin-top:4px;';
-          hint.textContent='Connected: '+conns.map(function(c){return c.user_id.substring(0,6);}).join(', ');
-          section.appendChild(hint);
+          if(!conns||!conns.length)return;
+          var connBox=document.getElementById('memTagConnections');
+          if(!connBox)return;
+          var label=document.createElement('div');
+          label.style.cssText='font-size:11px;color:rgba(255,255,255,.4);margin-bottom:4px;';
+          label.textContent='Your connections (tap to tag):';
+          connBox.appendChild(label);
+          var btnRow=document.createElement('div');
+          btnRow.style.cssText='display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;';
+          // Fetch display names for connections
+          var connIds=conns.map(function(c){return c.user_id;}).filter(Boolean);
+          var renderConnButtons=function(nameMap){
+            try{
+              conns.forEach(function(c){
+                try{
+                  var name=(nameMap&&nameMap[c.user_id])||c.user_id.substring(0,8)+'...';
+                  var btn=document.createElement('button');
+                  btn.style.cssText='padding:4px 10px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:#fff;border-radius:6px;cursor:pointer;font-size:12px;';
+                  btn.textContent=name;
+                  btn.onclick=function(){
+                    if(status)status.textContent='Tagging '+name+'...';
+                    if(window.EtieCloud&&window.EtieCloud.tagUser){
+                      window.EtieCloud.tagUser(memoryId, c.user_id, function(res){
+                        try{
+                          if(res&&res.ok){
+                            if(status)status.textContent='Tagged '+name+'! They\'ll see an invite.';
+                            loadMemTagSection(window._openMemorySpot);
+                          }else if(res&&res.error==='cooldown'){
+                            var hrs=Math.ceil(res.hours_remaining||72);
+                            if(status)status.textContent='You can tag '+name+' again in '+hrs+' hours.';
+                          }else{
+                            if(status)status.textContent='Tag failed: '+(res&&res.error||'unknown');
+                          }
+                        }catch(e){}
+                      });
+                    }
+                  };
+                  btnRow.appendChild(btn);
+                }catch(e){}
+              });
+              connBox.appendChild(btnRow);
+            }catch(e){}
+          };
+          if(window.EtieCloud&&window.EtieCloud.fetchDisplayNames){
+            window.EtieCloud.fetchDisplayNames(connIds, renderConnButtons);
+          }else{
+            renderConnButtons({});
+          }
         }catch(e){}
       });
     }

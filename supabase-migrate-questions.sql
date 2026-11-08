@@ -34,11 +34,11 @@ create policy "hq insert asker" on public.hangout_questions
 -- No update/delete for users (append-only for statuses via function).
 drop policy if exists "hq update none" on public.hangout_questions;
 create policy "hq update none" on public.hangout_questions
-  for update with check (false);
+  for update using (false) with check (false);
 
 drop policy if exists "hq delete none" on public.hangout_questions;
 create policy "hq delete none" on public.hangout_questions
-  for delete with check (false);
+  for delete using (false);
 
 create index if not exists hq_hangout_idx on public.hangout_questions(hangout_id, status);
 create index if not exists hq_answerer_idx on public.hangout_questions(answerer_id, status);
@@ -69,11 +69,11 @@ create policy "hav insert author" on public.hangout_answer_versions
 -- No update or delete for users (append-only).
 drop policy if exists "hav update none" on public.hangout_answer_versions;
 create policy "hav update none" on public.hangout_answer_versions
-  for update with check (false);
+  for update using (false) with check (false);
 
 drop policy if exists "hav delete none" on public.hangout_answer_versions;
 create policy "hav delete none" on public.hangout_answer_versions
-  for delete with check (false);
+  for delete using (false);
 
 create index if not exists hav_question_idx on public.hangout_answer_versions(question_id, created_at desc);
 

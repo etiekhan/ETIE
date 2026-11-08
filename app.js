@@ -2402,6 +2402,8 @@ function addHomeCity(){
     if(dup){inp.value='';return;}
     arr.unshift(name);arr=arr.slice(0,5);
     ETIE.local.cities=arr;ETIE.local.city=arr[0];
+    // Clear old anchor so it gets re-geocoded
+    ETIE.anchor=null;
     inp.value='';saveState();renderHomeCityChips();
     // Geocode the new home city and set as anchor
     geocodeCity(name,function(lat,lng){
@@ -2410,6 +2412,9 @@ function addHomeCity(){
         saveState();
         // Re-center map if it exists
         try{if(_map)_map.flyTo({center:[lng,lat],zoom:HK_ZOOM,duration:1500});}catch(e){}
+        toast('Home city set to '+name);
+      }else{
+        toast('Could not find '+name+' on the map.');
       }
     });
     try{if(ETIE.profileComplete&&!isProfileComplete())ETIE.profileComplete=false;}catch(e){}
@@ -2664,7 +2669,14 @@ function geocodeCity(cityName, cb){
 }
 
 function getAnchor(){
-  try{if(ETIE.anchor&&ETIE.anchor.lat!=null)return ETIE.anchor;}catch(e){}
+  try{
+    var hc=homeCities()[0]||'Hong Kong';
+    // If anchor exists and matches current home city, use it
+    if(ETIE.anchor&&ETIE.anchor.lat!=null&&ETIE.anchor.label===hc)return ETIE.anchor;
+    // If home city is Hong Kong, use HK center
+    if(hc==='Hong Kong')return {lat:HK_CENTER[0],lng:HK_CENTER[1],label:'Hong Kong'};
+    // Otherwise, anchor is stale or missing — will be geocoded
+  }catch(e){}
   return {lat:HK_CENTER[0],lng:HK_CENTER[1],label:'Hong Kong'};
 }
 function anchorBounds(a){
@@ -2770,10 +2782,10 @@ function initHKMap(){
     if(_map||!window.maplibregl)return;
     var el=document.getElementById('hkMap');if(!el)return;
     var _anchor=getAnchor();
-    // If anchor is default HK but user has a different home city, geocode it
+    // Geocode home city if anchor doesn't match
     try{
       var hc=homeCities()[0];
-      if(hc && hc!=='Hong Kong' && (!_anchor || _anchor.label==='Hong Kong' || !_anchor.label)){
+      if(hc && hc!=='Hong Kong' && (!_anchor || _anchor.label!=='Hong Kong' && _anchor.label!==hc || _anchor.label==='Hong Kong')){
         geocodeCity(hc,function(lat,lng){
           if(lat!=null&&lng!=null){
             ETIE.anchor={lat:lat,lng:lng,label:hc};

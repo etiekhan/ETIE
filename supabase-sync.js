@@ -1418,6 +1418,59 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
     }catch(e){if(cb)cb(false);}
   }
 
+  // ---- Deep-question exchange (Q2) ----
+  function createQuestion(hangoutId, askerId, answererId, questionText, hangoutEnd, cb){
+    try{
+      if(!client||!session){if(cb)cb({ok:false,error:'not signed in'});return;}
+      client.rpc('create_question',{p_hangout_id:hangoutId, p_asker_id:askerId, p_answerer_id:answererId, p_question_text:questionText, p_hangout_end:hangoutEnd}).then(function(r){
+        try{if(cb)cb(r&&!r.error?r.data:{ok:false,error:r&&r.error?r.error.message:'rpc failed'});}catch(e){if(cb)cb({ok:false,error:e.message});}
+      }).catch(function(e){if(cb)cb({ok:false,error:e&&e.message});});
+    }catch(e){if(cb)cb({ok:false,error:e&&e.message});}
+  }
+  function insertAnswer(questionId, answerText, cb){
+    try{
+      if(!client||!session){if(cb)cb({ok:false,error:'not signed in'});return;}
+      client.rpc('insert_answer',{p_question_id:questionId, p_answer_text:answerText}).then(function(r){
+        try{if(cb)cb(r&&!r.error?r.data:{ok:false,error:r&&r.error?r.error.message:'rpc failed'});}catch(e){if(cb)cb({ok:false,error:e.message});}
+      }).catch(function(e){if(cb)cb({ok:false,error:e&&e.message});});
+    }catch(e){if(cb)cb({ok:false,error:e&&e.message});}
+  }
+  function getLatestAnswer(questionId, cb){
+    try{
+      if(!client||!session||typeof cb!=='function'){cb({ok:false,error:'not signed in'});return;}
+      client.rpc('get_latest_answer',{p_question_id:questionId}).then(function(r){
+        try{if(cb)cb(r&&!r.error?r.data:{ok:false,error:r&&r.error?r.error.message:'rpc failed'});}catch(e){if(cb)cb({ok:false,error:e.message});}
+      }).catch(function(e){if(cb)cb({ok:false,error:e&&e.message});});
+    }catch(e){if(cb)cb({ok:false,error:e&&e.message});}
+  }
+  function reportQuestion(questionId, cb){
+    try{
+      if(!client||!session){if(cb)cb(false);return;}
+      client.rpc('report_question',{p_question_id:questionId}).then(function(r){
+        try{if(cb)cb(!r||!r.error);}catch(e){if(cb)cb(false);}
+      }).catch(function(){if(cb)cb(false);});
+    }catch(e){if(cb)cb(false);}
+  }
+  function fetchMyQuestions(cb){
+    try{
+      if(!client||!session||typeof cb!=='function'){cb([]);return;}
+      var me=session.user.id;
+      client.from('hangout_questions').select('*').or('asker_id.eq.'+me+',answerer_id.eq.'+me)
+        .order('created_at',{ascending:false}).limit(100).then(function(r){
+          try{cb(r&&!r.error?r.data||[]:[]);}catch(e){cb([]);}
+        }).catch(function(){cb([]);});
+    }catch(e){try{cb([]);}catch(_){}}
+  }
+  function fetchMyVersions(questionId, cb){
+    try{
+      if(!client||!session||typeof cb!=='function'){cb([]);return;}
+      client.from('hangout_answer_versions').select('*').eq('question_id',questionId).eq('author_id',session.user.id)
+        .order('created_at',{ascending:false}).limit(50).then(function(r){
+          try{cb(r&&!r.error?r.data||[]:[]);}catch(e){cb([]);}
+        }).catch(function(){cb([]);});
+    }catch(e){try{cb([]);}catch(_){}}
+  }
+
   // TODO(OAuth): Set up custom domain (e.g. auth.etie.app) in Supabase OAuth settings
 // to replace the raw supabase.co redirect URL on Google login.
 // Configure in Supabase Dashboard > Authentication > URL Configuration > Site URL & Redirect URLs.
@@ -1440,6 +1493,8 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
     fetchDisplayNames:fetchDisplayNames,
     searchProfiles:searchProfiles,
     cancelTag:cancelTag,
+    createQuestion:createQuestion, insertAnswer:insertAnswer, getLatestAnswer:getLatestAnswer,
+    reportQuestion:reportQuestion, fetchMyQuestions:fetchMyQuestions, fetchMyVersions:fetchMyVersions,
     pushSidequest:pushSidequest, fetchSidequest:fetchSidequest, clearSidequest:clearSidequest,
     syncProfile:syncProfile, pushSharedRequest:pushSharedRequest, pushSharedMessage:pushSharedMessage, pushSharedMeetup:pushSharedMeetup,
     pushSharedReview:pushSharedReview, pushSharedReport:pushSharedReport,

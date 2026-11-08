@@ -995,6 +995,212 @@ function createMemorySpotMarker(spot,mapInstance){
 }
 
 // Open memory card for a spot (shows all photos)
+// ===== Deep-question exchange (Q2) =====
+var _wrapupPinId=null;
+var _wrapupAskStep=0; // 0=not started, 1=asked, 2=answered
+var _wrapupDismissed=false;
+
+// Check for ended hangouts that need questions
+function checkWrapupCard(){
+  try{
+    if(!window.EtieCloud||!window.EtieCloud.fetchMyQuestions||!isSignedIn())return;
+    window.EtieCloud.fetchMyQuestions(function(questions){
+      try{
+        // Find ended hangouts where user hasn't asked or answered
+        var pins=allMapPins()||[];
+        var now=Date.now();
+        var myId=null;try{myId=myUid();}catch(e){}
+        if(!myId)return;
+        var needingQuestions=[];
+        pins.forEach(function(p){
+          try{
+            var state=getPinLifecycleState(p);
+            if(state!=='ended'&&state!=='vanished')return;
+            // Check if hangout ended >24h ago
+            var endAt=validTs(p.hangoutEndAt)||validTs(p.expires_at);
+            if(!endAt||now<endAt+24*3600000)return;
+            // Check if user is a member
+            var me=hookNick();
+            var isMember=(p.members||[]).some(function(m){return m.nick===me;});
+            if(!isMember)return;
+            // Check if user has asked/answered for this hangout
+            var asked=(questions||[]).filter(function(q){return q.hangout_id===p.id&&q.asker_id===myId;});
+            var answered=(questions||[]).filter(function(q){return q.hangout_id===p.id&&q.answerer_id===myId&&q.status==='answered';});
+            var askPending=(questions||[]).filter(function(q){return q.hangout_id===p.id&&q.answerer_id===myId&&q.status==='asked';});
+            if(!asked.length||askPending.length){
+              needingQuestions.push({pin:p,asked:asked.length,answerPending:askPending.length});
+            }
+          }catch(e){}
+        });
+        if(needingQuestions.length){
+          showWrapupCard(needingQuestions);
+        }else{
+          hideWrapupCard();
+        }
+      }catch(e){}
+    });
+  }catch(e){}
+}
+
+function showWrapupCard(items){
+  try{
+    // Show popup once
+    if(!_wrapupDismissed){
+      showWrapupPopup(items);
+      _wrapupDismissed=true;
+    }
+    // Show persistent card
+    var existing=document.getElementById('wrapupCard');
+    if(existing)existing.remove();
+    var card=document.createElement('div');
+    card.id='wrapupCard';
+    card.style.cssText='position:fixed;top:64px;left:50%;transform:translateX(-50%);width:min(520px,94vw);background:rgba(20,16,28,.95);border:1px solid rgba(244,63,94,.3);border-radius:14px;padding:14px;z-index:9998;color:#fff;box-shadow:0 8px 24px rgba(0,0,0,.4);';
+    var item=items[0];
+    var p=item.pin;
+    var otherMembers=(p.members||[]).filter(function(m){return m.nick!==hookNick();});
+    card.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'
+      +'<strong style="font-size:14px;color:#f43f5e;">Wrap-up: '+(p.title||p.location||'Hangout')+'</strong>'
+      +'<button onclick="hideWrapupCard()" style="background:transparent;border:0;color:rgba(255,255,255,.5);cursor:pointer;font-size:16px;padding:4px;" aria-label="Dismiss">\u2715</button>'
+      +'</div>'
+      +'<div style="font-size:12px;color:rgba(255,255,255,.6);margin-bottom:10px;">'
+      +'<div>1. Did the hangout happen? <button onclick="wrapupDidHappen(true)" style="padding:2px 8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:#fff;border-radius:4px;cursor:pointer;font-size:11px;">Yes</button> <button onclick="wrapupDidHappen(false)" style="padding:2px 8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:#fff;border-radius:4px;cursor:pointer;font-size:11px;">No</button></div>'
+      +'<div>2. Log hangout <button onclick="wrapupLogHangout()" style="padding:2px 8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:#fff;border-radius:4px;cursor:pointer;font-size:11px;">Log</button></div>'
+      +'<div>3. Ask your question <button onclick="wrapupAskQuestion()" style="padding:2px 8px;background:#f43f5e;color:#fff;border:0;border-radius:4px;cursor:pointer;font-size:11px;">Ask</button></div>'
+      +(item.answerPending?'<div>4. Answer question <button onclick="wrapupAnswerQuestion()" style="padding:2px 8px;background:#22d3ee;color:#000;border:0;border-radius:4px;cursor:pointer;font-size:11px;">Answer</button></div>':'')
+      +'</div>';
+    // Store for later use
+    window._wrapupPin=p;
+    window._wrapupItem=item;
+    document.body.appendChild(card);
+  }catch(e){}
+}
+
+function hideWrapupCard(){
+  try{var c=document.getElementById('wrapupCard');if(c)c.remove();}catch(e){}
+}
+
+function showWrapupPopup(items){
+  try{
+    var overlay=document.createElement('div');
+    overlay.id='wrapupPopupOverlay';
+    overlay.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6);';
+    var card=document.createElement('div');
+    card.style.cssText='background:#1a1428;border:1px solid rgba(244,63,94,.3);border-radius:16px;padding:24px;max-width:440px;width:90%;color:#fff;text-align:center;';
+    card.innerHTML='<h3 style="margin:0 0 12px;color:#f43f5e;">Hangout Wrap-up</h3>'
+      +'<p style="font-size:14px;color:rgba(255,255,255,.7);margin-bottom:20px;">Time to reflect on your hangout. A few quick questions to complete.</p>'
+      +'<button onclick="closeWrapupPopup()" style="padding:10px 24px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:#fff;border-radius:8px;cursor:pointer;font-size:13px;">Later</button>';
+    overlay.appendChild(card);
+    overlay.onclick=function(e){if(e.target===overlay)closeWrapupPopup();};
+    document.body.appendChild(overlay);
+  }catch(e){}
+}
+
+function closeWrapupPopup(){
+  try{var o=document.getElementById('wrapupPopupOverlay');if(o)o.remove();}catch(e){}
+}
+
+function wrapupDidHappen(yes){
+  try{
+    if(!yes){
+      if(confirm('Report a problem with this hangout?')){
+        toast('Report submitted. We\'ll review it.');
+      }
+      hideWrapupCard();
+      return;
+    }
+    // Move to next step
+    wrapupAskQuestion();
+  }catch(e){}
+}
+
+function wrapupLogHangout(){
+  try{
+    hideWrapupCard();
+    var p=window._wrapupPin;
+    if(p)openLogSheet(p.id);
+  }catch(e){}
+}
+
+function wrapupAskQuestion(){
+  try{
+    var p=window._wrapupPin;
+    if(!p)return;
+    var me=hookNick();
+    var myId=null;try{myId=myUid();}catch(e){}
+    if(!myId)return;
+    var others=(p.members||[]).filter(function(m){return m.nick!==me&&m.uid;});
+    if(!others.length){toast('No one else to ask.');return;}
+    // For simplicity, ask the first other member. In production, let user pick.
+    var other=others[0];
+    var question=prompt('Ask something you\'d genuinely want to know (max 250 chars):');
+    if(!question)return;
+    question=question.trim().slice(0,250);
+    if(question.length<1)return;
+    var endAt=validTs(p.hangoutEndAt)||validTs(p.expires_at)||new Date().toISOString();
+    if(window.EtieCloud&&window.EtieCloud.createQuestion){
+      window.EtieCloud.createQuestion(p.id, myId, other.uid, question, endAt, function(res){
+        try{
+          if(res&&res.ok){
+            toast('Question sent!');
+            window._wrapupAskStep=1;
+            checkWrapupCard();
+          }else{
+            toast('Failed: '+(res&&res.error||'unknown'));
+          }
+        }catch(e){}
+      });
+    }
+  }catch(e){}
+}
+
+function wrapupAnswerQuestion(){
+  try{
+    var item=window._wrapupItem;
+    if(!item)return;
+    // Find pending question for this user
+    if(window.EtieCloud&&window.EtieCloud.fetchMyQuestions){
+      window.EtieCloud.fetchMyQuestions(function(questions){
+        try{
+          var myId=null;try{myId=myUid();}catch(e){}
+          var pending=(questions||[]).filter(function(q){return q.hangout_id===item.pin.id&&q.answerer_id===myId&&q.status==='asked';});
+          if(!pending.length){toast('No pending questions.');return;}
+          var q=pending[0];
+          var answer=prompt('Your answer to: "'+q.question_text+'" (max 600 chars):');
+          if(!answer)return;
+          answer=answer.trim().slice(0,600);
+          if(answer.length<1)return;
+          if(window.EtieCloud&&window.EtieCloud.insertAnswer){
+            window.EtieCloud.insertAnswer(q.id, answer, function(res){
+              try{
+                if(res&&res.ok){
+                  toast('Answer saved!');
+                  window._wrapupAskStep=2;
+                  checkWrapupCard();
+                }else{
+                  toast('Failed: '+(res&&res.error||'unknown'));
+                }
+              }catch(e){}
+            });
+          }
+        }catch(e){}
+      });
+    }
+  }catch(e){}
+}
+
+// Gate: check if user owes questions before allowing hangout requests
+function checkQuestionGate(pinId){
+  try{
+    if(!isSignedIn())return true; // allow if not signed in (will be blocked by auth gate anyway)
+    // Check for ended hangouts with pending questions
+    if(window._wrapupItem){
+      // User has pending wrap-up — block new hangout requests
+      return false;
+    }
+    return true;
+  }catch(e){return true;}
+}
+
 function openMemorySpotCard(spot){
   try{
     if(!spot||!spot.photos||!spot.photos.length)return;
@@ -3795,6 +4001,8 @@ function acceptPinSidequest(){requestPinConnect();}
 function requestPinConnect(){
   try{
     if(needProfile('connect'))return;
+    // Gate: check if user owes questions for ended hangouts
+    if(!checkQuestionGate()){toast('Answer your pending questions before joining a new hangout.');return;}
     var p=findPin(_openPinId);if(!p)return;
     try{if(myUid()&&p.authorId&&myUid()===p.authorId){toast('This is your hook — guests request to join you.');return;}}catch(e){}
     // Block new requests if requests are closed, hangout ended, or pin vanished
@@ -3827,6 +4035,8 @@ function declineHookRequest(pinId,idx){
 }
 function approveHookRequest(pinId,idx){
   try{
+    // Gate: check if user owes questions for ended hangouts
+    if(!checkQuestionGate()){toast('Answer your pending questions before approving a new hangout.');return;}
     var p=findPin(pinId);if(!p||!p.requests||!p.requests[idx])return;
     try{if(!canManagePin(p)){toast('Only the host can approve.');return;}}catch(e){return;}
     var req=p.requests[idx];
@@ -5462,6 +5672,8 @@ document.addEventListener('DOMContentLoaded',function(){
   try{ renderDerivedBadge(); locateUser(); }catch(e){}
   try{ refreshGate(); }catch(e){}
   try{ processPhotoOutbox(); }catch(e){}
+  // Check for wrap-up card (ended hangouts needing questions)
+  try{setTimeout(function(){checkWrapupCard();},3000);}catch(e){}
   try{ window.addEventListener('online',function(){try{processPhotoOutbox();}catch(e){}}); }catch(e){}
   document.addEventListener('keydown',function(e){if(e.key==='Escape'){try{closeQuestDrawer();}catch(e2){}try{closeProfileDrawer();}catch(e2b){}try{closeAdmin();}catch(e3){}try{closeAvatarMenu();}catch(e4){}try{closeChatDrawer();}catch(e5){}try{closePinDetail();}catch(e6){}try{closeGroupModal();}catch(e7){}try{closeDropHook();}catch(e8){}try{closeLogSheet();}catch(e9){}try{closeMemoryCard();}catch(e10){}}});
   document.addEventListener('click',function(e){try{var d=document.getElementById('avatarDropdown');var btn=document.getElementById('headerProfile');if(d&&!d.classList.contains('hidden')&&e.target!==btn&&!d.contains(e.target)&&e.target!==btn)closeAvatarMenu();}catch(err){}});

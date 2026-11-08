@@ -1280,12 +1280,24 @@ function openMemorySingleView(idx, spot){
           details.appendChild(withLabel);
           var chips=document.createElement('div');
           chips.style.cssText='display:flex;flex-wrap:wrap;gap:4px;margin-top:2px;';
-          approved.forEach(function(t){
-            var chip=document.createElement('span');
-            chip.style.cssText='padding:4px 8px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:#fff;font-size:11px;';
-            chip.textContent=t.tagged_user_id.substring(0,8)+'\u2026';
-            chips.appendChild(chip);
-          });
+          // Fetch names for tagged users
+          var taggedIds=approved.map(function(t){return t.tagged_user_id;}).filter(Boolean);
+          var renderChips=function(nameMap){
+            try{
+              approved.forEach(function(t){
+                var chip=document.createElement('span');
+                chip.style.cssText='padding:4px 8px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:#fff;font-size:11px;';
+                var name=(nameMap&&nameMap[t.tagged_user_id])||t.tagged_user_id.substring(0,8)+'\u2026';
+                chip.textContent=name;
+                chips.appendChild(chip);
+              });
+            }catch(e){}
+          };
+          if(window.EtieCloud&&window.EtieCloud.fetchDisplayNames&&taggedIds.length){
+            window.EtieCloud.fetchDisplayNames(taggedIds, renderChips);
+          }else{
+            renderChips({});
+          }
           details.appendChild(chips);
         }catch(e){}
       });
@@ -1376,14 +1388,26 @@ function loadMemTagSection(spot){
           var list=document.getElementById('memTagList');
           if(!list)return;
           if(!tags||!tags.length){list.innerHTML='';return;}
-          list.innerHTML=tags.map(function(t){
-            var status=t.status==='approved'?'on their map':t.status==='pending'?'pending':'sat this one out';
-            var color=t.status==='approved'?'#4ade80':t.status==='pending'?'#fbbf24':'#f87171';
-            return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.06);">'
-              +'<span style="font-size:13px;color:#fff;">'+(t.tagged_user_id||'').substring(0,8)+'…</span>'
-              +'<span style="font-size:11px;color:'+color+';">'+status+'</span>'
-              +'</div>';
-          }).join('');
+          // Fetch display names for tagged users
+          var userIds=tags.map(function(t){return t.tagged_user_id;}).filter(Boolean);
+          var renderTags=function(nameMap){
+            try{
+              list.innerHTML=tags.map(function(t){
+                var status=t.status==='approved'?'on their map':t.status==='pending'?'pending':'sat this one out';
+                var color=t.status==='approved'?'#4ade80':t.status==='pending'?'#fbbf24':'#f87171';
+                var name=(nameMap&&nameMap[t.tagged_user_id])||t.tagged_user_id.substring(0,8)+'…';
+                return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.06);">'
+                  +'<span style="font-size:13px;color:#fff;">'+name+'</span>'
+                  +'<span style="font-size:11px;color:'+color+';">'+status+'</span>'
+                  +'</div>';
+              }).join('');
+            }catch(e){}
+          };
+          if(window.EtieCloud&&window.EtieCloud.fetchDisplayNames){
+            window.EtieCloud.fetchDisplayNames(userIds, renderTags);
+          }else{
+            renderTags({});
+          }
         }catch(e){}
       });
     }
@@ -4108,22 +4132,34 @@ function renderHookChatList(){
             directHeader.style.marginTop='16px';
             directHeader.textContent='Direct chats';
             box.appendChild(directHeader);
-            threads.forEach(function(th){
+            // Fetch display names for thread participants
+            var threadOtherIds=threads.filter(function(th){return th.context_type==='direct';}).map(function(th){return th.other_user;}).filter(Boolean);
+            var renderThreads=function(nameMap){
               try{
-                if(th.context_type!=='direct')return;
-                var row=document.createElement('div');
-                row.className='list-item';
-                row.style.cursor='pointer';
-                row.style.borderLeft='3px solid #22d3ee';
-                row.innerHTML='<div><strong></strong><br><span class="muted small"></span></div><span class="status" style="background:rgba(34,211,238,.15);color:#22d3ee;">Direct</span>';
-                row.querySelector('strong').textContent='Direct chat';
-                row.querySelector('span.muted').textContent='Tap to open';
-                row.onclick=function(){
-                  showDirectChatOverlay(th.id, null);
-                };
-                box.appendChild(row);
+                threads.forEach(function(th){
+                  try{
+                    if(th.context_type!=='direct')return;
+                    var row=document.createElement('div');
+                    row.className='list-item';
+                    row.style.cursor='pointer';
+                    row.style.borderLeft='3px solid #22d3ee';
+                    row.innerHTML='<div><strong></strong><br><span class="muted small"></span></div><span class="status" style="background:rgba(34,211,238,.15);color:#22d3ee;">Direct</span>';
+                    var otherName=(nameMap&&th.other_user&&nameMap[th.other_user])||'Direct chat';
+                    row.querySelector('strong').textContent=otherName;
+                    row.querySelector('span.muted').textContent='Tap to open';
+                    row.onclick=function(){
+                      showDirectChatOverlay(th.id, null);
+                    };
+                    box.appendChild(row);
+                  }catch(e){}
+                });
               }catch(e){}
-            });
+            };
+            if(window.EtieCloud&&window.EtieCloud.fetchDisplayNames&&threadOtherIds.length){
+              window.EtieCloud.fetchDisplayNames(threadOtherIds, renderThreads);
+            }else{
+              renderThreads({});
+            }
           }catch(e){}
         });
       }
@@ -4140,20 +4176,39 @@ function renderHookChatList(){
             peopleHeader.style.marginTop='16px';
             peopleHeader.textContent='People';
             box.appendChild(peopleHeader);
-            conns.forEach(function(c){
+            // Fetch display names for connections
+            var connIds=conns.map(function(c){return c.user_id;}).filter(Boolean);
+            var renderPeople=function(nameMap){
               try{
-                var row=document.createElement('div');
-                row.className='list-item';
-                row.innerHTML='<div><strong></strong></div><button class="secondary" style="padding:8px 14px;font-size:12px;">Message</button>';
-                row.querySelector('strong').textContent=c.user_id.substring(0,8)+'…';
-                var btn=row.querySelector('button');
-                btn.onclick=function(){
-                  // M4: open direct chat (placeholder for now)
-                  toast('Direct chat coming in M4.');
-                };
-                box.appendChild(row);
+                conns.forEach(function(c){
+                  try{
+                    var row=document.createElement('div');
+                    row.className='list-item';
+                    row.innerHTML='<div><strong></strong></div><button class="secondary" style="padding:8px 14px;font-size:12px;">Message</button>';
+                    var name=(nameMap&&nameMap[c.user_id])||c.user_id.substring(0,8)+'…';
+                    row.querySelector('strong').textContent=name;
+                    var btn=row.querySelector('button');
+                    btn.onclick=function(){
+                      // Open direct chat with this connection
+                      if(window.EtieCloud&&window.EtieCloud.getOrCreateDirectThread){
+                        window.EtieCloud.getOrCreateDirectThread(c.user_id, function(tid){
+                          try{
+                            if(tid){showDirectChatOverlay(tid, null);}
+                            else{toast('Could not open chat.');}
+                          }catch(e){}
+                        });
+                      }else{toast('Direct chat not ready.');}
+                    };
+                    box.appendChild(row);
+                  }catch(e){}
+                });
               }catch(e){}
-            });
+            };
+            if(window.EtieCloud&&window.EtieCloud.fetchDisplayNames){
+              window.EtieCloud.fetchDisplayNames(connIds, renderPeople);
+            }else{
+              renderPeople({});
+            }
           }catch(e){}
         });
       }

@@ -1116,6 +1116,21 @@ function openMemorySpotCard(spot){
     window._memGroupPhotos=photos;
   }catch(e){console.error('openMemorySpotCard error:',e);}
 }
+function cancelPendingTag(memoryId, taggedUserId){
+  try{
+    if(!confirm('Cancel this pending tag?'))return;
+    if(window.EtieCloud&&window.EtieCloud.cancelTag){
+      window.EtieCloud.cancelTag(memoryId, taggedUserId, function(ok){
+        try{
+          if(ok){toast('Tag cancelled.');loadMemTagSection(window._openMemorySpot);}
+          else{toast('Cancel failed. (Needs cancel_tag RPC in Supabase)');}
+        }catch(e){}
+      });
+    }else{
+      toast('Cancel not available.');
+    }
+  }catch(e){}
+}
 
 function makeTile(photo, idx, spot){
   var tile=document.createElement('div');
@@ -1403,8 +1418,11 @@ function loadMemTagSection(spot){
                 var status=t.status==='approved'?'on their map':t.status==='pending'?'pending':'sat this one out';
                 var color=t.status==='approved'?'#4ade80':t.status==='pending'?'#fbbf24':'#f87171';
                 var name=(nameMap&&nameMap[t.tagged_user_id])||t.tagged_user_id.substring(0,8)+'…';
+                var cancelBtn=t.status==='pending'
+                  ? ' <button onclick="cancelPendingTag(\''+memoryId+'\',\''+t.tagged_user_id+'\')" style="margin-left:6px;padding:1px 6px;background:rgba(255,60,60,.15);border:1px solid rgba(255,60,60,.3);color:#f87171;border-radius:3px;cursor:pointer;font-size:10px;" title="Cancel tag">\u2715</button>'
+                  : '';
                 return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.06);">'
-                  +'<span style="font-size:13px;color:#fff;">'+name+'</span>'
+                  +'<span style="font-size:13px;color:#fff;">'+name+cancelBtn+'</span>'
                   +'<span style="font-size:11px;color:'+color+';">'+status+'</span>'
                   +'</div>';
               }).join('');

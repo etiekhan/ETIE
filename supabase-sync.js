@@ -1407,6 +1407,16 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
     }catch(e){try{cb([]);}catch(_){}}
   }
 
+  // ---- Cancel pending tag (M3 addition) ----
+  function cancelTag(memoryId, taggedUserId, cb){
+    try{
+      if(!client||!session){if(cb)cb(false);return;}
+      client.rpc('cancel_tag',{p_memory_id:memoryId, p_tagged_user_id:taggedUserId}).then(function(r){
+        try{if(cb)cb(r&&!r.error);}catch(e){if(cb)cb(false);}
+      }).catch(function(){if(cb)cb(false);});
+    }catch(e){if(cb)cb(false);}
+  }
+
   // TODO(OAuth): Set up custom domain (e.g. auth.etie.app) in Supabase OAuth settings
 // to replace the raw supabase.co redirect URL on Google login.
 // Configure in Supabase Dashboard > Authentication > URL Configuration > Site URL & Redirect URLs.
@@ -1428,6 +1438,7 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
     reportMemory:reportMemory, blockUser:blockUser, unblockUser:unblockUser, fetchReports:fetchReports,
     fetchDisplayNames:fetchDisplayNames,
     searchProfiles:searchProfiles,
+    cancelTag:cancelTag,
     pushSidequest:pushSidequest, fetchSidequest:fetchSidequest, clearSidequest:clearSidequest,
     syncProfile:syncProfile, pushSharedRequest:pushSharedRequest, pushSharedMessage:pushSharedMessage, pushSharedMeetup:pushSharedMeetup,
     pushSharedReview:pushSharedReview, pushSharedReport:pushSharedReport,

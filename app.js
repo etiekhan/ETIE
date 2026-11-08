@@ -1102,18 +1102,11 @@ function openMemorySpotCard(spot){
     };
     card.appendChild(addBtn);
 
-    // Tag picker section
-    var tagSection=document.createElement('div');
-    tagSection.id='memTagSection';
-    tagSection.style.cssText='margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.1);';
-    card.appendChild(tagSection);
-
     overlay.appendChild(card);
     overlay.onclick=function(e){if(e.target===overlay)overlay.remove();};
     document.body.appendChild(overlay);
 
-    // Load tag section
-    try{loadMemTagSection(spot);}catch(e){}
+    // Tagging happens in single memory view
 
     // Esc to close
     var escHandler=function(e){if(e.key==='Escape'){overlay.remove();document.removeEventListener('keydown',escHandler);}};
@@ -1168,6 +1161,16 @@ function makeTile(photo, idx, spot){
   metaRow.appendChild(metaText);
   bottom.appendChild(metaRow);
   tile.appendChild(bottom);
+
+  // Tag button (small, top-left)
+  var tagBtn=document.createElement('button');
+  tagBtn.style.cssText='position:absolute;top:6px;left:6px;padding:2px 6px;background:rgba(244,63,94,.7);border:0;border-radius:4px;color:#fff;font-size:9px;font-weight:700;cursor:pointer;opacity:0;transition:opacity .2s;';
+  tagBtn.textContent='Tag';
+  tagBtn.setAttribute('aria-label','Tag people in this memory');
+  tagBtn.onclick=function(e){e.stopPropagation();openMemorySingleView(idx, spot);};
+  tile.appendChild(tagBtn);
+  tile.onmouseenter=function(){tagBtn.style.opacity='1';};
+  tile.onmouseleave=function(){tagBtn.style.opacity='0';};
 
   return tile;
 }

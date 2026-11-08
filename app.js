@@ -2973,6 +2973,91 @@ function renderMapFilter(){
     if(rb)rb.style.display='none';
   }catch(e){}
 }
+function setMemoryFilter(f){
+  try{
+    window._memFilter=f||'all';
+    renderMemoryFilters();
+    applyMapMode();
+  }catch(e){}
+}
+
+function renderMemoryFilters(){
+  try{
+    var bar=document.getElementById('mapFilterBar');if(!bar)return;
+    bar.innerHTML='';
+    var filters=[
+      {id:'all',label:'All'},
+      {id:'mine',label:'Mine'},
+      {id:'tagged',label:'Tagged with me'}
+    ];
+    var active=window._memFilter||'all';
+    var group=document.createElement('div');
+    group.style.display='flex';
+    group.style.gap='6px';
+    group.style.alignItems='center';
+    filters.forEach(function(f){
+      var b=document.createElement('button');
+      b.className='chip filter-status-chip'+(active===f.id?' active':'');
+      b.style.padding='7px 12px';
+      b.style.display='flex';
+      b.style.alignItems='center';
+      b.style.gap='6px';
+      var dot=document.createElement('span');
+      dot.style.display='inline-block';
+      dot.style.width='8px';
+      dot.style.height='8px';
+      dot.style.borderRadius='50%';
+      dot.style.background=f.id==='all'?'var(--blue)':f.id==='mine'?'var(--amber)':'var(--red)';
+      dot.style.boxShadow='0 0 6px '+(f.id==='all'?'var(--blue)':f.id==='mine'?'var(--amber)':'var(--red)');
+      b.appendChild(dot);
+      var label=document.createElement('span');
+      label.textContent=f.label;
+      b.appendChild(label);
+      b.onclick=(function(id){return function(){setMemoryFilter(id);};})(f.id);
+      group.appendChild(b);
+    });
+    bar.appendChild(group);
+
+    // Hide role bar
+    var rb=document.getElementById('mapRoleBar');
+    if(rb)rb.style.display='none';
+
+    // Empty state check
+    checkMemoryEmptyState();
+  }catch(e){}
+}
+
+function checkMemoryEmptyState(){
+  try{
+    if(_mapMode!=='memories')return;
+    if(!window.EtieCloud||!window.EtieCloud.fetchMyMemories)return;
+    window.EtieCloud.fetchMyMemories(function(logs){
+      try{
+        var photoLogs=(logs||[]).filter(function(l){return l&&l.lat!=null&&l.lng!=null&&l.photo_url;});
+        // Apply filter
+        var filter=window._memFilter||'all';
+        var myId=null;try{myId=myUid();}catch(e){}
+        if(filter==='mine'){
+          photoLogs=photoLogs.filter(function(l){return l.user_id===myId;});
+        }else if(filter==='tagged'){
+          photoLogs=photoLogs.filter(function(l){return l.tagged_user_id===myId;});
+        }
+        if(!photoLogs.length){
+          // Show empty state
+          var empty=document.getElementById('mapEmptyBanner');
+          if(empty){
+            empty.classList.remove('hidden');
+            empty.innerHTML='No memories yet. Add your first. <button onclick="openStandaloneLog()" style="margin-left:8px;padding:6px 14px;background:#f43f5e;color:#fff;border:0;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;">+ Add</button>';
+          }
+        }else{
+          var empty=document.getElementById('mapEmptyBanner');
+          if(empty)empty.classList.add('hidden');
+        }
+      }catch(e){}
+    });
+  }catch(e){}
+}
+
 function setMapFilter(cat){MAP_FILTER=(MAP_FILTER===cat)?'All':cat;renderMapFilter();renderMapPins();}
 function setMapRole(role){MAP_ROLE=role;renderMapFilter();renderMapPins();}
 function selectIntent(id){if(id==='All'){MAP_ROLE='All';MAP_FILTER='All';}else{MAP_ROLE=id;}renderMapFilter();renderMapPins();}
@@ -4025,6 +4110,7 @@ function renderAreaSidebar(){
   }catch(e){}
 }
 var _mapMode='hooks';
+var _memFilter='all';
 var _mainMemoryMarkers=[];
 function renderMemoryAreaSidebar(box){
   try{
@@ -4074,6 +4160,11 @@ function setMapMode(mode){
     if(b){b.classList.toggle('active',_mapMode==='memories');b.setAttribute('aria-pressed',_mapMode==='memories'?'true':'false');}
     try{renderAreaSidebar();}catch(e){}
     try{var h=document.getElementById('mapTapHint');if(h)h.textContent=_mapMode==='memories'?'Tap anywhere on the map to log a memory here.':'Click the map to drop a pin and tell travellers what you can show them.';}catch(_){}
+    if(_mapMode==='memories'){
+      renderMemoryFilters();
+    }else{
+      renderMapFilter();
+    }
     applyMapMode();
     toast(_mapMode==='memories'?'📸 Memories — everywhere you have actually been.':'🪝 Hooks — people going out.');
   }catch(e){}
@@ -4087,7 +4178,46 @@ function applyMapMode(){
     });
     _mainMemoryMarkers=[];
     try{renderMapPins();}catch(e){}
-    if(_mapMode==='memories')loadMainMemoryMarkers();
+    if(_mapMode==='memories'){
+      loadMainMemoryMarkers();
+      // Filter memories by current filter
+      filterMainMemoryMarkers();
+    }
+  }catch(e){}
+}
+
+function filterMainMemoryMarkers(){
+  try{
+    if(_mapMode!=='memories')return;
+    // Re-load with filter applied
+    if(!window.EtieCloud||!window.EtieCloud.fetchMyMemories||!_map)return;
+    var myId=null;try{myId=myUid();}catch(e){}
+    if(!myId)return;
+    window.EtieCloud.fetchMyMemories(function(logs){
+      try{
+        var photoLogs=(logs||[]).filter(function(l){return l&&l.lat!=null&&l.lng!=null&&l.photo_url;});
+        var filter=window._memFilter||'all';
+        if(filter==='mine'){
+          photoLogs=photoLogs.filter(function(l){return l.user_id===myId;});
+        }else if(filter==='tagged'){
+          photoLogs=photoLogs.filter(function(l){return l.tagged_user_id===myId;});
+        }
+        _mainMemoryMarkers.forEach(function(m){
+          try{if(m._interval)clearInterval(m._interval);}catch(e){}
+          try{m.remove();}catch(e){}
+        });
+        _mainMemoryMarkers=[];
+        if(!photoLogs.length){checkMemoryEmptyState();return;}
+        var spots=groupMemoriesIntoSpots(photoLogs);
+        spots.forEach(function(spot){
+          try{
+            var mk=createMemorySpotMarker(spot,_map);
+            if(mk)_mainMemoryMarkers.push(mk);
+          }catch(e){console.error('spot marker error:',e);}
+        });
+        checkMemoryEmptyState();
+      }catch(e){}
+    });
   }catch(e){}
 }
 function loadMainMemoryMarkers(){

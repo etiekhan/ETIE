@@ -1388,6 +1388,25 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
     }catch(e){try{cb({});}catch(_){}}
   }
 
+  // ---- Profile search (fuzzy, for tag suggestions) ----
+  function searchProfiles(query, cb){
+    try{
+      if(!client||!session||typeof cb!=='function'){cb([]);return;}
+      var q=String(query||'').trim();
+      if(!q){cb([]);return;}
+      client.from('etie_profiles').select('user_id,display_name,city')
+        .ilike('display_name','%'+q+'%').limit(8).then(function(r){
+          try{
+            var rows=r&&!r.error?r.data||[]:[];
+            var out=rows.map(function(row){
+              return {user_id:row.user_id, name:row.display_name||'Someone', city:row.city||''};
+            });
+            cb(out);
+          }catch(e){cb([]);}
+        }).catch(function(){cb([]);});
+    }catch(e){try{cb([]);}catch(_){}}
+  }
+
   // TODO(OAuth): Set up custom domain (e.g. auth.etie.app) in Supabase OAuth settings
 // to replace the raw supabase.co redirect URL on Google login.
 // Configure in Supabase Dashboard > Authentication > URL Configuration > Site URL & Redirect URLs.
@@ -1408,6 +1427,7 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
     sendThreadMessage:sendThreadMessage, fetchMyThreads:fetchMyThreads, subscribeThread:subscribeThread,
     reportMemory:reportMemory, blockUser:blockUser, unblockUser:unblockUser, fetchReports:fetchReports,
     fetchDisplayNames:fetchDisplayNames,
+    searchProfiles:searchProfiles,
     pushSidequest:pushSidequest, fetchSidequest:fetchSidequest, clearSidequest:clearSidequest,
     syncProfile:syncProfile, pushSharedRequest:pushSharedRequest, pushSharedMessage:pushSharedMessage, pushSharedMeetup:pushSharedMeetup,
     pushSharedReview:pushSharedReview, pushSharedReport:pushSharedReport,

@@ -1377,7 +1377,10 @@ function loadMemTagSection(spot){
     section.innerHTML='<div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:8px;">Tag people in this memory</div>'
       +'<div id="memTagConnections" style="margin-bottom:8px;"></div>'
       +'<div style="display:flex;gap:8px;margin-bottom:8px;">'
-      +'<input id="memTagInput" placeholder="Or type exact name" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:#fff;font-size:13px;">'
+      +'<div style="position:relative;flex:1;">'
+      +'<input id="memTagInput" placeholder="Or type a name" style="width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:#fff;font-size:13px;box-sizing:border-box;" oninput="suggestTagUsers(this.value,\''+memoryId+'\')">'
+      +'<div id="memTagSuggestions" style="position:absolute;top:100%;left:0;right:0;background:rgba(20,16,28,.98);border:1px solid rgba(255,255,255,.16);border-radius:8px;margin-top:2px;max-height:160px;overflow-y:auto;z-index:10;display:none;"></div>'
+      +'</div>'
       +'<button onclick="submitMemTag(\''+memoryId+'\')" style="padding:8px 14px;background:#f43f5e;color:#fff;border:0;border-radius:8px;cursor:pointer;font-size:13px;">Tag</button>'
       +'</div>'
       +'<div id="memTagStatus" style="font-size:12px;color:rgba(255,255,255,.5);"></div>'
@@ -1469,6 +1472,55 @@ function loadMemTagSection(spot){
     }
   }catch(e){console.error('loadMemTagSection error:',e);}
 }
+function suggestTagUsers(query, memoryId){
+  try{
+    var box=document.getElementById('memTagSuggestions');
+    if(!box)return;
+    var q=(query||'').trim();
+    if(!q){box.style.display='none';box.innerHTML='';return;}
+    if(!window.EtieCloud||!window.EtieCloud.searchProfiles){box.style.display='none';return;}
+    window.EtieCloud.searchProfiles(q, function(results){
+      try{
+        if(!results||!results.length){box.style.display='none';box.innerHTML='';return;}
+        box.innerHTML='';
+        results.forEach(function(u){
+          var item=document.createElement('div');
+          item.style.cssText='padding:8px 12px;cursor:pointer;font-size:13px;color:#fff;border-bottom:1px solid rgba(255,255,255,.06);';
+          item.textContent=u.name+(u.city?' ('+u.city+')':'');
+          item.onmouseenter=function(){item.style.background='rgba(255,255,255,.1)';};
+          item.onmouseleave=function(){item.style.background='';};
+          item.onclick=function(){
+            var input=document.getElementById('memTagInput');
+            if(input)input.value=u.name;
+            box.style.display='none';
+            // Tag immediately
+            var status=document.getElementById('memTagStatus');
+            if(status)status.textContent='Tagging '+u.name+'...';
+            if(window.EtieCloud&&window.EtieCloud.tagUser){
+              window.EtieCloud.tagUser(memoryId, u.user_id, function(res){
+                try{
+                  if(res&&res.ok){
+                    if(status)status.textContent='Tagged '+u.name+'! They\'ll see an invite.';
+                    var inp=document.getElementById('memTagInput');if(inp)inp.value='';
+                    loadMemTagSection(window._openMemorySpot);
+                  }else if(res&&res.error==='cooldown'){
+                    var hrs=Math.ceil(res.hours_remaining||72);
+                    if(status)status.textContent='You can tag '+u.name+' again in '+hrs+' hours.';
+                  }else{
+                    if(status)status.textContent='Tag failed: '+(res&&res.error||'unknown');
+                  }
+                }catch(e){}
+              });
+            }
+          };
+          box.appendChild(item);
+        });
+        box.style.display='block';
+      }catch(e){}
+    });
+  }catch(e){}
+}
+
 function submitMemTag(memoryId){
   try{
     var input=document.getElementById('memTagInput');

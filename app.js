@@ -4541,6 +4541,30 @@ function removeLogPerson(uid){
 function logPeopleSuggestions(){
   try{
     var out={},me=null;try{me=hookNick();}catch(e){}
+    // Accepted connections first
+    try{
+      if(window.EtieCloud&&window.EtieCloud.fetchConnections){
+        window.EtieCloud.fetchConnections(function(conns){
+          try{
+            (conns||[]).forEach(function(c){
+              if(c&&c.user_id&&!out[c.user_id])out[c.user_id]={user_id:c.user_id,name:c.user_id.substring(0,8)+'...',city:''};
+            });
+            // Fetch display names
+            if(window.EtieCloud&&window.EtieCloud.fetchDisplayNames){
+              var ids=conns.map(function(c){return c.user_id;}).filter(Boolean);
+              window.EtieCloud.fetchDisplayNames(ids, function(nameMap){
+                try{
+                  ids.forEach(function(id){
+                    if(out[id]&&nameMap&&nameMap[id])out[id].name=nameMap[id];
+                  });
+                  try{searchLogPeople('');}catch(_){}
+                }catch(e){}
+              });
+            }
+          }catch(e){}
+        });
+      }
+    }catch(e){}
     try{window.EtieCloud.fetchMyMemories(function(rows){
       (rows||[]).forEach(function(r){
         if(r&&r.tagged_user_id&&!out[r.tagged_user_id])out[r.tagged_user_id]={user_id:r.tagged_user_id,name:r.tagged_nickname||'Someone',city:''};
@@ -4554,7 +4578,6 @@ function logPeopleSuggestions(){
         });
       }catch(e){}
     });
-    // Fallback: all registered users (search will handle pagination)
     return Object.keys(out).map(function(k){return out[k];}).slice(0,8);
   }catch(e){return [];}
 }
@@ -4640,6 +4663,16 @@ function handleLogPhoto(input){
     var pv=document.getElementById('logPreview');
     if(pv){pv.innerHTML='';var im=document.createElement('img');im.src=URL.createObjectURL(f);im.style.cssText='width:100%;max-height:180px;object-fit:cover;border-radius:12px;';pv.appendChild(im);
       var cap=document.createElement('div');cap.className='muted small';cap.textContent='Taken: '+fmtWhen(_logTakenAt);pv.appendChild(cap);}
+    // Show editable photo date
+    var dateRow=document.getElementById('logPhotoDateRow');
+    if(dateRow){dateRow.style.display='block';}
+    var dateInput=document.getElementById('logPhotoDate');
+    if(dateInput){
+      var dt=new Date(_logTakenAt);
+      // Format as YYYY-MM-DDTHH:MM for datetime-local
+      var pad=function(n){return n<10?'0'+n:n;};
+      dateInput.value=dt.getFullYear()+'-'+pad(dt.getMonth()+1)+'-'+pad(dt.getDate())+'T'+pad(dt.getHours())+':'+pad(dt.getMinutes());
+    }
   }catch(e){}
 }
 function fileToDataURL(file,cb){try{var r=new FileReader();r.onload=function(e){cb(e.target.result);};r.onerror=function(){cb(null);};r.readAsDataURL(file);}catch(e){cb(null);}}
@@ -4668,8 +4701,16 @@ function submitHangoutLog(){
     var act=sel?sel.options[sel.selectedIndex].text:'';
     var capEl=document.getElementById('logCaption');
     var locEl=document.getElementById('logLocation');
+    var visEl=document.getElementById('logVisibility');
     var caption=capEl?capEl.value.trim().slice(0,120):'';
     var location=locEl?locEl.value.trim().slice(0,120):'';
+    var visibility=visEl?visEl.value:'tagged';
+    // Read photo date (editable)
+    var dateInput=document.getElementById('logPhotoDate');
+    if(dateInput&&dateInput.value){
+      var parsed=new Date(dateInput.value);
+      if(!isNaN(parsed.getTime()))_logTakenAt=parsed.getTime();
+    }
     var taken=_logTakenAt||Date.now();
     var ok=false,w=null;
     if(p){w=pinWindow(p);ok=taken>=w.start-5*60*1000&&taken<=w.end+2*3600*1000;}
@@ -4685,10 +4726,10 @@ function submitHangoutLog(){
       try{
         var entries=[];
         if(!tagged.length){
-          entries.push({hookId:pid,nick:me,photoUrl:urlFor,activity:act,title:title,location:location,lat:lat,lng:lng,takenAt:new Date(taken).toISOString(),verified:ok,status:'confirmed',confirmedAt:new Date().toISOString()});
+          entries.push({hookId:pid,nick:me,photoUrl:urlFor,activity:act,title:title,location:location,lat:lat,lng:lng,takenAt:new Date(taken).toISOString(),verified:ok,status:'confirmed',confirmedAt:new Date().toISOString(),visibility:visibility});
         }else{
           tagged.forEach(function(u){
-            entries.push({hookId:pid,nick:me,photoUrl:urlFor,activity:act,title:title,location:location,lat:lat,lng:lng,takenAt:new Date(taken).toISOString(),verified:ok,taggedUserId:u.user_id,taggedNickname:u.name||'Someone',status:'pending'});
+            entries.push({hookId:pid,nick:me,photoUrl:urlFor,activity:act,title:title,location:location,lat:lat,lng:lng,takenAt:new Date(taken).toISOString(),verified:ok,taggedUserId:u.user_id,taggedNickname:u.name||'Someone',status:'pending',visibility:visibility});
           });
         }
         var chain=Promise.resolve();

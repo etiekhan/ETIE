@@ -262,6 +262,14 @@
       <p class="muted small" id="logWindow">—</p>
       <div class="field"><label>Activity tag</label><select id="logActivity"><option>Food</option><option>Nightlife</option><option>Photo</option><option>Sports</option><option>Cafe</option><option>Salsa</option><option>Football</option><option>Coffee</option></select></div>
       <div class="field"><label>One line about it (optional)</label><input id="logCaption" maxlength="120" placeholder="e.g. Dim sum in Mong Kok"></div>
+      <div class="field"><label>Who can see this memory?</label>
+        <select id="logVisibility" style="width:100%;padding:12px;border:1px solid rgba(255,255,255,.16);border-radius:10px;background:rgba(255,255,255,.08);color:#fff;">
+          <option value="tagged">Tagged — you and people you tag</option>
+          <option value="only_me">Only me — just you</option>
+          <option value="connections">Connections — you, tagged people and your connections</option>
+        </select>
+        <p class="muted small" style="margin:4px 0 0;">"Tagged" is the default. "Only me" keeps it private. "Connections" shares with your accepted connections.</p>
+      </div>
       <div class="field"><label>Where did it happen? (optional)</label>
         <div style="display:flex;gap:8px;"><input id="logLocation" maxlength="120" placeholder="Place or area" style="flex:1;"><button class="secondary" id="logUseMapSpot" onclick="useMapSpotForLog()" style="padding:10px 12px;white-space:nowrap;">📍 Use map view</button></div>
         <p class="muted small" style="margin:4px 0 0;" id="logSpotNote">Pan the map to where it happened, then tap Use map view so it shows on your Memory Map.</p>
@@ -274,6 +282,10 @@
       </div>
       <div class="field"><label>Hangout photo</label>
         <div id="logPreview" style="margin-bottom:8px;"></div>
+        <div id="logPhotoDateRow" style="display:none;margin-bottom:8px;">
+          <label class="muted small" style="display:block;margin-bottom:4px;">Photo date (editable)</label>
+          <input id="logPhotoDate" type="datetime-local" style="width:100%;padding:8px;border:1px solid rgba(255,255,255,.16);border-radius:8px;background:rgba(255,255,255,.08);color:#fff;font-size:13px;">
+        </div>
         <input type="file" id="logPhotoInput" accept="image/*" style="display:none;" onchange="handleLogPhoto(this)">
         <button class="secondary" onclick="document.getElementById('logPhotoInput').click()">Choose photo / Take photo</button>
       </div>
@@ -522,7 +534,7 @@
   <script src="runtime-config.js"></script>
   <script src="runtime-config.example.js"></script>
   <script src="map-style.js"></script>
-  <script src="app.js?v=161"></script>
+  <script src="app.js?v=162"></script>
   <script src="supabase-sync.js?v=127"></script>
 </body>
 </html>

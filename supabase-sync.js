@@ -1065,7 +1065,8 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
           tagged_nickname:entry.taggedNickname||null,
           status:entry.status||'confirmed',
           handshake_note:entry.handshakeNote||null,
-          confirmed_at:entry.confirmedAt||null
+          confirmed_at:entry.confirmedAt||null,
+          visibility:entry.visibility||'tagged'
         }).then(function(r){resolve(r&&!r.error);}).catch(function(){resolve(null);});
       }catch(e){resolve(null);}
     });

@@ -979,7 +979,12 @@ function createMemorySpotMarker(spot,mapInstance){
       _pinJustClicked=true;
       setTimeout(function(){_pinJustClicked=false;},300);
       console.log('Memory marker clicked, spot:', spot.name, 'photos:', spot.photos.length);
-      openMemorySpotCard(spot);
+      if(spot.photos.length<=1){
+        window._memGroupPhotos=spot.photos;
+        openMemorySingleView(0, spot);
+      }else{
+        openMemorySpotCard(spot);
+      }
     });
     
     var mk=new maplibregl.Marker({element:el,anchor:'center'}).setLngLat([spot.coords.lng,spot.coords.lat]).addTo(mapInstance);
@@ -992,210 +997,361 @@ function createMemorySpotMarker(spot,mapInstance){
 // Open memory card for a spot (shows all photos)
 function openMemorySpotCard(spot){
   try{
-    console.log('openMemorySpotCard called, spot:', spot?.name, 'photos:', spot?.photos?.length);
+    if(!spot||!spot.photos||!spot.photos.length)return;
     // Remove any existing overlay
-    var old=document.getElementById('memCardOverlay');if(old)old.remove();
-    // Create a fresh overlay appended to body
+    var old=document.getElementById('memGroupOverlay');if(old)old.remove();
+    var old2=document.getElementById('memSingleOverlay');if(old2)old2.remove();
+    window._openMemorySpot=spot;
+    window._memGroupIndex=0;
+
+    // Count unique people
+    var peopleSet={};
+    spot.photos.forEach(function(p){if(p.owner)peopleSet[p.owner]=1;});
+    var peopleCount=Object.keys(peopleSet).length;
+
+    // Create overlay
     var overlay=document.createElement('div');
-    overlay.id='memCardOverlay';
+    overlay.id='memGroupOverlay';
     overlay.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);';
     var card=document.createElement('div');
-    card.style.cssText='background:#1a1428;border:2px solid #f43f5e;border-radius:16px;padding:20px;max-width:500px;width:90%;max-height:80vh;overflow-y:auto;color:#fff;';
-    var html='<h2 style="margin:0 0 12px;color:#f43f5e;">'+(spot.name||'Memory')+' ('+spot.photos.length+' photos)</h2>';
-    spot.photos.forEach(function(p){
-      html+='<div style="margin-bottom:12px;"><img src="'+p.url+'" style="width:100%;border-radius:8px;margin-bottom:4px;"><div style="font-size:13px;">'+(p.caption||'')+'</div><div style="font-size:11px;color:rgba(255,255,255,.5);">'+(p.owner||'')+'</div></div>';
+    card.style.cssText='background:#1a1428;border:1px solid rgba(255,255,255,.14);border-radius:16px;padding:20px;max-width:560px;width:90%;max-height:85vh;display:flex;flex-direction:column;color:#fff;overflow:hidden;';
+    // Header
+    var header=document.createElement('div');
+    header.style.cssText='display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;flex-shrink:0;';
+    var headerLeft=document.createElement('div');
+    var label=document.createElement('div');
+    label.style.cssText='font-size:10px;text-transform:uppercase;letter-spacing:.15em;color:rgba(255,255,255,.5);font-weight:800;margin-bottom:4px;';
+    label.textContent='MEMORIES HERE';
+    headerLeft.appendChild(label);
+    var title=document.createElement('div');
+    title.style.cssText='font-family:var(--font-logo, Syne),sans-serif;font-size:20px;font-weight:800;color:#fff;margin-bottom:2px;';
+    title.textContent=spot.name||'Hangout Memory';
+    headerLeft.appendChild(title);
+    var sub=document.createElement('div');
+    sub.style.cssText='font-size:12px;color:rgba(255,255,255,.5);';
+    sub.textContent=spot.photos.length+' memor'+(spot.photos.length===1?'y':'ies')+' \u00b7 '+peopleCount+' '+(peopleCount===1?'person':'people');
+    headerLeft.appendChild(sub);
+    header.appendChild(headerLeft);
+    var closeBtn=document.createElement('button');
+    closeBtn.setAttribute('aria-label','Close');
+    closeBtn.style.cssText='padding:8px 12px;min-height:44px;min-width:44px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:#fff;border-radius:8px;cursor:pointer;font-size:16px;flex-shrink:0;';
+    closeBtn.textContent='\u2715';
+    closeBtn.onclick=function(){overlay.remove();};
+    header.appendChild(closeBtn);
+    card.appendChild(header);
+
+    // Grid container (scrollable)
+    var gridWrap=document.createElement('div');
+    gridWrap.style.cssText='flex:1;overflow-y:auto;min-height:0;';
+
+    // Date sections only if >6 memories
+    var useSections = spot.photos.length > 6;
+
+    // Sort photos newest first
+    var photos = spot.photos.slice().sort(function(a,b){
+      var ta=a.timestamp?new Date(a.timestamp).getTime():0;
+      var tb=b.timestamp?new Date(b.timestamp).getTime():0;
+      return tb-ta;
     });
-    // Message privately button (owner + tagged+approved)
-    html+='<div style="margin-top:12px;"><button onclick="openDirectChatFromMemory(\''+spot.photos[0].logId+'\',\''+(spot.owner||'')+'\')" style="padding:8px 16px;background:rgba(34,211,238,.15);border:1px solid rgba(34,211,238,.3);color:#22d3ee;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;">💬 Message privately</button></div>';
-    // Safety buttons (report + block)
-    html+='<div style="margin-top:12px;display:flex;gap:8px;">'
-      +'<button onclick="reportMemoryPrompt(\''+spot.photos[0].logId+'\')" style="padding:6px 12px;background:rgba(255,60,60,.1);border:1px solid rgba(255,60,60,.2);color:#f87171;border-radius:6px;cursor:pointer;font-size:12px;">🚩 Report</button>'
-      +'<button onclick="blockMemoryOwner(\''+(spot.ownerId||'')+'\')" style="padding:6px 12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.6);border-radius:6px;cursor:pointer;font-size:12px;">🚫 Block</button>'
-      +'</div>';
+
+    // Group by date section if needed
+    function dateSection(ts){
+      var now=new Date();
+      var d=new Date(ts);
+      var today=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+      var weekAgo=new Date(today.getTime()-7*86400000);
+      if(d>=today) return 'Tonight';
+      if(d>=weekAgo) return 'This week';
+      return 'Earlier';
+    }
+
+    if(useSections){
+      var sections={};
+      var sectionOrder=[];
+      photos.forEach(function(p,i){
+        var sec=dateSection(p.timestamp||new Date().toISOString());
+        if(!sections[sec]){sections[sec]=[];sectionOrder.push(sec);}
+        sections[sec].push({photo:p,idx:i});
+      });
+      sectionOrder.forEach(function(sec){
+        var h=document.createElement('div');
+        h.style.cssText='font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,.5);font-weight:700;margin:12px 0 6px;';
+        h.textContent=sec;
+        gridWrap.appendChild(h);
+        var grid=document.createElement('div');
+        grid.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:8px;';
+        sections[sec].forEach(function(item){grid.appendChild(makeTile(item.photo, item.idx, spot));});
+        gridWrap.appendChild(grid);
+      });
+    } else {
+      var grid=document.createElement('div');
+      grid.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:8px;';
+      photos.forEach(function(p,i){grid.appendChild(makeTile(p, i, spot));});
+      gridWrap.appendChild(grid);
+    }
+
+    card.appendChild(gridWrap);
+
+    // Add a memory here button
+    var addBtn=document.createElement('button');
+    addBtn.style.cssText='margin-top:12px;padding:10px 16px;background:#f43f5e;color:#fff;border:0;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;flex-shrink:0;min-height:44px;';
+    addBtn.textContent='Add a memory here';
+    addBtn.onclick=function(){
+      overlay.remove();
+      try{openLogSheet(null,{lat:spot.coords.lat,lng:spot.coords.lng,label:spot.name});}catch(e){}
+    };
+    card.appendChild(addBtn);
+
     // Tag picker section
-    html+='<div id="memTagSection" style="margin-top:16px;padding-top:12px;border-top:1px solid rgba(255,255,255,.1);"></div>';
-    html+='<button onclick="document.getElementById(&quot;memCardOverlay&quot;).remove()" style="margin-top:12px;padding:10px 20px;background:#f43f5e;color:#fff;border:0;border-radius:8px;cursor:pointer;">Close</button>';
-    card.innerHTML=html;
+    var tagSection=document.createElement('div');
+    tagSection.id='memTagSection';
+    tagSection.style.cssText='margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.1);';
+    card.appendChild(tagSection);
+
     overlay.appendChild(card);
     overlay.onclick=function(e){if(e.target===overlay)overlay.remove();};
     document.body.appendChild(overlay);
-    // Store spot for reference
-    window._openMemorySpot=spot;
-    // Load tag section async (after DOM is ready)
-    try{loadMemTagSection(spot);}catch(e){console.error('tag section load error:',e);}
+
+    // Load tag section
+    try{loadMemTagSection(spot);}catch(e){}
+
+    // Esc to close
+    var escHandler=function(e){if(e.key==='Escape'){overlay.remove();document.removeEventListener('keydown',escHandler);}};
+    document.addEventListener('keydown',escHandler);
+
+    // Store for single view navigation
+    window._memGroupPhotos=photos;
   }catch(e){console.error('openMemorySpotCard error:',e);}
 }
-function reportMemoryPrompt(memoryId){
-  try{
-    var reason=prompt('Why are you reporting this memory? (spam, inappropriate, etc.)');
-    if(!reason)return;
-    if(window.EtieCloud&&window.EtieCloud.reportMemory){
-      window.EtieCloud.reportMemory(memoryId, reason, function(ok){
-        try{toast(ok?'Report submitted.':'Report failed.');}catch(e){}
-      });
-    }
-  }catch(e){}
+
+function makeTile(photo, idx, spot){
+  var tile=document.createElement('div');
+  tile.style.cssText='position:relative;border-radius:10px;overflow:hidden;cursor:pointer;aspect-ratio:3/4;background:#0b0b0e;';
+  tile.onclick=function(){openMemorySingleView(idx, spot);};
+
+  var img=document.createElement('img');
+  img.src=photo.url;
+  img.loading='lazy';
+  img.style.cssText='width:100%;height:100%;object-fit:cover;display:block;';
+  tile.appendChild(img);
+
+  // Date stamp (orange monospace) top-right
+  var ts=photo.timestamp||new Date().toISOString();
+  var d=new Date(ts);
+  var months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var dateStr=d.getDate()+' '+months[d.getMonth()]+' \u2019'+String(d.getFullYear()).slice(2);
+  var stamp=document.createElement('div');
+  stamp.style.cssText='position:absolute;top:6px;right:6px;font-family:monospace;font-size:11px;font-weight:700;color:#fb923c;text-shadow:0 0 8px rgba(251,146,60,.5);background:rgba(0,0,0,.5);padding:2px 6px;border-radius:4px;';
+  stamp.textContent=dateStr;
+  tile.appendChild(stamp);
+
+  // Bottom gradient with caption + avatar + name/time
+  var bottom=document.createElement('div');
+  bottom.style.cssText='position:absolute;bottom:0;left:0;right:0;padding:8px;background:linear-gradient(transparent,rgba(0,0,0,.85));';
+  if(photo.caption){
+    var cap=document.createElement('div');
+    cap.style.cssText='font-size:12px;font-weight:700;color:#fff;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+    cap.textContent=photo.caption;
+    bottom.appendChild(cap);
+  }
+  var metaRow=document.createElement('div');
+  metaRow.style.cssText='display:flex;align-items:center;gap:4px;';
+  var avatar=document.createElement('div');
+  avatar.style.cssText='width:16px;height:16px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;flex-shrink:0;';
+  avatar.textContent=(photo.owner||'?').charAt(0).toUpperCase();
+  metaRow.appendChild(avatar);
+  var metaText=document.createElement('div');
+  metaText.style.cssText='font-size:10px;color:rgba(255,255,255,.7);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+  var dayNames=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  var timeStr=dayNames[d.getDay()]+' '+d.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'});
+  metaText.textContent=(photo.owner||'Someone')+' \u00b7 '+timeStr;
+  metaRow.appendChild(metaText);
+  bottom.appendChild(metaRow);
+  tile.appendChild(bottom);
+
+  return tile;
 }
-function blockMemoryOwner(ownerId){
+
+function openMemorySingleView(idx, spot){
   try{
-    if(!ownerId){toast('Cannot block: no user ID.');return;}
-    if(!confirm('Block this user? You won\'t see their memories or be able to message them.'))return;
-    if(window.EtieCloud&&window.EtieCloud.blockUser){
-      window.EtieCloud.blockUser(ownerId, function(ok){
-        try{toast(ok?'User blocked.':'Block failed.');}catch(e){}
-      });
-    }
-  }catch(e){}
-}
-var _directChatThreadId=null;
-var _directChatUnsub=null;
-function openDirectChatFromMemory(memoryId, ownerName){
-  try{
-    // For now, we need the other user's ID. The owner name is a nickname, not a user ID.
-    // In M3, tagged users see invites. For M4, we need to look up the owner's user_id.
-    // For simplicity, show a toast for now and implement full chat in M4b.
-    toast('Direct chat: connecting...');
-    // Try to find the owner's user_id from the memory
-    if(window.EtieCloud&&window.EtieCloud.fetchMyMemories){
-      window.EtieCloud.fetchMyMemories(function(logs){
-        try{
-          var mem=null;
-          (logs||[]).forEach(function(l){if(l.id===memoryId)mem=l;});
-          if(!mem){toast('Memory not found.');return;}
-          var otherId=mem.user_id;
-          if(!otherId){toast('Cannot message this user.');return;}
-          // Check if current user is the owner - if so, message the tagged user
-          var myId=null;try{myId=myUid();}catch(e){}
-          if(otherId===myId){
-            // Owner wants to message tagged user - find tagged user from memory_tags
-            if(window.EtieCloud&&window.EtieCloud.fetchMemoryTags){
-              window.EtieCloud.fetchMemoryTags(memoryId, function(tags){
-                try{
-                  if(!tags||!tags.length){toast('No tagged users to message.');return;}
-                  // Find approved tags
-                  var approved=tags.filter(function(t){return t.status==='approved';});
-                  if(!approved.length){toast('No approved tags to message.');return;}
-                  // Message the first approved tagged user
-                  openDirectChatThread(approved[0].tagged_user_id, memoryId);
-                }catch(e){}
-              });
-            }
-            return;
-          }
-          openDirectChatThread(otherId, memoryId);
-        }catch(e){toast('Chat failed.');}
-      });
-    }
-  }catch(e){toast('Chat failed.');}
-}
-function openDirectChatThread(otherUserId, memoryId){
-  try{
-    if(!window.EtieCloud||!window.EtieCloud.getOrCreateDirectThread){toast('Cloud not ready.');return;}
-    window.EtieCloud.getOrCreateDirectThread(otherUserId, function(threadId){
-      try{
-        if(!threadId){toast('Could not create chat.');return;}
-        _directChatThreadId=threadId;
-        // Show direct chat overlay
-        showDirectChatOverlay(threadId, memoryId);
-      }catch(e){toast('Chat failed.');}
-    });
-  }catch(e){toast('Chat failed.');}
-}
-function showDirectChatOverlay(threadId, memoryId){
-  try{
-    var old=document.getElementById('directChatOverlay');if(old)old.remove();
+    var photos=window._memGroupPhotos||spot.photos;
+    if(!photos||!photos.length)return;
+    if(idx<0)idx=0;
+    if(idx>=photos.length)idx=photos.length-1;
+    window._memSingleIdx=idx;
+    var photo=photos[idx];
+
+    var old=document.getElementById('memSingleOverlay');if(old)old.remove();
     var overlay=document.createElement('div');
-    overlay.id='directChatOverlay';
+    overlay.id='memSingleOverlay';
     overlay.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);';
     var card=document.createElement('div');
-    card.style.cssText='background:#1a1428;border:2px solid #22d3ee;border-radius:16px;padding:20px;max-width:500px;width:90%;max-height:80vh;display:flex;flex-direction:column;color:#fff;';
-    card.innerHTML='<h3 style="margin:0 0 12px;color:#22d3ee;">Direct Chat</h3>'
-      +'<div id="directChatMsgs" style="flex:1;overflow-y:auto;max-height:300px;margin-bottom:12px;display:flex;flex-direction:column;gap:8px;"></div>'
-      +'<div style="display:flex;gap:8px;">'
-      +'<input id="directChatInput" placeholder="Type a message..." style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:#fff;font-size:13px;">'
-      +'<button onclick="sendDirectChatMsg(\''+threadId+'\',\''+(memoryId||'')+'\')" style="padding:8px 14px;background:#22d3ee;color:#000;border:0;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;">Send</button>'
-      +'</div>'
-      +'<button onclick="document.getElementById(\'directChatOverlay\').remove()" style="margin-top:12px;padding:8px 16px;background:rgba(255,255,255,.1);color:#fff;border:0;border-radius:8px;cursor:pointer;font-size:12px;">Close</button>';
-    overlay.appendChild(card);
-    overlay.onclick=function(e){if(e.target===overlay)overlay.remove();};
-    document.body.appendChild(overlay);
-    // Load messages
-    loadDirectChatMessages(threadId);
-    // Subscribe to new messages
-    if(window.EtieCloud&&window.EtieCloud.subscribeThread){
-      if(_directChatUnsub)try{_directChatUnsub();}catch(e){}
-      _directChatUnsub=window.EtieCloud.subscribeThread(threadId, function(row){
-        try{if(row)appendDirectChatMsg(row);}catch(e){}
-      });
+    card.style.cssText='background:#1a1428;border:1px solid rgba(255,255,255,.14);border-radius:16px;padding:20px;max-width:640px;width:90%;max-height:85vh;overflow-y:auto;color:#fff;';
+    // Navigation header
+    var nav=document.createElement('div');
+    nav.style.cssText='display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;';
+    var backBtn=document.createElement('button');
+    backBtn.setAttribute('aria-label','Back to group');
+    backBtn.style.cssText='padding:8px 14px;min-height:44px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:#fff;border-radius:8px;cursor:pointer;font-size:13px;';
+    backBtn.textContent='\u2190 Back to group';
+    backBtn.onclick=function(){overlay.remove();};
+    nav.appendChild(backBtn);
+    var counter=document.createElement('div');
+    counter.style.cssText='font-size:13px;color:rgba(255,255,255,.6);';
+    counter.textContent=(idx+1)+' of '+photos.length;
+    nav.appendChild(counter);
+    var navBtns=document.createElement('div');
+    navBtns.style.cssText='display:flex;gap:6px;';
+    var prevBtn=document.createElement('button');
+    prevBtn.setAttribute('aria-label','Previous memory');
+    prevBtn.style.cssText='padding:8px 12px;min-height:44px;min-width:44px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:#fff;border-radius:8px;cursor:pointer;font-size:16px;';
+    prevBtn.textContent='\u2190';
+    prevBtn.disabled=idx===0;
+    prevBtn.onclick=function(){if(idx>0)openMemorySingleView(idx-1,spot);};
+    navBtns.appendChild(prevBtn);
+    var nextBtn=document.createElement('button');
+    nextBtn.setAttribute('aria-label','Next memory');
+    nextBtn.style.cssText='padding:8px 12px;min-height:44px;min-width:44px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:#fff;border-radius:8px;cursor:pointer;font-size:16px;';
+    nextBtn.textContent='\u2192';
+    nextBtn.disabled=idx===photos.length-1;
+    nextBtn.onclick=function(){if(idx<photos.length-1)openMemorySingleView(idx+1,spot);};
+    navBtns.appendChild(nextBtn);
+    nav.appendChild(navBtns);
+    card.appendChild(nav);
+
+    // Content: photo left, details right
+    var content=document.createElement('div');
+    content.style.cssText='display:flex;gap:16px;flex-wrap:wrap;';
+    var photoDiv=document.createElement('div');
+    photoDiv.style.cssText='flex:1;min-width:200px;';
+    var img=document.createElement('img');
+    img.src=photo.url;
+    img.style.cssText='width:100%;border-radius:12px;object-fit:cover;';
+    photoDiv.appendChild(img);
+    content.appendChild(photoDiv);
+
+    var details=document.createElement('div');
+    details.style.cssText='flex:1;min-width:200px;display:flex;flex-direction:column;gap:8px;';
+    // Avatar + author
+    var authorRow=document.createElement('div');
+    authorRow.style.cssText='display:flex;align-items:center;gap:8px;';
+    var av=document.createElement('div');
+    av.style.cssText='width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;';
+    av.textContent=(photo.owner||'?').charAt(0).toUpperCase();
+    authorRow.appendChild(av);
+    var authorName=document.createElement('strong');
+    authorName.style.cssText='font-size:15px;color:#fff;';
+    authorName.textContent=photo.owner||'Someone';
+    authorRow.appendChild(authorName);
+    details.appendChild(authorRow);
+
+    // Full date and time
+    var ts=photo.timestamp||new Date().toISOString();
+    var d=new Date(ts);
+    var fullDate=document.createElement('div');
+    fullDate.style.cssText='font-size:13px;color:rgba(255,255,255,.6);';
+    fullDate.textContent=d.toLocaleString(undefined,{weekday:'long',year:'numeric',month:'long',day:'numeric',hour:'numeric',minute:'2-digit'});
+    details.appendChild(fullDate);
+
+    // Caption in Syne
+    if(photo.caption){
+      var caption=document.createElement('div');
+      caption.style.cssText='font-family:var(--font-logo, Syne),sans-serif;font-size:16px;font-weight:700;color:#fff;margin-top:4px;';
+      caption.textContent=photo.caption;
+      details.appendChild(caption);
     }
-  }catch(e){console.error('showDirectChatOverlay error:',e);toast('Chat failed.');}
-}
-function loadDirectChatMessages(threadId){
-  try{
-    if(!window.EtieCloud||!window.EtieCloud.fetchThreadMessages)return;
-    window.EtieCloud.fetchThreadMessages(threadId, function(msgs){
-      try{
-        var box=document.getElementById('directChatMsgs');
-        if(!box)return;
-        box.innerHTML='';
-        if(!msgs||!msgs.length){box.innerHTML='<div class="muted small">No messages yet.</div>';return;}
-        msgs.forEach(function(m){appendDirectChatMsg(m);});
-        box.scrollTop=box.scrollHeight;
-      }catch(e){}
-    });
-  }catch(e){}
-}
-function appendDirectChatMsg(m){
-  try{
-    var box=document.getElementById('directChatMsgs');
-    if(!box)return;
-    // Remove "no messages" placeholder
-    var placeholder=box.querySelector('.muted');if(placeholder)placeholder.remove();
-    var div=document.createElement('div');
-    var mine=m.sender_id===myUid();
-    div.style.cssText='padding:8px 12px;border-radius:10px;max-width:80%;'+(mine?'margin-left:auto;background:rgba(34,211,238,.15);':'background:rgba(255,255,255,.08);');
-    var who=document.createElement('div');
-    who.style.cssText='font-size:10px;color:rgba(255,255,255,.5);margin-bottom:2px;';
-    who.textContent=(m.sender_nick||'Someone')+(m.memory_id?' 📎':'');
-    div.appendChild(who);
-    var text=document.createElement('div');
-    text.style.cssText='font-size:13px;color:#fff;';
-    text.textContent=m.text||'';
-    div.appendChild(text);
-    // If memory attached, show thumbnail
-    if(m.memory_id){
-      var thumb=document.createElement('div');
-      thumb.style.cssText='margin-top:4px;padding:6px;background:rgba(255,255,255,.05);border-radius:6px;font-size:11px;color:rgba(255,255,255,.6);';
-      thumb.textContent='📎 Memory attached';
-      div.appendChild(thumb);
-    }
-    box.appendChild(div);
-    box.scrollTop=box.scrollHeight;
-  }catch(e){}
-}
-function sendDirectChatMsg(threadId, memoryId){
-  try{
-    var input=document.getElementById('directChatInput');
-    if(!input)return;
-    var text=input.value.trim();
-    if(!text)return;
-    input.value='';
-    // Send with memory_id only for the first message
-    var mid=memoryId||null;
-    if(window.EtieCloud&&window.EtieCloud.sendThreadMessage){
-      window.EtieCloud.sendThreadMessage(threadId, text, mid, function(ok){
+
+    // Place name muted
+    var place=document.createElement('div');
+    place.style.cssText='font-size:12px;color:rgba(255,255,255,.4);';
+    place.textContent=spot.name||'';
+    details.appendChild(place);
+
+    // With: chips (if tag data exists)
+    if(window.EtieCloud&&window.EtieCloud.fetchMemoryTags){
+      window.EtieCloud.fetchMemoryTags(photo.logId, function(tags){
         try{
-          if(ok){
-            // Append optimistically
-            appendDirectChatMsg({sender_id:myUid(),sender_nick:hookNick(),text:text,memory_id:mid,created_at:new Date().toISOString()});
-          }else{toast('Send failed.');}
+          if(!tags||!tags.length)return;
+          var approved=tags.filter(function(t){return t.status==='approved';});
+          if(!approved.length)return;
+          var withLabel=document.createElement('div');
+          withLabel.style.cssText='font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,.5);font-weight:700;margin-top:4px;';
+          withLabel.textContent='With:';
+          details.appendChild(withLabel);
+          var chips=document.createElement('div');
+          chips.style.cssText='display:flex;flex-wrap:wrap;gap:4px;margin-top:2px;';
+          approved.forEach(function(t){
+            var chip=document.createElement('span');
+            chip.style.cssText='padding:4px 8px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:#fff;font-size:11px;';
+            chip.textContent=t.tagged_user_id.substring(0,8)+'\u2026';
+            chips.appendChild(chip);
+          });
+          details.appendChild(chips);
         }catch(e){}
       });
     }
-    // Clear memory_id after first send so it's not attached to every message
-    // (handled by not passing it again)
-  }catch(e){}
+
+    // Message privately (owner + approved tagged)
+    var myId=null;try{myId=myUid();}catch(e){}
+    var isOwner = myId && photo.ownerId && myId===photo.ownerId;
+    var showMsg = isOwner;
+    // Check if current user is an approved tagged person
+    if(!isOwner && myId && window.EtieCloud&&window.EtieCloud.fetchMemoryTags){
+      window.EtieCloud.fetchMemoryTags(photo.logId, function(tags){
+        try{
+          if(!tags||!tags.length)return;
+          var approved=tags.some(function(tg){return tg.tagged_user_id===myId && tg.status==='approved';});
+          if(approved){
+            // Add message button
+            var msgBtn=document.createElement('button');
+            msgBtn.style.cssText='margin-top:8px;padding:8px 16px;background:rgba(34,211,238,.15);border:1px solid rgba(34,211,238,.3);color:#22d3ee;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;min-height:44px;';
+            msgBtn.textContent='\ud83d\udcac Message privately';
+            msgBtn.onclick=function(){overlay.remove();openDirectChatFromMemory(photo.logId, photo.owner);};
+            details.appendChild(msgBtn);
+          }
+        }catch(e){}
+      });
+    }
+    if(showMsg){
+      var msgBtn=document.createElement('button');
+      msgBtn.style.cssText='margin-top:8px;padding:8px 16px;background:rgba(34,211,238,.15);border:1px solid rgba(34,211,238,.3);color:#22d3ee;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;min-height:44px;';
+      msgBtn.textContent='\ud83d\udcac Message privately';
+      msgBtn.onclick=function(){overlay.remove();openDirectChatFromMemory(photo.logId, photo.owner);};
+      details.appendChild(msgBtn);
+    }
+
+    content.appendChild(details);
+    card.appendChild(content);
+
+    // Tag section (owner only)
+    if(isOwner){
+      var tagSec=document.createElement('div');
+      tagSec.id='memTagSection';
+      tagSec.style.cssText='margin-top:16px;padding-top:12px;border-top:1px solid rgba(255,255,255,.1);';
+      card.appendChild(tagSec);
+    }
+
+    overlay.appendChild(card);
+    overlay.onclick=function(e){if(e.target===overlay)overlay.remove();};
+    document.body.appendChild(overlay);
+
+    if(isOwner){
+      try{loadMemTagSection(spot);}catch(e){}
+    }
+
+    // Keyboard navigation
+    var keyHandler=function(e){
+      if(e.key==='ArrowLeft'&&idx>0){overlay.remove();openMemorySingleView(idx-1,spot);}
+      if(e.key==='ArrowRight'&&idx<photos.length-1){overlay.remove();openMemorySingleView(idx+1,spot);}
+      if(e.key==='Escape'){overlay.remove();document.removeEventListener('keydown',keyHandler);}
+    };
+    document.addEventListener('keydown',keyHandler);
+
+    // Store photos for navigation
+    window._memGroupPhotos=photos;
+  }catch(e){console.error('openMemorySingleView error:',e);}
 }
+
 function loadMemTagSection(spot){
   try{
     var section=document.getElementById('memTagSection');

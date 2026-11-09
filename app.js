@@ -1249,10 +1249,42 @@ function askPickedMember(uid, nick){
     if(!p)return;
     var myId=null;try{myId=myUid();}catch(e){}
     if(!myId)return;
-    var question=prompt('Ask '+(nick||'them')+' something you\'d genuinely want to know (max 250 chars):');
-    if(!question)return;
-    question=question.trim().slice(0,250);
-    if(question.length<1)return;
+    var askOverlay=document.createElement('div');
+    askOverlay.id='askFormOverlay';
+    askOverlay.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);';
+    var card=document.createElement('div');
+    card.style.cssText='background:#1a1428;border:1px solid rgba(255,255,255,.14);border-radius:16px;padding:20px;max-width:480px;width:90%;color:#fff;';
+    card.innerHTML='<h3 style="margin:0 0 4px;color:#f43f5e;">Ask '+(nick||'them')+'</h3>'
+      +'<p style="font-size:12px;color:rgba(255,255,255,.5);margin-bottom:12px;">Ask something you\'d genuinely want to know</p>'
+      +'<textarea id="askFormText" maxlength="250" placeholder="Ask something you\'d genuinely want to know" style="width:100%;min-height:80px;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:#fff;font-size:13px;resize:vertical;box-sizing:border-box;"></textarea>'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">'
+      +'<span id="askFormCount" style="font-size:11px;color:rgba(255,255,255,.4);">0 / 250</span>'
+      +'<div style="display:flex;gap:8px;">'
+      +'<button onclick="document.getElementById(\'askFormOverlay\').remove()" style="padding:8px 16px;background:transparent;border:1px solid rgba(255,255,255,.16);color:#fff;border-radius:8px;cursor:pointer;font-size:12px;">Cancel</button>'
+      +'<button onclick="submitAskForm(\''+uid+'\',\''+nick+'\')" style="padding:8px 16px;background:#f43f5e;color:#fff;border:0;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;">Send question</button>'
+      +'</div></div>';
+    askOverlay.appendChild(card);
+    askOverlay.onclick=function(e){if(e.target===askOverlay)askOverlay.remove();};
+    document.body.appendChild(askOverlay);
+    var ta=document.getElementById('askFormText');
+    var cnt=document.getElementById('askFormCount');
+    if(ta&&cnt){
+      ta.oninput=function(){cnt.textContent=ta.value.length+' / 250';};
+    }
+    if(ta)setTimeout(function(){ta.focus();},100);
+  }catch(e){}
+}
+
+function submitAskForm(uid, nick){
+  try{
+    var ta=document.getElementById('askFormText');
+    if(!ta)return;
+    var question=ta.value.trim().slice(0,250);
+    if(question.length<1){toast('Question is required.');return;}
+    var p=window._wrapupPin;
+    if(!p)return;
+    var myId=null;try{myId=myUid();}catch(e){}
+    if(!myId)return;
     var endAt=validTs(p.hangoutEndAt)||validTs(p.expires_at)||new Date().toISOString();
     if(window.EtieCloud&&window.EtieCloud.createQuestion){
       window.EtieCloud.createQuestion(p.id, myId, uid, question, endAt, function(res){
@@ -1261,7 +1293,9 @@ function askPickedMember(uid, nick){
             ETIE.questionBank=ETIE.questionBank||[];
             ETIE.questionBank.push({hangout_id:p.id, asker:myId, answerer:uid, answerer_nick:nick, question:question, asked_at:new Date().toISOString(), order:ETIE.questionBank.length+1});
             saveState();
+            var overlay=document.getElementById('askFormOverlay');if(overlay)overlay.remove();
             toast('Question sent to '+(nick||'them')+'!');
+            window._wrapupAskStep=1;
             checkWrapupCard();
           }else{
             toast('Failed: '+(res&&res.error||'unknown'));
@@ -1288,21 +1322,52 @@ function wrapupAnswerQuestion(pinId){
           var pending=(questions||[]).filter(function(q){return q.hangout_id===p.id&&q.answerer_id===myId&&q.status==='asked';});
           if(!pending.length){toast('No pending questions.');return;}
           var q=pending[0];
-          var answer=prompt('Your answer to: "'+q.question_text+'" (max 600 chars):');
-          if(!answer)return;
-          answer=answer.trim().slice(0,600);
-          if(answer.length<1)return;
-          if(window.EtieCloud&&window.EtieCloud.insertAnswer){
-            window.EtieCloud.insertAnswer(q.id, answer, function(res){
-              try{
-                if(res&&res.ok){
-                  toast('Answer saved!');
-                  checkWrapupCard();
-                }else{
-                  toast('Failed: '+(res&&res.error||'unknown'));
-                }
-              }catch(e){}
-            });
+          var overlay=document.createElement('div');
+          overlay.id='answerFormOverlay';
+          overlay.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);';
+          var card=document.createElement('div');
+          card.style.cssText='background:#1a1428;border:1px solid rgba(34,211,238,.3);border-radius:16px;padding:20px;max-width:480px;width:90%;color:#fff;';
+          card.innerHTML='<h3 style="margin:0 0 8px;color:#22d3ee;">Answer question</h3>'
+            +'<div style="font-size:14px;color:#fff;margin-bottom:12px;padding:10px;background:rgba(255,255,255,.05);border-radius:8px;">'+(q.question_text||'')+'</div>'
+            +'<textarea id="answerFormText" maxlength="600" placeholder="Your answer (min 1 char)" style="width:100%;min-height:100px;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:#fff;font-size:13px;resize:vertical;box-sizing:border-box;"></textarea>'
+            +'<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">'
+            +'<span id="answerFormCount" style="font-size:11px;color:rgba(255,255,255,.4);">0 / 600</span>'
+            +'<div style="display:flex;gap:8px;">'
+            +'<button onclick="document.getElementById(\'answerFormOverlay\').remove()" style="padding:8px 16px;background:transparent;border:1px solid rgba(255,255,255,.16);color:#fff;border-radius:8px;cursor:pointer;font-size:12px;">Cancel</button>'
+            +'<button onclick="submitAnswerForm(\''+q.id+'\')" style="padding:8px 16px;background:#22d3ee;color:#000;border:0;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;">Save answer</button>'
+            +'</div></div>'
+            +'<div style="margin-top:8px;"><button onclick="showAnswerHistory(\''+q.id+'\')" style="padding:4px 8px;background:transparent;border:0;color:rgba(255,255,255,.4);cursor:pointer;font-size:11px;">Your history</button></div>';
+          overlay.appendChild(card);
+          overlay.onclick=function(e){if(e.target===overlay)overlay.remove();};
+          document.body.appendChild(overlay);
+          var ta=document.getElementById('answerFormText');
+          var cnt=document.getElementById('answerFormCount');
+          if(ta&&cnt){
+            ta.oninput=function(){cnt.textContent=ta.value.length+' / 600';};
+          }
+          if(ta)setTimeout(function(){ta.focus();},100);
+        }catch(e){}
+      });
+    }
+  }catch(e){}
+}
+
+function submitAnswerForm(questionId){
+  try{
+    var ta=document.getElementById('answerFormText');
+    if(!ta)return;
+    var answer=ta.value.trim().slice(0,600);
+    if(answer.length<1){toast('Answer is required (min 1 char).');return;}
+    if(window.EtieCloud&&window.EtieCloud.insertAnswer){
+      window.EtieCloud.insertAnswer(questionId, answer, function(res){
+        try{
+          if(res&&res.ok){
+            var overlay=document.getElementById('answerFormOverlay');if(overlay)overlay.remove();
+            toast('Answer saved!');
+            window._wrapupAskStep=2;
+            checkWrapupCard();
+          }else{
+            toast('Failed: '+(res&&res.error||'unknown'));
           }
         }catch(e){}
       });

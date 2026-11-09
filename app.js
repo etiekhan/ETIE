@@ -462,6 +462,29 @@ function refreshAdminLive(){
       });
     }
   }catch(e){}
+  // Fetch reported questions
+  try{
+    if(window.EtieCloud&&window.EtieCloud.fetchReportedQuestions){
+      window.EtieCloud.fetchReportedQuestions(function(qs){
+        try{
+          var rl=document.getElementById('adminReportedQuestions');
+          if(rl){
+            rl.innerHTML='';
+            if(!qs||!qs.length){rl.innerHTML='<div class="muted small">No reported questions.</div>';return;}
+            qs.forEach(function(q){
+              var row=document.createElement('div');
+              row.className='list-item';
+              row.innerHTML='<div><strong></strong><br><span class="muted small"></span></div><span class="status"></span>';
+              row.querySelector('strong').textContent='Question: '+(q.question_text||'').substring(0,40);
+              row.querySelector('span.muted').textContent=new Date(q.created_at).toLocaleString()+' · '+q.status;
+              row.querySelector('span.status').textContent=q.status;
+              rl.appendChild(row);
+            });
+          }
+        }catch(e){}
+      });
+    }
+  }catch(e){}
   }catch(e){ try{ var h=document.getElementById('adminLiveHint'); if(h) h.textContent='Live refresh failed.'; }catch(e2){}}
 }
 
@@ -1373,6 +1396,8 @@ function readItBack(questionId){
 
 function showAnswerHistory(questionId){
   try{
+    // Track metadata: history was opened
+    try{ETIE.questionMetrics=ETIE.questionMetrics||{};ETIE.questionMetrics[questionId]=ETIE.questionMetrics[questionId]||{};ETIE.questionMetrics[questionId].historyOpened=true;ETIE.questionMetrics[questionId].historyOpenedAt=new Date().toISOString();saveState();}catch(e){}
     if(!window.EtieCloud||!window.EtieCloud.fetchMyVersions){toast('Cloud not ready.');return;}
     window.EtieCloud.fetchMyVersions(questionId, function(versions){
       try{

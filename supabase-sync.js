@@ -1471,6 +1471,32 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
     }catch(e){try{cb([]);}catch(_){}}
   }
 
+  // ---- Question safety + metrics (Q4) ----
+  function fetchReportedQuestions(cb){
+    try{
+      if(!client||!session||typeof cb!=='function'){cb([]);return;}
+      client.from('hangout_questions').select('*').eq('status','reported')
+        .order('created_at',{ascending:false}).limit(50).then(function(r){
+          try{cb(r&&!r.error?r.data||[]:[]);}catch(e){cb([]);}
+        }).catch(function(){cb([]);});
+    }catch(e){try{cb([]);}catch(_){}}
+  }
+  function fetchAnswerMetrics(questionId, cb){
+    try{
+      if(!client||!session||typeof cb!=='function'){cb(null);return;}
+      client.from('hangout_answer_versions').select('created_at').eq('question_id',questionId)
+        .order('created_at',{ascending:true}).then(function(r){
+          try{
+            var versions=r&&!r.error?r.data||[]:[];
+            if(!versions.length){cb({editCount:0,timeToFinal:0});return;}
+            var first=new Date(versions[0].created_at).getTime();
+            var last=new Date(versions[versions.length-1].created_at).getTime();
+            cb({editCount:versions.length, timeToFinal:Math.round((last-first)/1000)});
+          }catch(e){cb(null);}
+        }).catch(function(){cb(null);});
+    }catch(e){try{cb(null);}catch(_){}}
+  }
+
   // TODO(OAuth): Set up custom domain (e.g. auth.etie.app) in Supabase OAuth settings
 // to replace the raw supabase.co redirect URL on Google login.
 // Configure in Supabase Dashboard > Authentication > URL Configuration > Site URL & Redirect URLs.
@@ -1495,6 +1521,7 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
     cancelTag:cancelTag,
     createQuestion:createQuestion, insertAnswer:insertAnswer, getLatestAnswer:getLatestAnswer,
     reportQuestion:reportQuestion, fetchMyQuestions:fetchMyQuestions, fetchMyVersions:fetchMyVersions,
+    fetchReportedQuestions:fetchReportedQuestions, fetchAnswerMetrics:fetchAnswerMetrics,
     pushSidequest:pushSidequest, fetchSidequest:fetchSidequest, clearSidequest:clearSidequest,
     syncProfile:syncProfile, pushSharedRequest:pushSharedRequest, pushSharedMessage:pushSharedMessage, pushSharedMeetup:pushSharedMeetup,
     pushSharedReview:pushSharedReview, pushSharedReport:pushSharedReport,

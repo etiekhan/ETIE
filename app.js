@@ -1148,18 +1148,47 @@ function wrapupAskQuestion(){
     if(!myId)return;
     var others=(p.members||[]).filter(function(m){return m.nick!==me&&m.uid;});
     if(!others.length){toast('No one else to ask.');return;}
-    // For simplicity, ask the first other member. In production, let user pick.
-    var other=others[0];
-    var question=prompt('Ask something you\'d genuinely want to know (max 250 chars):');
+    // Show picker: let user choose who to ask first
+    var old=document.getElementById('askPickerOverlay');if(old)old.remove();
+    var overlay=document.createElement('div');
+    overlay.id='askPickerOverlay';
+    overlay.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);';
+    var card=document.createElement('div');
+    card.style.cssText='background:#1a1428;border:1px solid rgba(255,255,255,.14);border-radius:16px;padding:20px;max-width:400px;width:90%;color:#fff;';
+    var html='<h3 style="margin:0 0 12px;color:#f43f5e;">Who do you want to ask first?</h3>';
+    html+='<p style="font-size:12px;color:rgba(255,255,255,.5);margin-bottom:12px;">You need to ask everyone. Pick who to start with.</p>';
+    others.forEach(function(m){
+      html+='<button onclick="askPickedMember(\''+m.uid+'\',\''+m.nick+'\')" style="display:block;width:100%;padding:10px 14px;margin-bottom:6px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:#fff;border-radius:8px;cursor:pointer;font-size:13px;text-align:left;">Ask '+(m.nick||'Someone')+'</button>';
+    });
+    html+='<button onclick="document.getElementById(\'askPickerOverlay\').remove()" style="margin-top:8px;padding:8px 16px;background:transparent;border:0;color:rgba(255,255,255,.5);cursor:pointer;font-size:12px;">Cancel</button>';
+    card.innerHTML=html;
+    overlay.appendChild(card);
+    overlay.onclick=function(e){if(e.target===overlay)overlay.remove();};
+    document.body.appendChild(overlay);
+  }catch(e){}
+}
+
+function askPickedMember(uid, nick){
+  try{
+    var overlay=document.getElementById('askPickerOverlay');if(overlay)overlay.remove();
+    var p=window._wrapupPin;
+    if(!p)return;
+    var myId=null;try{myId=myUid();}catch(e){}
+    if(!myId)return;
+    var question=prompt('Ask '+(nick||'them')+' something you\'d genuinely want to know (max 250 chars):');
     if(!question)return;
     question=question.trim().slice(0,250);
     if(question.length<1)return;
     var endAt=validTs(p.hangoutEndAt)||validTs(p.expires_at)||new Date().toISOString();
     if(window.EtieCloud&&window.EtieCloud.createQuestion){
-      window.EtieCloud.createQuestion(p.id, myId, other.uid, question, endAt, function(res){
+      window.EtieCloud.createQuestion(p.id, myId, uid, question, endAt, function(res){
         try{
           if(res&&res.ok){
-            toast('Question sent!');
+            // Log to personal question bank
+            ETIE.questionBank=ETIE.questionBank||[];
+            ETIE.questionBank.push({hangout_id:p.id, asker:myId, answerer:uid, answerer_nick:nick, question:question, asked_at:new Date().toISOString(), order:ETIE.questionBank.length+1});
+            saveState();
+            toast('Question sent to '+(nick||'them')+'!');
             window._wrapupAskStep=1;
             checkWrapupCard();
           }else{
@@ -1342,6 +1371,29 @@ function readItBack(questionId){
   }catch(e){}
 }
 
+function showAnswerHistory(questionId){
+  try{
+    if(!window.EtieCloud||!window.EtieCloud.fetchMyVersions){toast('Cloud not ready.');return;}
+    window.EtieCloud.fetchMyVersions(questionId, function(versions){
+      try{
+        var box=document.getElementById('revealContent');
+        if(!box)return;
+        if(!versions||!versions.length){box.innerHTML='<div class="muted small">No versions yet.</div>';return;}
+        var html='<div style="margin-bottom:16px;">'
+          +'<div style="font-size:14px;color:#22d3ee;font-weight:700;margin-bottom:8px;">Your answer history ('+versions.length+' version'+(versions.length===1?'':'s')+')</div>';
+        versions.forEach(function(v,i){
+          html+='<div style="background:rgba(255,255,255,.05);padding:10px;border-radius:8px;margin-bottom:6px;">'
+            +'<div style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:4px;">Version '+(versions.length-i)+' \u00b7 '+new Date(v.created_at).toLocaleString()+'</div>'
+            +'<div style="font-size:13px;color:#fff;">'+(v.answer_text||'')+'</div>'
+            +'</div>';
+        });
+        html+='</div>';
+        box.innerHTML=html;
+      }catch(e){}
+    });
+  }catch(e){}
+}
+
 function hideExchange(questionId){
   try{
     _hiddenExchanges[questionId]=true;
@@ -1380,8 +1432,9 @@ function loadRevealContent(questionId){
             box.innerHTML='<div style="text-align:center;padding:20px;">'
               +'<div style="font-size:16px;color:#a78bfa;margin-bottom:8px;">Answered. Unlocks in '+hrs+'h.</div>'
               +'<div style="font-size:12px;color:rgba(255,255,255,.5);margin-bottom:12px;">The answer is sealed until the reveal time.</div>'
-              +'<div style="font-size:10px;color:rgba(255,255,255,.3);margin-top:8px;">We track edit counts and timing for quality. Never your words.</div>'
-              +'<button onclick="readItBack(\''+questionId+'\')" style="padding:8px 16px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:#fff;border-radius:8px;cursor:pointer;font-size:12px;">Read it back as they\'ll see it</button>'
+              +'<div style="font-size:10px;color:rgba(255,255,255,.3);margin-top:8px;margin-bottom:12px;">We track edit counts and timing for quality. Never your words.</div>'
+              +'<button onclick="readItBack(\''+questionId+'\')" style="padding:8px 16px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:#fff;border-radius:8px;cursor:pointer;font-size:12px;margin-right:8px;">Read it back as they\'ll see it</button>'
+              +'<button onclick="showAnswerHistory(\''+questionId+'\')" style="padding:8px 16px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:#fff;border-radius:8px;cursor:pointer;font-size:12px;">Your history</button>'
               +'</div>';
           }else{
             box.innerHTML='<div class="muted small">Cannot load: '+(res&&res.error||'unknown')+'</div>';

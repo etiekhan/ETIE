@@ -1038,101 +1038,132 @@ function createMemorySpotMarker(spot,mapInstance){
 // Open memory card for a spot (shows all photos)
 // ===== Deep-question exchange (Q2) =====
 var _wrapupPinId=null;
-var _wrapupAskStep=0; // 0=not started, 1=asked, 2=answered
 var _wrapupDismissed=false;
+var _wrapupCollapsed={}; // hangout_id -> true
 
-// Check for ended hangouts that need questions
+// Check for ended hangouts that need wrap-up
 function checkWrapupCard(){
   try{
-    if(!window.EtieCloud||!window.EtieCloud.fetchMyQuestions||!isSignedIn())return;
-    window.EtieCloud.fetchMyQuestions(function(questions){
+    if(!isSignedIn())return;
+    var pins=allMapPins()||[];
+    var now=Date.now();
+    var myId=null;try{myId=myUid();}catch(e){}
+    if(!myId)return;
+    var needingWrapup=[];
+    pins.forEach(function(p){
       try{
-        // Find ended hangouts where user hasn't asked or answered
-        var pins=allMapPins()||[];
-        var now=Date.now();
-        var myId=null;try{myId=myUid();}catch(e){}
-        if(!myId)return;
-        var needingQuestions=[];
-        pins.forEach(function(p){
-          try{
-            var state=getPinLifecycleState(p);
-            if(state!=='ended'&&state!=='vanished')return;
-            // Check if hangout ended >24h ago
-            var endAt=validTs(p.hangoutEndAt)||validTs(p.expires_at);
-            if(!endAt||now<endAt+24*3600000)return;
-            // Check if user is a member
-            var me=hookNick();
-            var isMember=(p.members||[]).some(function(m){return m.nick===me;});
-            if(!isMember)return;
-            // Check if user has asked/answered for this hangout
-            var asked=(questions||[]).filter(function(q){return q.hangout_id===p.id&&q.asker_id===myId;});
-            var answered=(questions||[]).filter(function(q){return q.hangout_id===p.id&&q.answerer_id===myId&&q.status==='answered';});
-            var askPending=(questions||[]).filter(function(q){return q.hangout_id===p.id&&q.answerer_id===myId&&q.status==='asked';});
-            if(!asked.length||askPending.length){
-              needingQuestions.push({pin:p,asked:asked.length,answerPending:askPending.length});
-            }
-          }catch(e){}
-        });
-        if(needingQuestions.length){
-          showWrapupCard(needingQuestions);
-        }else{
-          hideWrapupCard();
-        }
+        var state=getPinLifecycleState(p);
+        if(state!=='ended'&&state!=='vanished')return;
+        var endAt=validTs(p.hangoutEndAt)||validTs(p.expires_at);
+        if(!endAt)return;
+        var me=hookNick();
+        var isMember=(p.members||[]).some(function(m){return m.nick===me;});
+        if(!isMember)return;
+        needingWrapup.push(p);
+      }catch(e){}
+    });
+    // Sort newest first
+    needingWrapup.sort(function(a,b){
+      var ea=validTs(a.hangoutEndAt)||validTs(a.expires_at)||0;
+      var eb=validTs(b.hangoutEndAt)||validTs(b.expires_at)||0;
+      return eb-ea;
+    });
+    if(needingWrapup.length){
+      showWrapupCards(needingWrapup);
+      // One-time popup
+      if(!_wrapupDismissed){
+        showWrapupPopup(needingWrapup[0]);
+        _wrapupDismissed=true;
+      }
+    }else{
+      hideWrapupCards();
+    }
+  }catch(e){}
+}
+
+function showWrapupCards(pins){
+  try{
+    hideWrapupCards();
+    var container=document.getElementById('wrapupCardsContainer');
+    if(!container){
+      container=document.createElement('div');
+      container.id='wrapupCardsContainer';
+      container.style.cssText='position:fixed;top:64px;right:16px;width:min(380px,calc(100vw - 32px));z-index:9997;display:flex;flex-direction:column;gap:8px;';
+      document.body.appendChild(container);
+    }
+    pins.forEach(function(p){
+      try{
+        if(_wrapupCollapsed[p.id])return;
+        var card=createWrapupCard(p);
+        container.appendChild(card);
       }catch(e){}
     });
   }catch(e){}
 }
 
-function showWrapupCard(items){
+function hideWrapupCards(){
+  try{var c=document.getElementById('wrapupCardsContainer');if(c)c.remove();}catch(e){}
+}
+
+function createWrapupCard(p){
+  var card=document.createElement('div');
+  card.id='wrapupCard-'+p.id;
+  card.style.cssText='background:rgba(20,16,28,.95);border:1px solid rgba(244,63,94,.4);border-radius:14px;padding:14px;color:#fff;box-shadow:0 0 16px rgba(244,63,94,.15),0 8px 24px rgba(0,0,0,.4);';
+  var endAt=validTs(p.hangoutEndAt)||validTs(p.expires_at)||Date.now();
+  var minsAgo=Math.max(0,Math.round((Date.now()-endAt)/60000));
+  var otherMembers=(p.members||[]).filter(function(m){return m.nick!==hookNick();});
+  var otherName=otherMembers.length?otherMembers[0].nick:'someone';
+  var place=p.title||p.location||'Hangout';
+
+  var html='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'
+    +'<strong style="font-size:13px;color:#f43f5e;">'+place+' with '+otherName+'</strong>'
+    +'<button onclick="collapseWrapupCard(\''+p.id+'\')" style="background:transparent;border:0;color:rgba(255,255,255,.5);cursor:pointer;font-size:14px;padding:4px;min-height:32px;min-width:32px;" aria-label="Collapse wrap-up card">\u25BC</button>'
+    +'</div>'
+    +'<div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:10px;">Hangout ended '+minsAgo+' min ago</div>'
+    +'<div style="font-size:12px;color:rgba(255,255,255,.7);margin-bottom:10px;">'
+    +'<div style="margin-bottom:4px;">1. Did the hangout happen? '
+    +'<button onclick="wrapupDidHappen(\''+p.id+'\',true)" style="padding:2px 8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:#fff;border-radius:4px;cursor:pointer;font-size:11px;margin-left:4px;">Yes</button> '
+    +'<button onclick="wrapupDidHappen(\''+p.id+'\',false)" style="padding:2px 8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:#fff;border-radius:4px;cursor:pointer;font-size:11px;">No</button></div>'
+    +'<div style="margin-bottom:4px;">2. Log hangout <button onclick="wrapupLogHangout(\''+p.id+'\')" style="padding:2px 8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:#fff;border-radius:4px;cursor:pointer;font-size:11px;margin-left:4px;">Log</button></div>'
+    +'<div style="margin-bottom:4px;">3. Ask your question <button onclick="wrapupAskQuestion(\''+p.id+'\')" style="padding:2px 8px;background:#f43f5e;color:#fff;border:0;border-radius:4px;cursor:pointer;font-size:11px;margin-left:4px;">Ask</button></div>'
+    +'<div style="margin-bottom:4px;color:rgba(255,255,255,.4);">4. Answer <name>\'s question <span style="font-size:10px;">(Appears when they ask)</span></div>'
+    +'</div>'
+    +'<div style="font-size:10px;color:rgba(255,255,255,.4);border-top:1px solid rgba(255,255,255,.08);padding-top:6px;">New hangout requests unlock after steps 3 and 4.</div>';
+  card.innerHTML=html;
+  window._wrapupPin=p;
+  return card;
+}
+
+function collapseWrapupCard(pinId){
   try{
-    // Show popup once
-    if(!_wrapupDismissed){
-      showWrapupPopup(items);
-      _wrapupDismissed=true;
-    }
-    // Show persistent card
-    var existing=document.getElementById('wrapupCard');
-    if(existing)existing.remove();
-    var card=document.createElement('div');
-    card.id='wrapupCard';
-    card.style.cssText='position:fixed;top:64px;left:50%;transform:translateX(-50%);width:min(520px,94vw);background:rgba(20,16,28,.95);border:1px solid rgba(244,63,94,.3);border-radius:14px;padding:14px;z-index:9998;color:#fff;box-shadow:0 8px 24px rgba(0,0,0,.4);';
-    var item=items[0];
-    var p=item.pin;
-    var otherMembers=(p.members||[]).filter(function(m){return m.nick!==hookNick();});
-    card.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'
-      +'<strong style="font-size:14px;color:#f43f5e;">Wrap-up: '+(p.title||p.location||'Hangout')+'</strong>'
-      +'<button onclick="hideWrapupCard()" style="background:transparent;border:0;color:rgba(255,255,255,.5);cursor:pointer;font-size:16px;padding:4px;" aria-label="Dismiss">\u2715</button>'
-      +'</div>'
-      +'<div style="font-size:12px;color:rgba(255,255,255,.6);margin-bottom:10px;">'
-      +'<div>1. Did the hangout happen? <button onclick="wrapupDidHappen(true)" style="padding:2px 8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:#fff;border-radius:4px;cursor:pointer;font-size:11px;">Yes</button> <button onclick="wrapupDidHappen(false)" style="padding:2px 8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:#fff;border-radius:4px;cursor:pointer;font-size:11px;">No</button></div>'
-      +'<div>2. Log hangout <button onclick="wrapupLogHangout()" style="padding:2px 8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:#fff;border-radius:4px;cursor:pointer;font-size:11px;">Log</button></div>'
-      +'<div>3. Ask your question <button onclick="wrapupAskQuestion()" style="padding:2px 8px;background:#f43f5e;color:#fff;border:0;border-radius:4px;cursor:pointer;font-size:11px;">Ask</button></div>'
-      +(item.answerPending?'<div>4. Answer question <button onclick="wrapupAnswerQuestion()" style="padding:2px 8px;background:#22d3ee;color:#000;border:0;border-radius:4px;cursor:pointer;font-size:11px;">Answer</button></div>':'')
-      +'</div>';
-    // Store for later use
-    window._wrapupPin=p;
-    window._wrapupItem=item;
-    document.body.appendChild(card);
+    _wrapupCollapsed[pinId]=true;
+    var c=document.getElementById('wrapupCard-'+pinId);if(c)c.remove();
   }catch(e){}
 }
 
-function hideWrapupCard(){
-  try{var c=document.getElementById('wrapupCard');if(c)c.remove();}catch(e){}
-}
-
-function showWrapupPopup(items){
+function showWrapupPopup(p){
   try{
     var overlay=document.createElement('div');
     overlay.id='wrapupPopupOverlay';
     overlay.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6);';
+    var otherMembers=(p.members||[]).filter(function(m){return m.nick!==hookNick();});
+    var otherName=otherMembers.length?otherMembers[0].nick:'someone';
+    var place=p.title||p.location||'Hangout';
     var card=document.createElement('div');
     card.style.cssText='background:#1a1428;border:1px solid rgba(244,63,94,.3);border-radius:16px;padding:24px;max-width:440px;width:90%;color:#fff;text-align:center;';
-    card.innerHTML='<h3 style="margin:0 0 12px;color:#f43f5e;">Hangout Wrap-up</h3>'
-      +'<p style="font-size:14px;color:rgba(255,255,255,.7);margin-bottom:20px;">Time to reflect on your hangout. A few quick questions to complete.</p>'
-      +'<button onclick="closeWrapupPopup()" style="padding:10px 24px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:#fff;border-radius:8px;cursor:pointer;font-size:13px;">Later</button>';
+    card.innerHTML='<h3 style="margin:0 0 12px;color:#f43f5e;">Did '+place+' with '+otherName+' happen?</h3>'
+      +'<div style="display:flex;gap:8px;justify-content:center;margin-top:16px;">'
+      +'<button onclick="wrapupDidHappen(\''+p.id+'\',true);closeWrapupPopup();" style="padding:10px 20px;background:#f43f5e;color:#fff;border:0;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;">Yes, it did</button>'
+      +'<button onclick="wrapupDidHappen(\''+p.id+'\',false);closeWrapupPopup();" style="padding:10px 20px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:#fff;border-radius:8px;cursor:pointer;font-size:13px;">No</button>'
+      +'<button onclick="closeWrapupPopup();" style="padding:10px 20px;background:transparent;border:0;color:rgba(255,255,255,.5);cursor:pointer;font-size:13px;">Later</button>'
+      +'</div>';
     overlay.appendChild(card);
     overlay.onclick=function(e){if(e.target===overlay)closeWrapupPopup();};
     document.body.appendChild(overlay);
+    // Mark popup as seen
+    if(window.EtieCloud&&window.EtieCloud.markPopupSeen){
+      window.EtieCloud.markPopupSeen(p.id, function(){});
+    }
   }catch(e){}
 }
 
@@ -1140,38 +1171,58 @@ function closeWrapupPopup(){
   try{var o=document.getElementById('wrapupPopupOverlay');if(o)o.remove();}catch(e){}
 }
 
-function wrapupDidHappen(yes){
+function wrapupDidHappen(pinId, yes){
   try{
-    if(!yes){
-      if(confirm('Report a problem with this hangout?')){
-        toast('Report submitted. We\'ll review it.');
-      }
-      hideWrapupCard();
-      return;
+    var p=null;
+    (allMapPins()||[]).forEach(function(x){if(x&&(x.id===pinId||x.cloudId===pinId))p=x;});
+    if(!p)return;
+    if(window.EtieCloud&&window.EtieCloud.confirmHangout){
+      window.EtieCloud.confirmHangout(pinId, yes, function(ok){
+        try{
+          if(!ok){toast('Confirmation failed.');return;}
+          if(!yes){
+            // No response
+            var overlay=document.createElement('div');
+            overlay.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6);';
+            var card=document.createElement('div');
+            card.style.cssText='background:#1a1428;border:1px solid rgba(255,60,60,.3);border-radius:16px;padding:24px;max-width:400px;width:90%;color:#fff;text-align:center;';
+            card.innerHTML='<h3 style="margin:0 0 12px;color:#f87171;">Sorry it didn\'t work out</h3>'
+              +'<p style="font-size:13px;color:rgba(255,255,255,.6);margin-bottom:16px;">No questions will be exchanged for this hangout.</p>'
+              +'<div style="display:flex;gap:8px;justify-content:center;">'
+              +'<button onclick="toast(\'Report submitted.\');this.parentElement.parentElement.parentElement.remove();" style="padding:8px 16px;background:rgba(255,60,60,.15);border:1px solid rgba(255,60,60,.3);color:#f87171;border-radius:8px;cursor:pointer;font-size:12px;">Report a problem</button>'
+              +'<button onclick="this.parentElement.parentElement.parentElement.remove();" style="padding:8px 16px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:#fff;border-radius:8px;cursor:pointer;font-size:12px;">Close</button>'
+              +'</div>';
+            overlay.appendChild(card);
+            document.body.appendChild(overlay);
+            hideWrapupCards();
+          }else{
+            toast('Confirmed! Now log and ask your question.');
+          }
+        }catch(e){}
+      });
     }
-    // Move to next step
-    wrapupAskQuestion();
   }catch(e){}
 }
 
-function wrapupLogHangout(){
+function wrapupLogHangout(pinId){
   try{
-    hideWrapupCard();
-    var p=window._wrapupPin;
+    var p=null;
+    (allMapPins()||[]).forEach(function(x){if(x&&(x.id===pinId||x.cloudId===pinId))p=x;});
+    hideWrapupCards();
     if(p)openLogSheet(p.id);
   }catch(e){}
 }
 
-function wrapupAskQuestion(){
+function wrapupAskQuestion(pinId){
   try{
-    var p=window._wrapupPin;
+    var p=null;
+    (allMapPins()||[]).forEach(function(x){if(x&&(x.id===pinId||x.cloudId===pinId))p=x;});
+    if(!p){p=window._wrapupPin;}
     if(!p)return;
-    var me=hookNick();
-    var myId=null;try{myId=myUid();}catch(e){}
-    if(!myId)return;
-    var others=(p.members||[]).filter(function(m){return m.nick!==me&&m.uid;});
+    window._wrapupPin=p;
+    // Show picker
+    var others=(p.members||[]).filter(function(m){return m.nick!==hookNick()&&m.uid;});
     if(!others.length){toast('No one else to ask.');return;}
-    // Show picker: let user choose who to ask first
     var old=document.getElementById('askPickerOverlay');if(old)old.remove();
     var overlay=document.createElement('div');
     overlay.id='askPickerOverlay';
@@ -1181,7 +1232,7 @@ function wrapupAskQuestion(){
     var html='<h3 style="margin:0 0 12px;color:#f43f5e;">Who do you want to ask first?</h3>';
     html+='<p style="font-size:12px;color:rgba(255,255,255,.5);margin-bottom:12px;">You need to ask everyone. Pick who to start with.</p>';
     others.forEach(function(m){
-      html+='<button onclick="askPickedMember(\''+m.uid+'\',\''+m.nick+'\')" style="display:block;width:100%;padding:10px 14px;margin-bottom:6px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:#fff;border-radius:8px;cursor:pointer;font-size:13px;text-align:left;">Ask '+(m.nick||'Someone')+'</button>';
+      html+='<button onclick="askPickedMember(\''+m.uid+'\',\''+m.nick+'\')" style="display:block;width:100%;padding:10px 14px;margin-bottom:6px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:#fff;border-radius:8px;cursor:pointer;font-size:13px;text-align:left;min-height:44px;">Ask '+(m.nick||'Someone')+'</button>';
     });
     html+='<button onclick="document.getElementById(\'askPickerOverlay\').remove()" style="margin-top:8px;padding:8px 16px;background:transparent;border:0;color:rgba(255,255,255,.5);cursor:pointer;font-size:12px;">Cancel</button>';
     card.innerHTML=html;
@@ -1207,12 +1258,10 @@ function askPickedMember(uid, nick){
       window.EtieCloud.createQuestion(p.id, myId, uid, question, endAt, function(res){
         try{
           if(res&&res.ok){
-            // Log to personal question bank
             ETIE.questionBank=ETIE.questionBank||[];
             ETIE.questionBank.push({hangout_id:p.id, asker:myId, answerer:uid, answerer_nick:nick, question:question, asked_at:new Date().toISOString(), order:ETIE.questionBank.length+1});
             saveState();
             toast('Question sent to '+(nick||'them')+'!');
-            window._wrapupAskStep=1;
             checkWrapupCard();
           }else{
             toast('Failed: '+(res&&res.error||'unknown'));
@@ -1223,16 +1272,20 @@ function askPickedMember(uid, nick){
   }catch(e){}
 }
 
-function wrapupAnswerQuestion(){
+function wrapupAnswerQuestion(pinId){
   try{
-    var item=window._wrapupItem;
-    if(!item)return;
-    // Find pending question for this user
+    var p=null;
+    (allMapPins()||[]).forEach(function(x){if(x&&(x.id===pinId||x.cloudId===pinId))p=x;});
+    if(!p)p=window._wrapupPin;
+    if(!p)return;
+    window._wrapupPin=p;
+    var me=hookNick();
+    var myId=null;try{myId=myUid();}catch(e){}
+    if(!myId)return;
     if(window.EtieCloud&&window.EtieCloud.fetchMyQuestions){
       window.EtieCloud.fetchMyQuestions(function(questions){
         try{
-          var myId=null;try{myId=myUid();}catch(e){}
-          var pending=(questions||[]).filter(function(q){return q.hangout_id===item.pin.id&&q.answerer_id===myId&&q.status==='asked';});
+          var pending=(questions||[]).filter(function(q){return q.hangout_id===p.id&&q.answerer_id===myId&&q.status==='asked';});
           if(!pending.length){toast('No pending questions.');return;}
           var q=pending[0];
           var answer=prompt('Your answer to: "'+q.question_text+'" (max 600 chars):');
@@ -1244,7 +1297,6 @@ function wrapupAnswerQuestion(){
               try{
                 if(res&&res.ok){
                   toast('Answer saved!');
-                  window._wrapupAskStep=2;
                   checkWrapupCard();
                 }else{
                   toast('Failed: '+(res&&res.error||'unknown'));
@@ -1258,14 +1310,25 @@ function wrapupAnswerQuestion(){
   }catch(e){}
 }
 
-// Gate: check if user owes questions before allowing hangout requests
-function checkQuestionGate(pinId){
+// Gate: check if user owes questions for confirmed hangouts
+function checkQuestionGate(){
   try{
-    if(!isSignedIn())return true; // allow if not signed in (will be blocked by auth gate anyway)
-    // Check for ended hangouts with pending questions
-    if(window._wrapupItem){
-      // User has pending wrap-up — block new hangout requests
-      return false;
+    if(!isSignedIn())return true;
+    // Check if there's a pending wrap-up card
+    var card=document.getElementById('wrapupCardsContainer');
+    if(card&&card.children.length>0){
+      // User has pending wrap-up — check if they've asked at least one question
+      var p=window._wrapupPin;
+      if(p){
+        var myId=null;try{myId=myUid();}catch(e){}
+        if(myId){
+          // Check if user has asked for this hangout
+          if(window.EtieCloud&&window.EtieCloud.fetchMyQuestions){
+            // Sync check — if _wrapupAskStep is 0, they haven't asked
+            if(window._wrapupAskStep===0)return false;
+          }
+        }
+      }
     }
     return true;
   }catch(e){return true;}
@@ -5136,6 +5199,17 @@ function openLogSheet(pinId,spot){
   try{
     var p=pinId?findPin(pinId):null;
     if(pinId&&!p){toast('Hook not found.');return;}
+    // End the hangout if still active (first log tap ends it)
+    if(p){
+      var now=Date.now();
+      var endAt=validTs(p.hangoutEndAt)||validTs(p.expires_at);
+      if(!endAt||now<endAt){
+        p.hangoutEndAt=new Date(now).toISOString();
+        p.expires_at=new Date(now).toISOString();
+        try{storePin(p);}catch(e){}
+        try{if(window.EtieCloud&&window.EtieCloud.pushSharedRequest)window.EtieCloud.pushSharedRequest(p.id);}catch(e){}
+      }
+    }
     var me=hookNick();
     if(p&&!(p.members||[]).some(function(m){return m.nick===me;})){toast('Join this hook first to log photos.');return;}
     _logPinId=p?pinId:null;_logStandalone=!p;_logFile=null;_logTakenAt=0;_logPeople=[];_logSearchResults=[];_logSpot=null;

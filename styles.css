@@ -1057,6 +1057,11 @@ h1, h2, h3, h4, h5, h6, .logo-inline {
   z-index: var(--z-map);
 }
 
+/* Wrap-up card: full-width on narrow screens */
+@media(max-width:640px){
+  #wrapupCardsContainer{left:8px;right:8px;width:auto;top:56px;}
+}
+
 /* Accessibility: visible focus rings */
 button:focus-visible,
 input:focus-visible,

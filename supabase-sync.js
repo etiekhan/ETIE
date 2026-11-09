@@ -1497,6 +1497,43 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
     }catch(e){try{cb(null);}catch(_){}}
   }
 
+  // ---- Wrap-up confirmations (W1) ----
+  function confirmHangout(hangoutId, happened, cb){
+    try{
+      if(!client||!session){if(cb)cb(false);return;}
+      client.from('hangout_confirmations').upsert({
+        hangout_id:hangoutId, user_id:session.user.id,
+        happened:happened, confirmed_at:new Date().toISOString()
+      },{onConflict:'hangout_id,user_id'}).then(function(r){
+        try{if(cb)cb(!r||!r.error);}catch(e){if(cb)cb(false);}
+      }).catch(function(){if(cb)cb(false);});
+    }catch(e){if(cb)cb(false);}
+  }
+  function markPopupSeen(hangoutId, cb){
+    try{
+      if(!client||!session){if(cb)cb(false);return;}
+      client.rpc('mark_popup_seen',{p_hangout_id:hangoutId}).then(function(r){
+        try{if(cb)cb(!r||!r.error);}catch(e){if(cb)cb(false);}
+      }).catch(function(){if(cb)cb(false);});
+    }catch(e){if(cb)cb(false);}
+  }
+  function checkHangoutConfirmation(hangoutId, cb){
+    try{
+      if(!client||!session||typeof cb!=='function'){cb(null);return;}
+      client.rpc('check_hangout_confirmation',{p_hangout_id:hangoutId}).then(function(r){
+        try{cb(r&&!r.error?r.data:null);}catch(e){cb(null);}
+      }).catch(function(){cb(null);});
+    }catch(e){try{cb(null);}catch(_){}}
+  }
+  function fetchMyConfirmations(cb){
+    try{
+      if(!client||!session||typeof cb!=='function'){cb([]);return;}
+      client.from('hangout_confirmations').select('*').eq('user_id',session.user.id).then(function(r){
+        try{cb(r&&!r.error?r.data||[]:[]);}catch(e){cb([]);}
+      }).catch(function(){cb([]);});
+    }catch(e){try{cb([]);}catch(_){}}
+  }
+
   // TODO(OAuth): Set up custom domain (e.g. auth.etie.app) in Supabase OAuth settings
 // to replace the raw supabase.co redirect URL on Google login.
 // Configure in Supabase Dashboard > Authentication > URL Configuration > Site URL & Redirect URLs.
@@ -1522,6 +1559,8 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
     createQuestion:createQuestion, insertAnswer:insertAnswer, getLatestAnswer:getLatestAnswer,
     reportQuestion:reportQuestion, fetchMyQuestions:fetchMyQuestions, fetchMyVersions:fetchMyVersions,
     fetchReportedQuestions:fetchReportedQuestions, fetchAnswerMetrics:fetchAnswerMetrics,
+    confirmHangout:confirmHangout, markPopupSeen:markPopupSeen, checkHangoutConfirmation:checkHangoutConfirmation,
+    fetchMyConfirmations:fetchMyConfirmations,
     pushSidequest:pushSidequest, fetchSidequest:fetchSidequest, clearSidequest:clearSidequest,
     syncProfile:syncProfile, pushSharedRequest:pushSharedRequest, pushSharedMessage:pushSharedMessage, pushSharedMeetup:pushSharedMeetup,
     pushSharedReview:pushSharedReview, pushSharedReport:pushSharedReport,

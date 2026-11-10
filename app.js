@@ -5689,7 +5689,7 @@ function saveSidequest(){
         var s=document.getElementById('sqStatus');
         if(ok){if(s)s.textContent='Live now: '+t;toast('Sidequest live.');
           try{document.getElementById('sqTitle').value='';document.getElementById('sqDesc').value='';clearSqPhoto();}catch(e){}}
-        else{if(s)s.textContent='Save failed.';toast('Could not save sidequest.');}
+        else{if(s)s.textContent='Save failed. Check console (F12).';toast('Could not save sidequest. Check browser console (F12).');}
       }catch(e){}
     });
   }catch(e){toast('Could not save sidequest.');}

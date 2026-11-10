@@ -1719,12 +1719,6 @@ function openMemorySpotCard(spot){
 
     card.appendChild(gridWrap);
 
-    // Tag section (in group panel - targets first photo for quick tagging)
-    var tagSection=document.createElement('div');
-    tagSection.id='memTagSection';
-    tagSection.style.cssText='margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.1);';
-    card.appendChild(tagSection);
-
     // Add a memory here button
     var addBtn=document.createElement('button');
     addBtn.style.cssText='margin-top:12px;padding:10px 16px;background:#f43f5e;color:#fff;border:0;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;flex-shrink:0;min-height:44px;';
@@ -1742,8 +1736,7 @@ function openMemorySpotCard(spot){
     window._openMemorySpot=spot;
     window._memSingleIdx=0;
 
-    // Load tag section (first photo) for group panel
-    try{loadMemTagSection(spot, 0);}catch(e){console.error('group tag section load error:',e);}
+    // Tagging happens in single memory view only
 
     // Esc to close
     var escHandler=function(e){if(e.key==='Escape'){overlay.remove();document.removeEventListener('keydown',escHandler);}};
@@ -1844,31 +1837,31 @@ function openMemorySingleView(idx, spot){
     overlay.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);';
     var card=document.createElement('div');
     card.style.cssText='background:#1a1428;border:1px solid rgba(255,255,255,.14);border-radius:16px;padding:20px;max-width:640px;width:90%;max-height:85vh;overflow-y:auto;color:#fff;';
-    // Navigation header
+    // Unified glassmorphic toolbar
     var nav=document.createElement('div');
-    nav.style.cssText='display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;';
+    nav.style.cssText='display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding:8px 12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:12px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);flex-shrink:0;position:sticky;top:0;z-index:1;';
     var backBtn=document.createElement('button');
     backBtn.setAttribute('aria-label','Back to group');
-    backBtn.style.cssText='padding:8px 14px;min-height:44px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:#fff;border-radius:8px;cursor:pointer;font-size:13px;';
-    backBtn.textContent='\u2190 Back to group';
+    backBtn.style.cssText='padding:6px 12px;min-height:40px;background:transparent;border:0;color:#fff;cursor:pointer;font-size:13px;border-radius:6px;';
+    backBtn.textContent='\u2190 Back';
     backBtn.onclick=function(){overlay.remove();};
     nav.appendChild(backBtn);
     var counter=document.createElement('div');
-    counter.style.cssText='font-size:13px;color:rgba(255,255,255,.6);';
+    counter.style.cssText='font-size:13px;color:rgba(255,255,255,.6);font-weight:600;';
     counter.textContent=(idx+1)+' of '+photos.length;
     nav.appendChild(counter);
     var navBtns=document.createElement('div');
-    navBtns.style.cssText='display:flex;gap:6px;';
+    navBtns.style.cssText='display:flex;gap:4px;';
     var prevBtn=document.createElement('button');
     prevBtn.setAttribute('aria-label','Previous memory');
-    prevBtn.style.cssText='padding:8px 12px;min-height:44px;min-width:44px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:#fff;border-radius:8px;cursor:pointer;font-size:16px;';
+    prevBtn.style.cssText='padding:6px 10px;min-height:40px;min-width:40px;background:transparent;border:0;color:#fff;border-radius:6px;cursor:pointer;font-size:16px;';
     prevBtn.textContent='\u2190';
     prevBtn.disabled=idx===0;
     prevBtn.onclick=function(){if(idx>0)openMemorySingleView(idx-1,spot);};
     navBtns.appendChild(prevBtn);
     var nextBtn=document.createElement('button');
     nextBtn.setAttribute('aria-label','Next memory');
-    nextBtn.style.cssText='padding:8px 12px;min-height:44px;min-width:44px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:#fff;border-radius:8px;cursor:pointer;font-size:16px;';
+    nextBtn.style.cssText='padding:6px 10px;min-height:40px;min-width:40px;background:transparent;border:0;color:#fff;border-radius:6px;cursor:pointer;font-size:16px;';
     nextBtn.textContent='\u2192';
     nextBtn.disabled=idx===photos.length-1;
     nextBtn.onclick=function(){if(idx<photos.length-1)openMemorySingleView(idx+1,spot);};
@@ -1910,11 +1903,18 @@ function openMemorySingleView(idx, spot){
     fullDate.textContent=d.toLocaleString(undefined,{weekday:'long',year:'numeric',month:'long',day:'numeric',hour:'numeric',minute:'2-digit'});
     details.appendChild(fullDate);
 
-    // Caption in Syne
+    // Caption in Syne (with class for edit mode)
     if(photo.caption){
       var caption=document.createElement('div');
+      caption.className='mem-caption-display';
       caption.style.cssText='font-family:var(--font-logo, Syne),sans-serif;font-size:16px;font-weight:700;color:#fff;margin-top:4px;';
       caption.textContent=photo.caption;
+      details.appendChild(caption);
+    }else{
+      var caption=document.createElement('div');
+      caption.className='mem-caption-display';
+      caption.style.cssText='font-family:var(--font-logo, Syne),sans-serif;font-size:16px;font-weight:700;color:rgba(255,255,255,.3);margin-top:4px;';
+      caption.textContent='(no caption)';
       details.appendChild(caption);
     }
 
@@ -1989,6 +1989,64 @@ function openMemorySingleView(idx, spot){
       details.appendChild(msgBtn);
     }
 
+    // Edit + Delete (author only)
+    var myId2=null;try{myId2=myUid();}catch(e){}
+    var isAuthor = myId2 && photo.ownerId && myId2===photo.ownerId;
+    if(isAuthor){
+      var actionRow=document.createElement('div');
+      actionRow.style.cssText='display:flex;gap:8px;margin-top:12px;';
+      // Edit button
+      var editBtn=document.createElement('button');
+      editBtn.style.cssText='padding:8px 14px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:#fff;border-radius:8px;cursor:pointer;font-size:12px;min-height:40px;';
+      editBtn.textContent='\u270f\ufe0f Edit';
+      editBtn.setAttribute('aria-label','Edit memory');
+      editBtn.onclick=function(){
+        // Toggle edit mode for caption
+        var captionEl=details.querySelector('.mem-caption-edit');
+        if(captionEl){
+          // Save
+          var newCaption=captionEl.value.trim().slice(0,120);
+          photo.caption=newCaption;
+          // Update in state
+          if(window._openMemorySpot){
+            var spot=window._openMemorySpot;
+            spot.photos.forEach(function(p){if(p.logId===photo.logId)p.caption=newCaption;});
+          }
+          // Update in DB
+          if(photo.logId && window.EtieCloud&&window.EtieCloud.updateHangoutLog){
+            window.EtieCloud.updateHangoutLog(photo.logId, {title:newCaption});
+          }
+          toast('Caption updated.');
+          overlay.remove();
+          openMemorySingleView(idx, spot);
+        }else{
+          // Enter edit mode
+          var capDiv=details.querySelector('.mem-caption-display');
+          if(capDiv){
+            var input=document.createElement('textarea');
+            input.className='mem-caption-edit';
+            input.value=photo.caption||'';
+            input.style.cssText='width:100%;min-height:60px;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:#fff;font-size:13px;resize:vertical;box-sizing:border-box;';
+            capDiv.parentNode.replaceChild(input, capDiv);
+            editBtn.textContent='\ud83d\udcbe Save';
+          }
+        }
+      };
+      actionRow.appendChild(editBtn);
+      // Delete button
+      var delBtn=document.createElement('button');
+      delBtn.style.cssText='padding:8px 14px;background:rgba(255,60,60,.1);border:1px solid rgba(255,60,60,.2);color:#f87171;border-radius:8px;cursor:pointer;font-size:12px;min-height:40px;';
+      delBtn.textContent='\ud83d\uddd1 Delete';
+      delBtn.setAttribute('aria-label','Delete memory');
+      delBtn.onclick=function(){
+        if(!confirm('Are you sure you want to permanently delete this memory?'))return;
+        deleteMemoryPhoto(photo, spot, idx, photos.length);
+        overlay.remove();
+      };
+      actionRow.appendChild(delBtn);
+      details.appendChild(actionRow);
+    }
+
     content.appendChild(details);
     card.appendChild(content);
 
@@ -2060,7 +2118,7 @@ function loadMemTagSection(spot, photoIdx){
         try{
           var list=document.getElementById('memTagList');
           if(!list)return;
-          if(!tags||!tags.length){list.innerHTML='<div style="font-size:11px;color:rgba(255,255,255,.3);">No tags yet.</div>';return;}
+          if(!tags||!tags.length){list.innerHTML='<div style="font-size:11px;color:rgba(255,255,255,.3);">No tagged friends on this photo.</div>';return;}
           // Fetch display names for tagged users
           var userIds=tags.map(function(t){return t.tagged_user_id;}).filter(Boolean);
           var renderTags=function(nameMap){
@@ -2092,12 +2150,11 @@ function loadMemTagSection(spot, photoIdx){
       window.EtieCloud.fetchConnections(function(conns){
         try{
           if(!conns||!conns.length){
-            // Show hint that connections may not be set up
             var connBox=document.getElementById('memTagConnections');
             if(connBox){
               var hint=document.createElement('div');
               hint.style.cssText='font-size:11px;color:rgba(255,255,255,.4);margin-bottom:4px;';
-              hint.textContent='No connections yet. (Run M2 SQL if not done.)';
+              hint.textContent='No tagged friends on this photo.';
               connBox.appendChild(hint);
             }
             return;
@@ -2379,9 +2436,10 @@ function openMemoryCardFromFeed(photo, spot){
     openMemoryCard(log);
   }catch(e){}
 }
-function deleteMemoryPhoto(photo, spot){
+function deleteMemoryPhoto(photo, spot, idx, totalPhotos){
   try{
     if(!photo||!photo.url){toast('No photo to delete.');return;}
+    // Confirm already done by caller, but double-check
     // Delete from storage
     if(window.EtieCloud&&window.EtieCloud.deletePhoto){
       window.EtieCloud.deletePhoto(photo.url).catch(function(){});
@@ -2390,14 +2448,26 @@ function deleteMemoryPhoto(photo, spot){
     if(photo.logId && window.EtieCloud&&window.EtieCloud.deleteHangoutLog){
       window.EtieCloud.deleteHangoutLog(photo.logId).then(function(){
         toast('Photo deleted.');
+        // Remove from spot's photos
+        if(spot && spot.photos){
+          spot.photos=spot.photos.filter(function(p){return p.logId!==photo.logId;});
+        }
+        // If last photo in group, remove map pin marker
+        if(spot && (!spot.photos || spot.photos.length===0)){
+          try{
+            // Find and remove the marker
+            _mainMemoryMarkers.forEach(function(m){
+              try{if(m._spot && m._spot.id===spot.id){if(m._interval)clearInterval(m._interval);m.remove();}}catch(e){}
+            });
+            _mainMemoryMarkers=_mainMemoryMarkers.filter(function(m){return !(m._spot&&m._spot.id===spot.id);});
+          }catch(e){}
+        }
         // Refresh memory markers
         try{if(typeof loadMainMemoryMarkers==='function')loadMainMemoryMarkers();}catch(e){}
-        try{var m=document.getElementById('memoryCardModal');if(m)m.classList.add('hidden');}catch(e){}
       }).catch(function(){toast('Deleted from storage, DB update failed.');});
     }else{
       toast('Photo deleted from storage.');
       try{if(typeof loadMainMemoryMarkers==='function')loadMainMemoryMarkers();}catch(e){}
-      try{var m=document.getElementById('memoryCardModal');if(m)m.classList.add('hidden');}catch(e){}
     }
   }catch(e){console.error('deleteMemoryPhoto error:',e);toast('Delete failed.');}
 }

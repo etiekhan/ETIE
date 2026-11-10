@@ -34,10 +34,10 @@ create policy "hc update own" on public.hangout_confirmations
   for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 -- Admins can read all confirmations (to review disagreements).
--- Replace 'your-admin-email@example.com' with your admin email.
+-- Replace 'kan.ethan.cy@gmail.com' with your admin email.
 drop policy if exists "hc read admin" on public.hangout_confirmations;
 create policy "hc read admin" on public.hangout_confirmations
-  for select using (auth.jwt() ->> 'email' in ('your-admin-email@example.com'));
+  for select using (auth.jwt() ->> 'email' in ('kan.ethan.cy@gmail.com'));
 
 create index if not exists hc_hangout_idx on public.hangout_confirmations(hangout_id, happened);
 create index if not exists hc_user_idx on public.hangout_confirmations(user_id, confirmed_at desc);

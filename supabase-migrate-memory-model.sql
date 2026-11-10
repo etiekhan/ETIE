@@ -137,6 +137,15 @@ drop policy if exists "blocks delete own" on public.blocks;
 create policy "blocks delete own" on public.blocks
   for delete using (auth.uid() = blocker_id);
 
+-- Helper: check if user is a participant in a thread (avoids RLS recursion)
+create or replace function public.is_thread_participant(p_thread_id uuid, p_user_id uuid)
+returns boolean language sql security definer as $$
+  select exists (
+    select 1 from public.chat_participants
+    where thread_id = p_thread_id and user_id = p_user_id
+  );
+$$;
+
 -- 6. CHAT THREADS + PARTICIPANTS
 create table if not exists public.chat_threads (
   id uuid primary key default gen_random_uuid(),
@@ -158,14 +167,14 @@ alter table public.chat_participants enable row level security;
 drop policy if exists "threads read participant" on public.chat_threads;
 create policy "threads read participant" on public.chat_threads
   for select using (
-    exists (select 1 from public.chat_participants cp where cp.thread_id = id and cp.user_id = auth.uid())
+    public.is_thread_participant(id, auth.uid())
   );
 
 -- Participants read participant lists for their threads
 drop policy if exists "participants read own thread" on public.chat_participants;
 create policy "participants read own thread" on public.chat_participants
   for select using (
-    exists (select 1 from public.chat_participants cp where cp.thread_id = thread_id and cp.user_id = auth.uid())
+    public.is_thread_participant(thread_id, auth.uid())
   );
 
 -- 7. ADD thread_id + memory_id TO etie_messages
@@ -178,7 +187,7 @@ drop policy if exists "messages read participant" on public.etie_messages;
 create policy "messages read participant" on public.etie_messages
   for select using (
     thread_id is null or
-    exists (select 1 from public.chat_participants cp where cp.thread_id = thread_id and cp.user_id = auth.uid())
+    public.is_thread_participant(thread_id, auth.uid())
   );
 
 drop policy if exists "messages insert auth" on public.etie_messages;
@@ -186,7 +195,7 @@ drop policy if exists "messages insert participant" on public.etie_messages;
 create policy "messages insert participant" on public.etie_messages
   for insert with check (
     auth.uid() = sender_id and
-    (thread_id is null or exists (select 1 from public.chat_participants cp where cp.thread_id = thread_id and cp.user_id = auth.uid()))
+    (thread_id is null or public.is_thread_participant(thread_id, auth.uid()))
   );
 
 create index if not exists etie_messages_thread_idx on public.etie_messages(thread_id, created_at);
@@ -341,6 +350,9 @@ begin
   return json_build_object('ok', true);
 end;
 $$;
+
+-- Grant execute on helper function
+grant execute on function public.is_thread_participant(uuid, uuid) to authenticated;
 
 -- Grant execute on functions to authenticated users
 grant execute on function public.tag_user(uuid, uuid) to authenticated;

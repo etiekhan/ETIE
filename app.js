@@ -1719,6 +1719,12 @@ function openMemorySpotCard(spot){
 
     card.appendChild(gridWrap);
 
+    // Tag section (in group panel - targets first photo for quick tagging)
+    var tagSection=document.createElement('div');
+    tagSection.id='memTagSection';
+    tagSection.style.cssText='margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.1);';
+    card.appendChild(tagSection);
+
     // Add a memory here button
     var addBtn=document.createElement('button');
     addBtn.style.cssText='margin-top:12px;padding:10px 16px;background:#f43f5e;color:#fff;border:0;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;flex-shrink:0;min-height:44px;';
@@ -1732,8 +1738,11 @@ function openMemorySpotCard(spot){
     overlay.appendChild(card);
     overlay.onclick=function(e){if(e.target===overlay)overlay.remove();};
     document.body.appendChild(overlay);
+    window._openMemorySpot=spot;
+    window._memSingleIdx=0;
 
-    // Tagging happens in single memory view
+    // Load tag section (first photo) for group panel
+    try{loadMemTagSection(spot, 0);}catch(e){console.error('group tag section load error:',e);}
 
     // Esc to close
     var escHandler=function(e){if(e.key==='Escape'){overlay.remove();document.removeEventListener('keydown',escHandler);}};
@@ -1989,10 +1998,10 @@ function openMemorySingleView(idx, spot){
     card.appendChild(tagSec);
 
     overlay.appendChild(card);
-
-    try{loadMemTagSection(spot, idx);}catch(e){}
     overlay.onclick=function(e){if(e.target===overlay)overlay.remove();};
     document.body.appendChild(overlay);
+    // Load tag section AFTER overlay is in DOM
+    try{loadMemTagSection(spot, idx);}catch(e){console.error('tag section load error:',e);}
 
 
 
@@ -2012,10 +2021,12 @@ function openMemorySingleView(idx, spot){
 function loadMemTagSection(spot, photoIdx){
   try{
     var section=document.getElementById('memTagSection');
-    if(!section||!spot||!spot.photos||!spot.photos.length)return;
+    if(!section){console.log('loadMemTagSection: section not found');return;}
+    if(!spot||!spot.photos||!spot.photos.length){console.log('loadMemTagSection: no spot/photos');return;}
     if(photoIdx==null)photoIdx=0;
     // Use the specific photo's logId as the memory ID for tagging
     var memoryId=spot.photos[photoIdx].logId;
+    console.log('loadMemTagSection: memoryId=',memoryId,'photoIdx=',photoIdx,'spot=',spot.name);
     if(!memoryId){section.innerHTML='<div style="font-size:12px;color:rgba(255,255,255,.4);">Tagging requires cloud sync. (No memory ID)</div>';return;}
     // Check if signed in
     var myId=null;try{myId=myUid();}catch(e){}

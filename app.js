@@ -1737,6 +1737,7 @@ function openMemorySpotCard(spot){
 
     overlay.appendChild(card);
     overlay.onclick=function(e){if(e.target===overlay)overlay.remove();};
+
     document.body.appendChild(overlay);
     window._openMemorySpot=spot;
     window._memSingleIdx=0;
@@ -2022,11 +2023,14 @@ function loadMemTagSection(spot, photoIdx){
   try{
     var section=document.getElementById('memTagSection');
     if(!section){console.log('loadMemTagSection: section not found');return;}
-    if(!spot||!spot.photos||!spot.photos.length){console.log('loadMemTagSection: no spot/photos');return;}
+    // Use the sorted photos array if available
+    var photos=window._memGroupPhotos||(spot&&spot.photos)||[];
+    if(!photos||!photos.length){console.log('loadMemTagSection: no photos');return;}
     if(photoIdx==null)photoIdx=0;
+    if(photoIdx>=photos.length)photoIdx=0;
     // Use the specific photo's logId as the memory ID for tagging
-    var memoryId=spot.photos[photoIdx].logId;
-    console.log('loadMemTagSection: memoryId=',memoryId,'photoIdx=',photoIdx,'spot=',spot.name);
+    var memoryId=photos[photoIdx].logId;
+    console.log('loadMemTagSection: memoryId=',memoryId,'photoIdx=',photoIdx);
     if(!memoryId){section.innerHTML='<div style="font-size:12px;color:rgba(255,255,255,.4);">Tagging requires cloud sync. (No memory ID)</div>';return;}
     // Check if signed in
     var myId=null;try{myId=myUid();}catch(e){}
@@ -2039,6 +2043,7 @@ function loadMemTagSection(spot, photoIdx){
     var myId=null;try{myId=myUid();}catch(e){}
     // We'll show tag UI for the owner. For simplicity, show for all (owner check via RPC).
     section.innerHTML='<div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:8px;">Tag people in this memory</div>'
+      +'<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:8px;">Memory: '+(photos[photoIdx].caption||'Untitled')+'</div>'
       +'<div id="memTagConnections" style="margin-bottom:8px;"></div>'
       +'<div style="display:flex;gap:8px;margin-bottom:8px;">'
       +'<div style="position:relative;flex:1;">'

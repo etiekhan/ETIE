@@ -31,4 +31,8 @@ create policy "sidequests admin write" on public.sidequests for all using (
 
 create index if not exists sidequests_active_idx on public.sidequests(is_active, starts_at, ends_at);
 
-alter publication supabase_realtime add table public.sidequests;
+do $$ begin
+  if not exists (select 1 from pg_publication_tables where pubname='supabase_realtime' and tablename='sidequests') then
+    alter publication supabase_realtime add table public.sidequests;
+  end if;
+end $$;

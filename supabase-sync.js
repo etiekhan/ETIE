@@ -957,12 +957,12 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
   }
   // ---- Sidequest of the week (admin-published, read by everyone) ----
   function sidequestTable(){return 'sidequests';}
-  function pushSidequest(title,desc){
+  function pushSidequest(title,desc,imageUrl){
     return new Promise(function(resolve){
       try{
         if(!client||!session){resolve(null);return;}
         client.from(sidequestTable()).update({is_active:false}).eq('is_active',true).then(function(){
-          client.from(sidequestTable()).insert({title:String(title||'').slice(0,80),descr:String(desc||'').slice(0,280),is_active:true,created_by:session.user.id}).then(function(r){resolve(r&&!r.error);}).catch(function(){resolve(null);});
+          client.from(sidequestTable()).insert({title:String(title||'').slice(0,80),descr:String(desc||'').slice(0,280),image_url:imageUrl||null,is_active:true,created_by:session.user.id}).then(function(r){resolve(r&&!r.error);}).catch(function(){resolve(null);});
         }).catch(function(){resolve(null);});
       }catch(e){resolve(null);}
     });

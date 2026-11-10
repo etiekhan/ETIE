@@ -167,7 +167,14 @@
       <h3 style="color:#fff;">Live users on platform</h3><div class="list" id="adminLiveProfiles"><div class="muted small">No live data yet — sign in on both phones and open Admin again.</div></div>
       <h3 style="color:#fff;">Live requests & meetups</h3><div class="list" id="adminLiveRequests"><div class="muted small">No requests yet.</div></div>
       <h3 style="color:#fff;">Verification queue (live)</h3><div class="list" id="adminVerifyQueue"><div class="muted small">Loading live verifications…</div></div>
-      <h3 style="color:#fff;">Sidequest of the Week</h3><div class="field" style="margin:0 0 8px;"><label>Title</label><input id="sqTitle" maxlength="80" placeholder="e.g. Night bus to nowhere" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid rgba(255,255,255,.16);border-radius:10px;background:rgba(255,255,255,.08);color:#fff;"></div><div class="field" style="margin:0 0 8px;"><label>Description</label><textarea id="sqDesc" maxlength="280" rows="2" placeholder="What to do, where, what counts as done" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid rgba(255,255,255,.16);border-radius:10px;background:rgba(255,255,255,.08);color:#fff;resize:vertical;"></textarea></div><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="secondary" onclick="saveSidequest()" style="padding:10px 16px;">Publish</button><button class="secondary" onclick="clearSidequestLive()" style="padding:10px 16px;">Clear live</button></div><p class="muted small" id="sqStatus">No live sidequest.</p>
+      <h3 style="color:#fff;">Sidequest of the Week</h3><div class="field" style="margin:0 0 8px;"><label>Title</label><input id="sqTitle" maxlength="80" placeholder="e.g. Night bus to nowhere" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid rgba(255,255,255,.16);border-radius:10px;background:rgba(255,255,255,.08);color:#fff;"></div><div class="field" style="margin:0 0 8px;"><label>Description</label><textarea id="sqDesc" maxlength="280" rows="2" placeholder="What to do, where, what counts as done" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid rgba(255,255,255,.16);border-radius:10px;background:rgba(255,255,255,.08);color:#fff;resize:vertical;"></textarea></div>
+      <div class="field" style="margin:0 0 8px;"><label>Photo (optional)</label>
+        <div id="sqPhotoPreview" style="margin-bottom:8px;"></div>
+        <input type="file" id="sqPhotoInput" accept="image/*" style="display:none;" onchange="handleSqPhoto(this)">
+        <button class="secondary" onclick="document.getElementById('sqPhotoInput').click()" style="padding:8px 14px;">Choose photo</button>
+        <button class="secondary" onclick="clearSqPhoto()" style="padding:8px 14px;margin-left:4px;">Clear</button>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="secondary" onclick="saveSidequest()" style="padding:10px 16px;">Publish</button><button class="secondary" onclick="clearSidequestLive()" style="padding:10px 16px;">Clear live</button></div><p class="muted small" id="sqStatus">No live sidequest.</p>
       <h3 style="color:#fff;">Safety</h3><p class="muted">Reports, block history, manual review and match intervention live here. This layer is essential for an MVP involving strangers.</p><div class="list" id="adminReportsList" style="margin-top:8px;"><div class="muted small">Loading reports…</div></div><h3 style="color:#fff;margin-top:16px;">Reported questions</h3><div class="list" id="adminReportedQuestions"><div class="muted small">Loading…</div></div>
       <h3 style="color:#fff;">Test data</h3><p class="muted small">Wipe local or cloud rows for this login during 2-phone realtime tests.</p><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="secondary" onclick="wipeLocalEtie()">Wipe local chat/history</button><button class="secondary" style="background:#fff0f0!important;border-color:#e8b4b4!important;color:#b00020!important;" onclick="wipeEverything()">☠️ Wipe everything (this login)</button></div><p class="muted small">Central kill: tap on each phone while signed in as that user — deletes that login’s cloud rows + local profile/trips/chats.</p>
       <p class="muted small" id="adminLegacyAnchor" style="display:none;">legacy anchor for JS compat</p>
@@ -534,7 +541,7 @@
   <script src="runtime-config.js"></script>
   <script src="runtime-config.example.js"></script>
   <script src="map-style.js"></script>
-  <script src="app.js?v=175"></script>
+  <script src="app.js?v=176"></script>
   <script src="supabase-sync.js?v=128"></script>
 </body>
 </html>

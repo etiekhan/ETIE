@@ -1807,17 +1807,6 @@ function makeTile(photo, idx, spot){
   bottom.appendChild(metaRow);
   tile.appendChild(bottom);
 
-  // Tag button (small, top-left)
-  var tagBtn=document.createElement('button');
-  tagBtn.style.cssText='position:absolute;top:6px;left:6px;padding:4px 8px;min-height:24px;background:rgba(244,63,94,.8);border:0;border-radius:4px;color:#fff;font-size:9px;font-weight:700;cursor:pointer;opacity:0.9;';
-  tagBtn.textContent='Tag';
-  tagBtn.setAttribute('aria-label','Tag people in this memory');
-  tagBtn.onclick=function(e){e.stopPropagation();openMemorySingleView(idx, spot);};
-  tile.appendChild(tagBtn);
-  // Always visible on touch devices
-  tile.onmouseenter=function(){tagBtn.style.opacity='1';};
-  tile.onmouseleave=function(){tagBtn.style.opacity='0.9';};
-
   return tile;
 }
 
@@ -5669,6 +5658,25 @@ function openQuestDrawer(){  try{
 function closeQuestDrawer(){
   try{var o=document.getElementById('questDrawer');if(o)o.classList.add('hidden');}catch(e){}
 }
+var _sqPhotoUrl=null;
+function handleSqPhoto(input){
+  try{
+    var f=input.files&&input.files[0];if(!f)return;
+    var pv=document.getElementById('sqPhotoPreview');
+    if(pv){pv.innerHTML='';var im=document.createElement('img');im.src=URL.createObjectURL(f);im.style.cssText='width:100%;max-height:160px;object-fit:cover;border-radius:12px;';pv.appendChild(im);}
+    // Compress and upload
+    if(window.EtieCloud&&window.EtieCloud.uploadPhoto){
+      window.EtieCloud.uploadPhoto(f,'quest').then(function(url){_sqPhotoUrl=url;toast('Photo ready.');}).catch(function(){toast('Photo upload failed.');_sqPhotoUrl=null;});
+    }else{
+      // Offline: read as data URL
+      var r=new FileReader();r.onload=function(e){_sqPhotoUrl=e.target.result;};r.readAsDataURL(f);
+    }
+  }catch(e){}
+}
+function clearSqPhoto(){
+  try{_sqPhotoUrl=null;var pv=document.getElementById('sqPhotoPreview');if(pv)pv.innerHTML='';var fi=document.getElementById('sqPhotoInput');if(fi)fi.value='';}catch(e){}
+}
+
 function saveSidequest(){
   // admin publishes the sidequest of the week (admin UI only; RLS: signed-in writes)
   try{
@@ -5676,11 +5684,11 @@ function saveSidequest(){
     var d=((document.getElementById('sqDesc')||{}).value||'').trim().slice(0,280);
     if(!t){toast('Give the sidequest a title first.');return;}
     if(!(window.EtieCloud&&window.EtieCloud.pushSidequest)){toast('Cloud not ready — sign in first.');return;}
-    window.EtieCloud.pushSidequest(t,d).then(function(ok){
+    window.EtieCloud.pushSidequest(t,d,_sqPhotoUrl).then(function(ok){
       try{
         var s=document.getElementById('sqStatus');
         if(ok){if(s)s.textContent='Live now: '+t;toast('Sidequest live.');
-          try{document.getElementById('sqTitle').value='';document.getElementById('sqDesc').value='';}catch(e){}}
+          try{document.getElementById('sqTitle').value='';document.getElementById('sqDesc').value='';clearSqPhoto();}catch(e){}}
         else{if(s)s.textContent='Save failed.';toast('Could not save sidequest.');}
       }catch(e){}
     });
@@ -5691,7 +5699,7 @@ function clearSidequestLive(){
     if(!(window.EtieCloud&&window.EtieCloud.clearSidequest)){toast('Cloud not ready — sign in first.');return;}
     window.EtieCloud.clearSidequest().then(function(ok){
       try{var s=document.getElementById('sqStatus');if(s)s.textContent=ok?'No live sidequest.':'Clear failed.';}catch(e){}
-      if(ok)toast('Sidequest cleared.');
+      if(ok){toast('Sidequest cleared.');clearSqPhoto();}
     });
   }catch(e){}
 }

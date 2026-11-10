@@ -2016,7 +2016,14 @@ function loadMemTagSection(spot, photoIdx){
     if(photoIdx==null)photoIdx=0;
     // Use the specific photo's logId as the memory ID for tagging
     var memoryId=spot.photos[photoIdx].logId;
-    if(!memoryId){section.innerHTML='<div style="font-size:12px;color:rgba(255,255,255,.4);">Tagging requires cloud sync.</div>';return;}
+    if(!memoryId){section.innerHTML='<div style="font-size:12px;color:rgba(255,255,255,.4);">Tagging requires cloud sync. (No memory ID)</div>';return;}
+    // Check if signed in
+    var myId=null;try{myId=myUid();}catch(e){}
+    if(!myId){section.innerHTML='<div style="font-size:12px;color:rgba(255,255,255,.4);">Sign in to tag people.</div>';return;}
+    // Check DB readiness
+    if(!window.EtieCloud||!window.EtieCloud.tagUser){
+      section.innerHTML='<div style="font-size:12px;color:rgba(255,60,60,.8);">Tagging unavailable (cloud not ready).</div>';return;
+    }
     // Check if current user is the owner
     var myId=null;try{myId=myUid();}catch(e){}
     // We'll show tag UI for the owner. For simplicity, show for all (owner check via RPC).
@@ -2037,7 +2044,7 @@ function loadMemTagSection(spot, photoIdx){
         try{
           var list=document.getElementById('memTagList');
           if(!list)return;
-          if(!tags||!tags.length){list.innerHTML='';return;}
+          if(!tags||!tags.length){list.innerHTML='<div style="font-size:11px;color:rgba(255,255,255,.3);">No tags yet.</div>';return;}
           // Fetch display names for tagged users
           var userIds=tags.map(function(t){return t.tagged_user_id;}).filter(Boolean);
           var renderTags=function(nameMap){
@@ -2068,7 +2075,17 @@ function loadMemTagSection(spot, photoIdx){
     if(window.EtieCloud&&window.EtieCloud.fetchConnections){
       window.EtieCloud.fetchConnections(function(conns){
         try{
-          if(!conns||!conns.length)return;
+          if(!conns||!conns.length){
+            // Show hint that connections may not be set up
+            var connBox=document.getElementById('memTagConnections');
+            if(connBox){
+              var hint=document.createElement('div');
+              hint.style.cssText='font-size:11px;color:rgba(255,255,255,.4);margin-bottom:4px;';
+              hint.textContent='No connections yet. (Run M2 SQL if not done.)';
+              connBox.appendChild(hint);
+            }
+            return;
+          }
           var connBox=document.getElementById('memTagConnections');
           if(!connBox)return;
           var label=document.createElement('div');
@@ -2092,16 +2109,19 @@ function loadMemTagSection(spot, photoIdx){
                     if(window.EtieCloud&&window.EtieCloud.tagUser){
                       window.EtieCloud.tagUser(memoryId, c.user_id, function(res){
                         try{
+                          console.log('tagUser (conn) result:', JSON.stringify(res));
                           if(res&&res.ok){
                             if(status)status.textContent='Tagged '+name+'! They\'ll see an invite.';
                             loadMemTagSection(window._openMemorySpot, window._memSingleIdx||0);
                           }else if(res&&res.error==='cooldown'){
                             var hrs=Math.ceil(res.hours_remaining||72);
                             if(status)status.textContent='You can tag '+name+' again in '+hrs+' hours.';
+                          }else if(res&&res.error==='not owner'){
+                            if(status)status.textContent='Only the memory owner can tag people.';
                           }else{
-                            if(status)status.textContent='Tag failed: '+(res&&res.error||'unknown');
+                            if(status)status.textContent='Tag failed: '+(res&&res.error||'unknown')+'. (Check M2 SQL)';
                           }
-                        }catch(e){}
+                        }catch(e){console.error('tagUser conn callback error:',e);}
                       });
                     }
                   };
@@ -2186,18 +2206,22 @@ function submitMemTag(memoryId){
           if(window.EtieCloud&&window.EtieCloud.tagUser){
             window.EtieCloud.tagUser(memoryId, user.user_id, function(res){
               try{
+                console.log('tagUser result:', JSON.stringify(res));
                 if(res&&res.ok){
                   if(status)status.textContent='Tagged '+user.name+'! They\'ll see an invite.';
                   input.value='';
-                  // Reload tag list
                   loadMemTagSection(window._openMemorySpot, window._memSingleIdx||0);
                 }else if(res&&res.error==='cooldown'){
                   var hrs=Math.ceil(res.hours_remaining||72);
                   if(status)status.textContent='You can tag '+user.name+' again in '+hrs+' hours.';
+                }else if(res&&res.error==='not owner'){
+                  if(status)status.textContent='Only the memory owner can tag people.';
+                }else if(res&&res.error==='blocked'){
+                  if(status)status.textContent='Cannot tag: users are blocked.';
                 }else{
-                  if(status)status.textContent='Tag failed: '+(res&&res.error||'unknown');
+                  if(status)status.textContent='Tag failed: '+(res&&res.error||'unknown')+'. (Check M2 SQL is run)';
                 }
-              }catch(e){}
+              }catch(e){console.error('tagUser callback error:',e);}
             });
           }
         }catch(e){}

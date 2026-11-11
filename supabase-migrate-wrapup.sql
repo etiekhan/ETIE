@@ -37,7 +37,7 @@ create policy "hc update own" on public.hangout_confirmations
 -- Replace 'kan.ethan.cy@gmail.com' with your admin email.
 drop policy if exists "hc read admin" on public.hangout_confirmations;
 create policy "hc read admin" on public.hangout_confirmations
-  for select using (auth.jwt() ->> 'email' in ('kan.ethan.cy@gmail.com'));
+  for select using (auth.uid() = '9f2e8d41-0394-4e25-9758-e1d7c7b52a2a'::uuid);
 
 create index if not exists hc_hangout_idx on public.hangout_confirmations(hangout_id, happened);
 create index if not exists hc_user_idx on public.hangout_confirmations(user_id, confirmed_at desc);

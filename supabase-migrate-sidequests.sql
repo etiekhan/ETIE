@@ -21,9 +21,9 @@ create policy "sidequests read all" on public.sidequests for select using (true)
 
 drop policy if exists "sidequests admin write" on public.sidequests;
 create policy "sidequests admin write" on public.sidequests for all using (
-  auth.jwt() ->> 'email' in ('kan.ethan.cy@gmail.com')
+  auth.uid() = '9f2e8d41-0394-4e25-9758-e1d7c7b52a2a'::uuid
 ) with check (
-  auth.jwt() ->> 'email' in ('kan.ethan.cy@gmail.com')
+  auth.uid() = '9f2e8d41-0394-4e25-9758-e1d7c7b52a2a'::uuid
 );
 
 -- If you don't have a specific admin email yet, use this more permissive version temporarily:

@@ -963,7 +963,7 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
         if(!client||!session){console.warn('pushSidequest: no client/session');resolve(null);return;}
         client.from(sidequestTable()).update({is_active:false}).eq('is_active',true).then(function(upRes){
           if(upRes&&upRes.error){console.warn('pushSidequest deactivate error:',upRes.error.message);}
-          client.from(sidequestTable()).insert({title:String(title||'').slice(0,80),descr:String(desc||'').slice(0,280),image_url:imageUrl||null,is_active:true}).then(function(r){
+          client.from(sidequestTable()).insert({title:String(title||'').slice(0,80),description:String(desc||'').slice(0,280),image_url:imageUrl||null,is_active:true}).then(function(r){
             if(r&&r.error){console.warn('pushSidequest insert error:',r.error.message);console.warn('pushSidequest insert details:',JSON.stringify(r.error));}
             resolve(r&&!r.error);
           }).catch(function(e){console.warn('pushSidequest insert catch:',e&&e.message);resolve(null);});

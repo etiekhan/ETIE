@@ -1758,41 +1758,41 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
   function resetDemoData(cb){
     try{
       if(!client||!session){if(cb)cb(false);return;}
-      // Delete all demo data in order
-      client.from(CHALLENGES_SCHEMA+'.been_here').delete().neq('id','00000000-0000-0000-0000-000000000000').then(function(){
-        client.from(CHALLENGES_SCHEMA+'.entry_comments').delete().neq('id','00000000-0000-0000-0000-000000000000').then(function(){
-          client.from(CHALLENGES_SCHEMA+'.entry_reactions').delete().neq('id','00000000-0000-0000-0000-000000000000').then(function(){
-            client.from(CHALLENGES_SCHEMA+'.entry_saves').delete().neq('id','00000000-0000-0000-0000-000000000000').then(function(){
-              client.from(CHALLENGES_SCHEMA+'.challenge_votes').delete().neq('id','00000000-0000-0000-0000-000000000000').then(function(){
-                client.from(CHALLENGES_SCHEMA+'.challenge_entries').delete().neq('id','00000000-0000-0000-0000-000000000000').then(function(){
-                  client.from(CHALLENGES_SCHEMA+'.nominations').delete().neq('id','00000000-0000-0000-0000-000000000000').then(function(){
-                    client.from(CHALLENGES_SCHEMA+'.challenge_members').delete().neq('id','00000000-0000-0000-0000-000000000000').then(function(){
-                      client.from(CHALLENGES_SCHEMA+'.challenges').delete().neq('id','00000000-0000-0000-0000-000000000000').then(function(){
-                        // Delete demo-created memories
-                        client.from(CHALLENGES_SCHEMA+'.demo_created_items').select('*').then(function(r){
-                          var items=r&&!r.error?r.data||[]:[];
-                          // Delete memories
-                          items.filter(function(i){return i.item_type==='memory'&&i.item_id;}).forEach(function(i){
-                            client.from('hangout_logs').delete().eq('id',i.item_id).then(function(){}).catch(function(){});
-                          });
-                          // Reset demo_created_items
-                          client.from(CHALLENGES_SCHEMA+'.demo_created_items').delete().neq('id','00000000-0000-0000-0000-000000000000').then(function(){
-                            // Reset metrics
-                            client.from(CHALLENGES_SCHEMA+'.metrics').update({count:0}).neq('key','').then(function(){
-                              if(cb)cb(true);
-                            }).catch(function(){if(cb)cb(true);});
-                          }).catch(function(){if(cb)cb(true);});
-                        }).catch(function(){if(cb)cb(true);});
-                      }).catch(function(){if(cb)cb(false);});
-                    }).catch(function(){if(cb)cb(false);});
-                  }).catch(function(){if(cb)cb(false);});
-                }).catch(function(){if(cb)cb(false);});
-              }).catch(function(){if(cb)cb(false);});
-            }).catch(function(){if(cb)cb(false);});
-          }).catch(function(){if(cb)cb(false);});
-        }).catch(function(){if(cb)cb(false);});
-      }catch(e){if(cb)cb(false);}
+      // Delete all demo data tables in sequence
+      var tables = ['been_here','entry_comments','entry_reactions','entry_saves','challenge_votes','challenge_entries','nominations','challenge_members','challenges'];
+      var idx = 0;
+      function deleteNext(){
+        if(idx >= tables.length){
+          // Delete demo-created memories
+          client.from(CHALLENGES_SCHEMA+'.demo_created_items').select('*').then(function(r){
+            var items = r&&!r.error ? r.data||[] : [];
+            items.filter(function(i){return i.item_type==='memory'&&i.item_id;}).forEach(function(i){
+              client.from('hangout_logs').delete().eq('id', i.item_id).then(function(){}).catch(function(){});
+            });
+            // Reset demo_created_items
+            client.from(CHALLENGES_SCHEMA+'.demo_created_items').delete().neq('id','00000000-0000-0000-0000-000000000000').then(function(){
+              // Reset metrics
+              client.from(CHALLENGES_SCHEMA+'.metrics').update({count:0}).neq('key','').then(function(){
+                if(cb)cb(true);
+              }).catch(function(){if(cb)cb(true);});
+            }).catch(function(){if(cb)cb(true);});
+          }).catch(function(){if(cb)cb(true);});
+          return;
+        }
+        var tbl = tables[idx];
+        idx++;
+        client.from(CHALLENGES_SCHEMA+'.'+tbl).delete().neq('id','00000000-0000-0000-0000-000000000000').then(function(){
+          deleteNext();
+        }).catch(function(){
+          deleteNext();
+        });
+      }
+      deleteNext();
     }catch(e){if(cb)cb(false);}
+  }
+  function removeDemo(cb){
+    // Cannot drop schema from client. User must run down migration manually.
+    if(cb)cb(false);
   }
   function removeDemo(cb){
     // Cannot drop schema from client. User must run down migration manually.

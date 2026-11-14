@@ -1697,6 +1697,31 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
       }).catch(function(){if(cb)cb(false);});
     }catch(e){if(cb)cb(false);}
   }
+  function deleteChallenge(challengeId, cb){
+    try{
+      if(!client||!session){if(cb)cb(false);return;}
+      // Delete in order: votes, comments, reactions, saves, been_here, nominations, entries, members, then challenge
+      client.from(CHALLENGES_SCHEMA+'demo_challenge_challenge_votes').delete().eq('challenge_id',challengeId).then(function(){
+        client.from(CHALLENGES_SCHEMA+'demo_challenge_entry_comments').delete().in('entry_id', client.from(CHALLENGES_SCHEMA+'demo_challenge_challenge_entries').select('id').eq('challenge_id',challengeId)).then(function(){
+          client.from(CHALLENGES_SCHEMA+'demo_challenge_entry_reactions').delete().in('entry_id', client.from(CHALLENGES_SCHEMA+'demo_challenge_challenge_entries').select('id').eq('challenge_id',challengeId)).then(function(){
+            client.from(CHALLENGES_SCHEMA+'demo_challenge_entry_saves').delete().in('entry_id', client.from(CHALLENGES_SCHEMA+'demo_challenge_challenge_entries').select('id').eq('challenge_id',challengeId)).then(function(){
+              client.from(CHALLENGES_SCHEMA+'demo_challenge_been_here').delete().in('entry_id', client.from(CHALLENGES_SCHEMA+'demo_challenge_challenge_entries').select('id').eq('challenge_id',challengeId)).then(function(){
+                client.from(CHALLENGES_SCHEMA+'demo_challenge_nominations').delete().eq('challenge_id',challengeId).then(function(){
+                  client.from(CHALLENGES_SCHEMA+'demo_challenge_challenge_entries').delete().eq('challenge_id',challengeId).then(function(){
+                    client.from(CHALLENGES_SCHEMA+'demo_challenge_challenge_members').delete().eq('challenge_id',challengeId).then(function(){
+                      client.from(CHALLENGES_SCHEMA+'demo_challenge_challenges').delete().eq('id',challengeId).then(function(r){
+                        try{if(cb)cb(!r||!r.error);}catch(e){if(cb)cb(false);}
+                      }).catch(function(){if(cb)cb(false);});
+                    }).catch(function(){if(cb)cb(false);});
+                  }).catch(function(){if(cb)cb(false);});
+                }).catch(function(){if(cb)cb(false);});
+              }).catch(function(){if(cb)cb(false);});
+            }).catch(function(){if(cb)cb(false);});
+          }).catch(function(){if(cb)cb(false);});
+        }).catch(function(){if(cb)cb(false);});
+      }).catch(function(){if(cb)cb(false);});
+    }catch(e){if(cb)cb(false);}
+  }
   function recordDemoItem(type, itemId, storagePath, cb){
     try{
       if(!client||!session){if(cb)cb(false);return;}
@@ -1826,7 +1851,7 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
     respondToChallengeInvite:respondToChallengeInvite, fetchChallengeMembers:fetchChallengeMembers,
     startChallenge:startChallenge, fetchChallengeEntries:fetchChallengeEntries, addChallengeEntry:addChallengeEntry,
     submitVote:submitVote, fetchChallengeResults:fetchChallengeResults, fetchChallengeEntryMemories:fetchChallengeEntryMemories,
-    closeChallenge:closeChallenge, recordDemoItem:recordDemoItem, fetchAllowlist:fetchAllowlist,
+    closeChallenge:closeChallenge, deleteChallenge:deleteChallenge, recordDemoItem:recordDemoItem, fetchAllowlist:fetchAllowlist,
     addToAllowlist:addToAllowlist, toggleFeatureFlag:toggleFeatureFlag, seedChallenge:seedChallenge,
     resetDemoData:resetDemoData, removeDemo:removeDemo,
     createQuestion:createQuestion, insertAnswer:insertAnswer, getLatestAnswer:getLatestAnswer,

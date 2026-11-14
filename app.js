@@ -5392,6 +5392,17 @@ function openChallengeDetail(ch){
     overlay.appendChild(card);
     overlay.onclick=function(e){if(e.target===overlay)overlay.remove();};
     document.body.appendChild(overlay);
+    // Add delete button for creator (after render)
+    try{
+      var myId=myUid();
+      if(myId&&ch.creator_id&&myId===ch.creator_id){
+        var delBtn=document.createElement('button');
+        delBtn.style.cssText='margin-top:8px;padding:8px 16px;background:rgba(255,60,60,.15);border:1px solid rgba(255,60,60,.3);color:#f87171;border-radius:8px;cursor:pointer;font-size:12px;';
+        delBtn.textContent='Delete Challenge';
+        delBtn.onclick=function(){deleteChallengeConfirm(ch.id);};
+        card.appendChild(delBtn);
+      }
+    }catch(e){}
     loadChallengeDetail(ch);
   }catch(e){console.error('openChallengeDetail error:',e);}
 }
@@ -5448,6 +5459,19 @@ function loadChallengeDetail(ch){
   }catch(e){
     console.error('loadChallengeDetail error:',e);
   }
+}
+
+function deleteChallengeConfirm(challengeId){
+  try{
+    if(!confirm('Are you sure you want to permanently delete this challenge?'))return;
+    if(!window.EtieCloud||!window.EtieCloud.deleteChallenge){toast('Cloud not ready.');return;}
+    window.EtieCloud.deleteChallenge(challengeId, function(ok){
+      try{
+        if(ok){toast('Challenge deleted.');document.getElementById('challengeDetailOverlay').remove();renderChallengesScreen();}
+        else{toast('Delete failed.');}
+      }catch(e){}
+    });
+  }catch(e){}
 }
 
 function openAddEntry(challengeId){

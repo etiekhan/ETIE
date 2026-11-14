@@ -5224,14 +5224,27 @@ function renderChallengesScreen(){
           box.innerHTML='<div class="muted small" style="text-align:center;padding:24px;">Challenges are not available right now.</div>';
           return;
         }
-        box.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">'
-          +'<span class="muted small">Best spot challenges with friends</span>'
+        // Photo header with dark gradient
+        var headerHtml='<div style="position:relative;height:84px;border-radius:12px;overflow:hidden;margin-bottom:16px;">'
+          +'<img src="photos/hk-bar.jpg" style="width:100%;height:100%;object-fit:cover;" alt="">'
+          +'<div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(11,6,18,.3),rgba(11,6,18,.85));display:flex;align-items:flex-end;padding:12px;">'
+          +'<h2 style="margin:0;font-family:var(--font-logo, Syne),sans-serif;font-size:24px;font-weight:800;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.5);">Best Spot Challenges</h2>'
+          +'</div></div>';
+        // Create button
+        headerHtml+='<div style="display:flex;justify-content:flex-end;margin-bottom:12px;">'
           +'<button class="primary" onclick="openCreateChallenge()" style="padding:8px 16px;font-size:12px;min-height:40px;">+ Create Challenge</button>'
-          +'</div>'
-          +'<div id="challengesList"><div class="muted small">Loading...</div></div>'
-          +'<div style="margin-top:12px;"><button class="secondary" onclick="seedChallengeDemo()" style="padding:8px 16px;font-size:12px;">Seed sample challenge</button>'
-          +'<button class="secondary" onclick="resetDemoDataConfirm()" style="padding:8px 16px;font-size:12px;margin-left:8px;">Reset demo data</button>'
-          +'<button class="secondary" onclick="removeDemoConfirm()" style="padding:8px 16px;font-size:12px;margin-left:8px;">Remove demo</button></div>';
+          +'</div>';
+        // Empty state with starter chips (shown when no challenges)
+        headerHtml+='<div id="challengesList"><div class="muted small">Loading...</div></div>';
+        // Demo tools (collapsed, admin-only)
+        headerHtml+='<details style="margin-top:16px;" id="demoToolsDetails">'
+          +'<summary style="cursor:pointer;font-size:11px;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.1em;font-weight:700;">Demo tools</summary>'
+          +'<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">'
+          +'<button class="secondary" onclick="seedChallengeDemo()" style="padding:6px 12px;font-size:11px;">Seed sample</button>'
+          +'<button class="secondary" onclick="resetDemoDataConfirm()" style="padding:6px 12px;font-size:11px;background:rgba(255,60,60,.1);border-color:rgba(255,60,60,.2);color:#f87171;">Reset demo data</button>'
+          +'<button class="secondary" onclick="removeDemoConfirm()" style="padding:6px 12px;font-size:11px;background:rgba(255,60,60,.1);border-color:rgba(255,60,60,.2);color:#f87171;">Remove demo</button>'
+          +'</div></details>';
+        box.innerHTML=headerHtml;
         loadChallengesList();
       }catch(e){box.innerHTML='<div class="muted small">Error loading challenges.</div>';}
     });
@@ -5244,7 +5257,15 @@ function loadChallengesList(){
     if(!window.EtieCloud||!window.EtieCloud.fetchChallenges){box.innerHTML='<div class="muted small">Cloud not ready.</div>';return;}
     window.EtieCloud.fetchChallenges(function(chs){
       try{
-        if(!chs||!chs.length){box.innerHTML='<div class="muted small">No challenges yet. Create one!</div>';return;}
+        if(!chs||!chs.length){
+          box.innerHTML='<div class="muted small" style="margin-bottom:12px;">No challenges yet. Start one:</div>'
+            +'<div style="display:flex;gap:6px;flex-wrap:wrap;">'
+            +'<button class="secondary" onclick="openCreateChallengePrefilled(\'Best breakup spot\')" style="padding:6px 12px;font-size:12px;">Best breakup spot</button>'
+            +'<button class="secondary" onclick="openCreateChallengePrefilled(\'Best hidden café\')" style="padding:6px 12px;font-size:12px;">Best hidden café</button>'
+            +'<button class="secondary" onclick="openCreateChallengePrefilled(\'Best late-night eats\')" style="padding:6px 12px;font-size:12px;">Best late-night eats</button>'
+            +'</div>';
+          return;
+        }
         box.innerHTML='';
         chs.forEach(function(ch){
           try{
@@ -5265,6 +5286,15 @@ function loadChallengesList(){
         });
       }catch(e){box.innerHTML='<div class="muted small">Error loading.</div>';}
     });
+  }catch(e){}
+}
+
+function openCreateChallengePrefilled(theme){
+  try{
+    openCreateChallenge();
+    setTimeout(function(){
+      try{var inp=document.getElementById('chTitle');if(inp)inp.value=theme||'';}catch(e){}
+    },100);
   }catch(e){}
 }
 
@@ -5412,12 +5442,19 @@ function openChallengeDetail(ch){
     overlay.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);';
     var card=document.createElement('div');
     card.style.cssText='background:#1a1428;border:1px solid rgba(244,63,94,.3);border-radius:16px;padding:20px;max-width:640px;width:90%;max-height:85vh;overflow-y:auto;color:#fff;';
-    card.innerHTML='<h3 style="margin:0 0 4px;color:#f43f5e;">'+(ch.theme_title||'Challenge')+'</h3>'
-      +'<p class="muted small" style="margin-bottom:12px;">'+(ch.status||'draft')+' \u00b7 '+(ch.stakes||'')+'</p>'
-      +'<div id="challengeDetailContent"><div class="muted small">Loading...</div></div>'
-      +'<div style="margin-top:12px;display:flex;gap:8px;">'
-      +'<button onclick="document.getElementById(\'challengeDetailOverlay\').remove()" style="padding:8px 16px;background:rgba(255,255,255,.08);color:#fff;border:0;border-radius:8px;cursor:pointer;font-size:12px;">Close</button>'
-      +'</div>';
+    card.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:8px 12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:12px;backdrop-filter:blur(8px);flex-shrink:0;">'
+      +'<button onclick="document.getElementById(\'challengeDetailOverlay\').remove()" style="padding:6px 10px;min-height:40px;min-width:40px;background:transparent;border:0;color:#fff;border-radius:6px;cursor:pointer;font-size:18px;" aria-label="Close challenge">\u2715</button>'
+      +'<span style="font-size:13px;color:rgba(255,255,255,.6);font-weight:600;">Challenge</span>'
+      +'<div style="display:flex;gap:4px;">'
+      +'<button onclick="challengeMoreMenu(\''+ch.id+'\')" style="padding:6px 10px;min-height:40px;min-width:40px;background:transparent;border:0;color:rgba(255,255,255,.4);border-radius:6px;cursor:pointer;font-size:14px;" aria-label="More options">\u22ef</button>'
+      +'</div></div>'
+      +'<h3 style="margin:0 0 4px;font-family:var(--font-logo, Syne),sans-serif;font-size:24px;font-weight:800;color:#fff;">'+(ch.theme_title||'Challenge')+'</h3>'
+      +'<div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">'
+      +'<span style="padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;background:rgba(255,255,255,.1);color:#fff;">'+(ch.status||'draft')+'</span>'
+      +'<span style="padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;background:rgba(251,191,36,.15);color:#fbbf24;">countdown</span>'
+      +'</div>'
+      +'<p class="muted small" style="margin-bottom:12px;">Stakes: '+(ch.stakes||'None')+'</p>'
+      +'<div id="challengeDetailContent"><div class="muted small">Loading...</div></div>';
     overlay.appendChild(card);
     overlay.onclick=function(e){if(e.target===overlay)overlay.remove();};
     document.body.appendChild(overlay);
@@ -5448,9 +5485,20 @@ function loadChallengeDetail(ch){
         try{
           html='<div style="margin-bottom:12px;"><strong style="font-size:13px;">Members ('+(members?members.length:0)+')</strong></div>';
           if(members&&members.length){
+            var acceptedCount=members.filter(function(m){return m.status==='accepted';}).length;
+            html+='<div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:8px;">'+acceptedCount+' of '+members.length+' accepted</div>';
+            html+='<div style="width:100%;height:4px;background:rgba(255,255,255,.1);border-radius:2px;margin-bottom:8px;overflow:hidden;"><div style="width:'+Math.round(acceptedCount/members.length*100)+'%;height:100%;background:#4ade80;border-radius:2px;"></div></div>';
             members.forEach(function(m){
-              html+='<div style="font-size:12px;color:rgba(255,255,255,.7);padding:4px 0;">'+(m.user_id||'').substring(0,8)+'... '+(m.status||'invited')+'</div>';
+              var name=m.user_id?m.user_id.substring(0,8)+'...':'Friend';
+              var statusColor=m.status==='accepted'?'#4ade80':m.status==='invited'?'#fbbf24':'#f87171';
+              html+='<div style="display:flex;align-items:center;gap:8px;padding:4px 0;">'
+                +'<div style="width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0;">'+(name.charAt(0)||'?').toUpperCase()+'</div>'
+                +'<span style="font-size:12px;color:#fff;flex:1;">'+name+'</span>'
+                +'<span style="font-size:10px;padding:2px 6px;border-radius:4px;background:rgba(255,255,255,.08);color:'+statusColor+';">'+(m.status||'invited')+'</span>'
+                +'</div>';
             });
+          }else{
+            html+='<div class="muted small">No members yet.</div>';
           }
           if(ch.status==='active'){
             html+='<div style="margin-top:12px;"><button onclick="openAddEntry(\''+ch.id+'\')" style="padding:8px 16px;background:#f43f5e;color:#fff;border:0;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;">+ Add your spot</button></div>';
@@ -5462,13 +5510,18 @@ function loadChallengeDetail(ch){
                 html+='<div style="margin-top:12px;"><strong style="font-size:13px;">Entries ('+(entries?entries.length:0)+')</strong></div>';
                 if(entries&&entries.length){
                   entries.forEach(function(e){
-                    html+='<div style="padding:8px;background:rgba(255,255,255,.05);border-radius:8px;margin-bottom:6px;">';
-                    html+='<div style="font-size:12px;color:#fff;">'+(e.caption||'Entry')+'</div>';
-                    html+='<div style="font-size:10px;color:rgba(255,255,255,.5);">'+(e.location||'')+'</div>';
-                    html+='</div>';
+                    html+='<div style="display:flex;gap:8px;padding:8px;background:rgba(255,255,255,.05);border-radius:8px;margin-bottom:6px;">';
+                    html+='<img src="'+(e.photo_url||'')+'" style="width:48px;height:48px;border-radius:6px;object-fit:cover;flex-shrink:0;background:#0b0b0e;">';
+                    html+='<div style="flex:1;min-width:0;">';
+                    html+='<div style="font-size:12px;color:#fff;font-weight:600;">'+(e.caption||'Entry')+'</div>';
+                    html+='<div style="font-size:10px;color:rgba(255,255,255,.5);">'+(e.location||'')+' \u00b7 '+(e.player_id?e.player_id.substring(0,6)+'...':'')+'</div>';
+                    html+='</div></div>';
                   });
                 }else{
-                  html+='<div class="muted small">No entries yet.</div>';
+                  html+='<div style="text-align:center;padding:16px;background:rgba(255,255,255,.03);border-radius:8px;border:1px dashed rgba(255,255,255,.1);">';
+                  html+='<div style="font-size:24px;margin-bottom:4px;">\ud83d\udccd</div>';
+                  html+='<div class="muted small">Be the first to add a spot</div>';
+                  html+='</div>';
                 }
                 box.innerHTML=html;
               }catch(err){
@@ -5500,6 +5553,30 @@ function deleteChallengeConfirm(challengeId){
         else{toast('Delete failed.');}
       }catch(e){}
     });
+  }catch(e){}
+}
+
+function challengeMoreMenu(challengeId){
+  try{
+    var myId=null;try{myId=myUid();}catch(e){}
+    if(window.EtieCloud&&window.EtieCloud.fetchChallenges){
+      window.EtieCloud.fetchChallenges(function(chs){
+        try{
+          var ch=null;
+          (chs||[]).forEach(function(c){if(c.id===challengeId)ch=c;});
+          if(!ch||!myId||ch.creator_id!==myId){toast('Only the creator can delete.');return;}
+          if(!confirm('Delete this challenge permanently?'))return;
+          if(window.EtieCloud&&window.EtieCloud.deleteChallenge){
+            window.EtieCloud.deleteChallenge(challengeId, function(ok){
+              try{
+                if(ok){toast('Challenge deleted.');document.getElementById('challengeDetailOverlay').remove();renderChallengesScreen();}
+                else{toast('Delete failed.');}
+              }catch(e){}
+            });
+          }
+        }catch(e){}
+      });
+    }
   }catch(e){}
 }
 

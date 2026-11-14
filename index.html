@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <!-- Phase 1: split from single-file prototype, no visual changes -->
-  <link rel="stylesheet" href="styles.css?v=96">
+  <link rel="stylesheet" href="styles.css?v=97">
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
 </head>
 <body>
@@ -50,6 +50,7 @@
     <button id="weeklyQuestBanner" class="weekly-quest-banner hidden" onclick="openQuestDrawer()" aria-label="Sidequest of the week"><span aria-hidden="true">⚡</span><span id="weeklyQuestBannerText">Sidequest of the week</span><span aria-hidden="true">→</span><span id="weeklyQuestDismiss" role="button" aria-label="Dismiss" onclick="event.stopPropagation();dismissWeeklyQuest()" style="margin-left:6px;opacity:.7;">✕</span></button>
     <div class="map-wrap2">
       <div id="hkMap"></div>
+      <div id="coventrySpotlight" class="hidden" style="position:absolute;inset:0;pointer-events:none;z-index:2;background:radial-gradient(circle 120px at 50% 50%, transparent 0%, rgba(11,11,14,0.3) 40%, rgba(11,11,14,0.85) 100%);"></div>
       <div id="mapEmptyBanner" class="map-empty hidden">No pins here yet. Be the first.</div>
     </div>
     <div id="bottomActions">
@@ -525,6 +526,44 @@
   <div class="chat-drawer-list" id="chatMsgList"></div>
   <div class="chat-drawer-foot"><input id="chatMsgInput" placeholder="Message the group..." onkeydown="if(event.key==='Enter')sendHookMessage()"><button class="primary" onclick="sendHookMessage()">Send</button></div>
 </div>
+<!-- Intro Story Modal (Coventry onboarding) -->
+<div class="chat-overlay hidden" id="introStoryModal" style="align-items:center;justify-content:center;background:rgba(0,0,0,.85);">
+  <div class="glass-modal" role="dialog" aria-modal="true" aria-label="Intro Story" style="width:min(560px,calc(100vw - 24px));max-height:90vh;overflow-y:auto;padding:24px;">
+    <div style="text-align:center;margin-bottom:16px;">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.15em;color:rgba(255,255,255,.5);font-weight:800;margin-bottom:8px;">ETIE</div>
+      <div style="font-size:15px;font-style:italic;color:rgba(255,255,255,.8);line-height:1.5;margin-bottom:16px;">"Friction is what gives life texture, flavour, meaning."</div>
+    </div>
+    <div style="font-size:13px;color:rgba(255,255,255,.7);line-height:1.6;margin-bottom:16px;">
+      <p>I want to make an introduction to my website, like the inspiration of why I wanted to start this project.</p>
+      <p>Its probably on my ig reposts or sth, but a wise woman said friction is what gives life texture, flavour, meaning. It made me think of my good friend Carla, the way we truly became good friends.</p>
+      <p>It was a spontaneous party I was doing and I just thought fuck it, let's ask Carla she'll love to see my friends. Long story short, my mate drank too much and she was there for her, all night caring for her. We still bond for that.</p>
+      <p>Spontaneity pulled us closer, and I'm so grateful for that. In a way I always thought it was quite poetic as well, as it was my exchange mate Capucine who had too much to drink, and we were really really good mates.</p>
+      <p>One of her final gifts to me at Warwick, was introducing Carla into my life on that silly silly night, and I've never been more grateful for a person like her.</p>
+      <p>We all need friction. That unpredictability, that spontaneity. The kind of stuff you don't have to plan in advance.</p>
+    </div>
+    <div style="display:flex;gap:8px;overflow-x:auto;margin-bottom:16px;padding-bottom:8px;">
+      <div style="flex:0 0 auto;text-align:center;">
+        <img src="photos/20260818_190247_538.JPG" style="width:120px;height:150px;object-fit:cover;border-radius:4px;border:3px solid #fff;box-shadow:0 4px 12px rgba(0,0,0,.4);transform:rotate(-3deg);" alt="Albany Student Village">
+        <div style="font-size:10px;color:rgba(255,255,255,.5);margin-top:4px;">Albany Student Village \u00b7 Coventry</div>
+      </div>
+      <div style="flex:0 0 auto;text-align:center;">
+        <img src="photos/20260901_222032_333.JPG" style="width:120px;height:150px;object-fit:cover;border-radius:4px;border:3px solid #fff;box-shadow:0 4px 12px rgba(0,0,0,.4);transform:rotate(2deg);" alt="Albany Student Village">
+        <div style="font-size:10px;color:rgba(255,255,255,.5);margin-top:4px;">Albany Student Village \u00b7 Coventry</div>
+      </div>
+      <div style="flex:0 0 auto;text-align:center;">
+        <img src="photos/20260919_144428_128.JPG" style="width:120px;height:150px;object-fit:cover;border-radius:4px;border:3px solid #fff;box-shadow:0 4px 12px rgba(0,0,0,.4);transform:rotate(-1deg);" alt="Albany Student Village">
+        <div style="font-size:10px;color:rgba(255,255,255,.5);margin-top:4px;">Albany Student Village \u00b7 Coventry</div>
+      </div>
+      <div style="flex:0 0 auto;text-align:center;">
+        <img src="photos/20261030_205940_612.JPG" style="width:120px;height:150px;object-fit:cover;border-radius:4px;border:3px solid #fff;box-shadow:0 4px 12px rgba(0,0,0,.4);transform:rotate(3deg);" alt="Albany Student Village">
+        <div style="font-size:10px;color:rgba(255,255,255,.5);margin-top:4px;">Albany Student Village \u00b7 Coventry</div>
+      </div>
+    </div>
+    <div style="text-align:center;">
+      <button class="primary" onclick="completeOnboarding()" style="padding:12px 24px;font-size:14px;font-weight:700;">Find your friction... wherever you may be \u2192</button>
+    </div>
+  </div>
+</div>
 <div id="gateOverlay" class="hidden">
   <div class="gate-card">
     <div class="eyebrow" style="color:#fb7185;font-weight:700;letter-spacing:1px;">ETIE · PRIVATE NETWORK 🇭🇰</div>
@@ -541,7 +580,7 @@
   <script src="runtime-config.js"></script>
   <script src="runtime-config.example.js"></script>
   <script src="map-style.js"></script>
-  <script src="app.js?v=177"></script>
+  <script src="app.js?v=178"></script>
   <script src="supabase-sync.js?v=131"></script>
 </body>
 </html>

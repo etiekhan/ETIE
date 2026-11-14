@@ -228,6 +228,15 @@ function gateState(){
     var cloud=false;try{cloud=!!ETIE.cloudOnboarded;}catch(e){}
     var local=false;try{local=!!ETIE.profileComplete||isProfileComplete();}catch(e){}
     if(!(cloud||local))return 'profile';
+    // Onboarding check: first-time users see Coventry intro
+    var onboarded=false;try{onboarded=!!ETIE.onboardingCompleted;}catch(e){}
+    if(!onboarded && cloud){return 'onboarding';}
+    // If cloudOnboarded not yet loaded, check ETIE state
+    if(!onboarded && !cloud){
+      // Profile complete but onboarding not done and cloud not loaded yet
+      // Default to onboarding for signed-in users with complete profile
+      try{if(ETIE.profileComplete||isProfileComplete())return 'onboarding';}catch(e){}
+    }
   }catch(e){return 'signin';}
   return 'open';
 }
@@ -236,12 +245,79 @@ function refreshGate(){
     var st=gateState();
     var o=document.getElementById('gateOverlay');if(!o)return st;
     if(st==='open'){o.classList.add('hidden');return st;}
+    if(st==='onboarding'){o.classList.add('hidden');try{startOnboarding();}catch(e){}return st;}
     try{var hp=document.getElementById('profile');if(hp&&hp.classList.contains('panel-open'))return st;}catch(e){}
     o.classList.remove('hidden');
     renderGateBody(st);
     return st;
   }catch(e){return 'signin';}
 }
+// ===== Coventry Onboarding =====
+var ALBANY_LAT=52.4042, ALBANY_LNG=-1.5173;
+
+function startOnboarding(){
+  try{
+    if(_map){
+      try{_map.setCenter([ALBANY_LNG,ALBANY_LAT]);}catch(e){}
+      try{_map.setZoom(14);}catch(e){}
+      try{_map.dragPan.disable();}catch(e){}
+      try{_map.scrollZoom.disable();}catch(e){}
+      try{_map.boxZoom.disable();}catch(e){}
+      try{_map.dragRotate.disable();}catch(e){}
+      try{_map.keyboard.disable();}catch(e){}
+      try{_map.doubleClickZoom.disable();}catch(e){}
+      try{_map.touchZoomRotate.disable();}catch(e){}
+    }
+    var sp=document.getElementById('coventrySpotlight');
+    if(sp)sp.classList.remove('hidden');
+    var modal=document.getElementById('introStoryModal');
+    if(modal)modal.classList.remove('hidden');
+  }catch(e){console.error('startOnboarding error:',e);}
+}
+
+function completeOnboarding(){
+  try{
+    ETIE.onboardingCompleted=true;
+    ETIE.cloudOnboarded=true;
+    saveState();
+    try{if(window.EtieCloud&&window.EtieCloud.syncProfile)window.EtieCloud.syncProfile();}catch(e){}
+    var sp=document.getElementById('coventrySpotlight');
+    if(sp)sp.classList.add('hidden');
+    var modal=document.getElementById('introStoryModal');
+    if(modal)modal.classList.add('hidden');
+    if(_map){
+      try{_map.dragPan.enable();}catch(e){}
+      try{_map.scrollZoom.enable();}catch(e){}
+      try{_map.boxZoom.enable();}catch(e){}
+      try{_map.dragRotate.enable();}catch(e){}
+      try{_map.keyboard.enable();}catch(e){}
+      try{_map.doubleClickZoom.enable();}catch(e){}
+      try{_map.touchZoomRotate.enable();}catch(e){}
+    }
+    var anchor=getAnchor();
+    if(_map){
+      try{_map.flyTo({center:[anchor.lng,anchor.lat],zoom:13,duration:3000});}catch(e){}
+    }
+    try{refreshGate();}catch(e){}
+    toast('Welcome to ETIE!');
+  }catch(e){console.error('completeOnboarding error:',e);}
+}
+
+function renderAlbanyLorePin(mapInstance){
+  try{
+    if(!mapInstance||!window.maplibregl)return;
+    var el=document.createElement('div');
+    el.style.cssText='width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#06B6D4,#f43f5e);border:2px solid #fff;box-shadow:0 0 16px rgba(6,182,212,.5),0 0 8px rgba(244,63,94,.3);display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;';
+    el.textContent='\u2728';
+    el.setAttribute('aria-label','Albany Student Village - Where it all started');
+    el.onclick=function(e){
+      try{e.stopPropagation();}catch(_){}
+      toast('Albany Student Village \u00b7 Coventry \u00b7 Where it all started');
+    };
+    new maplibregl.Marker({element:el,anchor:'center'}).setLngLat([ALBANY_LNG,ALBANY_LAT]).addTo(mapInstance);
+  }catch(e){}
+}
+
 function renderGateBody(st){
   try{
     var b=document.getElementById('gateBody');if(!b)return;
@@ -860,6 +936,7 @@ function renderProfileMemoryMap(){
         if(!_profileMemoryMap)return;
         _profileMemoryMap.addControl(new maplibregl.NavigationControl({showCompass:false}),'bottom-right');
         fetchAndRenderMemoryMarkers(_profileMemoryMap);
+        try{renderAlbanyLorePin(_profileMemoryMap);}catch(e){}
       });
     } else {
       _profileMemoryMap=createEtieMap('memoryMap',{
@@ -917,6 +994,7 @@ function renderMemoryMapFull(){
       var el=document.getElementById('memoryMapCount');
       if(el)el.textContent=count+' memory'+(count===1?'':'s')+' mapped';
     });
+    try{renderAlbanyLorePin(_memoryMapFull);}catch(e){}
   }catch(e){console.error('renderMemoryMapFull',e);}
 }
 // ===== Fetch hangout logs and render photo markers with clustering =====
@@ -3545,6 +3623,7 @@ function initHKMap(){
         _map.on('load',function(){
           renderMapFilter();
           try{renderMapPins();}catch(e){}
+          try{renderAlbanyLorePin(_map);}catch(e){}
           try{startGlobeSpin();}catch(e){}
         });
       });
@@ -3558,6 +3637,7 @@ function initHKMap(){
       _map.on('load',function(){
         renderMapFilter();
         try{renderMapPins();}catch(e){}
+        try{renderAlbanyLorePin(_map);}catch(e){}
         try{startGlobeSpin();}catch(e){}
       });
     }

@@ -241,7 +241,7 @@
         memories: ((typeof window.ETIE!=='undefined'&&window.ETIE.traveller&&window.ETIE.traveller.memories)||[]).slice(0,3),
         role: (function(){try{return ((window.ETIE.activeRole||window.ETIE.derivedRole)==='local')?'local_host':'traveller';}catch(e){return 'traveller';}})(),
         recommended_spots: ((typeof window.ETIE!=='undefined'&&window.ETIE.traveller&&window.ETIE.traveller.spots)||[]).slice(0,3),
-        is_onboarded: !!((typeof window.ETIE!=='undefined')&&window.ETIE.profileComplete),
+        is_onboarded: !!((typeof window.ETIE!=='undefined')&&(window.ETIE.profileComplete||window.ETIE.onboardingCompleted)),
         activity_stats: ((typeof window.ETIE!=='undefined'&&window.ETIE.traveller&&window.ETIE.traveller.activityStats)||{}),
         featured_memories: ((typeof window.ETIE!=='undefined'&&window.ETIE.traveller&&window.ETIE.traveller.featuredMemories)||[]).slice(0,3),
         photo_url: (function(){try{var ph=(typeof window.ETIE!=='undefined'&&window.ETIE.traveller&&window.ETIE.traveller.photo)||'';return (ph.indexOf('http')===0)?ph.slice(0,500):'';}catch(e){return '';}})()
@@ -995,6 +995,7 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
           var row=r&&!r.error?r.data:null;
           if(row&&typeof window.ETIE!=='undefined'){
             try{window.ETIE.cloudOnboarded=!!row.is_onboarded;}catch(e){}
+            try{if(row.is_onboarded)window.ETIE.onboardingCompleted=true;}catch(e){}
             try{
               var adopted=false;
               if(row.display_name&&!window.ETIE.traveller.nickname&&!window.ETIE.local.displayName){window.ETIE.traveller.nickname=row.display_name;window.ETIE.local.displayName=row.display_name;adopted=true;}

@@ -1569,3 +1569,25 @@ body.has-open-card .map-foot { display: none; }
 #adminOverlay .muted{color:rgba(255,255,255,.6);}
 #adminOverlay .field label{color:rgba(255,255,255,.7);}
 #adminOverlay .field input,#adminOverlay .field textarea{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:#fff;}
+
+/* ===== Coventry Onboarding Spotlight ===== */
+#coventrySpotlight {
+  transition: opacity 0.8s ease;
+}
+#coventrySpotlight.hidden { display: none; }
+
+/* Polaroid photos in intro modal */
+.intro-polaroid {
+  flex: 0 0 auto;
+  text-align: center;
+  margin: 0 8px;
+}
+.intro-polaroid img {
+  border-radius: 4px;
+  border: 3px solid #fff;
+  box-shadow: 0 4px 12px rgba(0,0,0,.4);
+  transition: transform 0.3s ease;
+}
+.intro-polaroid img:hover {
+  transform: scale(1.05);
+}

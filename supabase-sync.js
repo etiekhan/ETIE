@@ -241,7 +241,7 @@
         memories: ((typeof window.ETIE!=='undefined'&&window.ETIE.traveller&&window.ETIE.traveller.memories)||[]).slice(0,3),
         role: (function(){try{return ((window.ETIE.activeRole||window.ETIE.derivedRole)==='local')?'local_host':'traveller';}catch(e){return 'traveller';}})(),
         recommended_spots: ((typeof window.ETIE!=='undefined'&&window.ETIE.traveller&&window.ETIE.traveller.spots)||[]).slice(0,3),
-        is_onboarded: !!((typeof window.ETIE!=='undefined')&&(window.ETIE.profileComplete||window.ETIE.onboardingCompleted)),
+        is_onboarded: !!((typeof window.ETIE!=='undefined')&&window.ETIE.onboardingCompleted),
         activity_stats: ((typeof window.ETIE!=='undefined'&&window.ETIE.traveller&&window.ETIE.traveller.activityStats)||{}),
         featured_memories: ((typeof window.ETIE!=='undefined'&&window.ETIE.traveller&&window.ETIE.traveller.featuredMemories)||[]).slice(0,3),
         photo_url: (function(){try{var ph=(typeof window.ETIE!=='undefined'&&window.ETIE.traveller&&window.ETIE.traveller.photo)||'';return (ph.indexOf('http')===0)?ph.slice(0,500):'';}catch(e){return '';}})()

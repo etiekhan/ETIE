@@ -5280,9 +5280,13 @@ function openCreateChallenge(){
       +'<div class="field"><label>Theme title</label><input id="chTitle" maxlength="100" placeholder="e.g. Best breakup spot in Hong Kong" style="width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:#fff;font-size:13px;box-sizing:border-box;"></div>'
       +'<div class="field"><label>Stakes (free text)</label><input id="chStakes" maxlength="200" placeholder="e.g. Lowest crew score buys drinks" style="width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:#fff;font-size:13px;box-sizing:border-box;"></div>'
       +'<div class="field"><label>End date</label><input id="chEndsAt" type="date" style="width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:#fff;font-size:13px;box-sizing:border-box;"></div>'
-      +'<div class="field"><label>Invite players (exact name)</label>'
-      +'<input id="chInviteInput" maxlength="40" placeholder="Type name, Enter to add" style="width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:#fff;font-size:13px;box-sizing:border-box;" onkeydown="if(event.key===\'Enter\'){event.preventDefault();addChallengeInvite();}">'
-      +'<div id="chInviteList" style="margin-top:8px;"></div>'
+      +'<div class="field"><label>Invite players</label>'
+      +'<div style="display:flex;gap:8px;margin-bottom:4px;">'
+      +'<input id="chInviteInput" maxlength="80" placeholder="Type name or paste user ID" style="flex:1;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:#fff;font-size:13px;box-sizing:border-box;" onkeydown="if(event.key===\'Enter\'){event.preventDefault();addChallengeInvite();}">'
+      +'<button onclick="addChallengeInvite()" style="padding:10px 14px;background:#f43f5e;color:#fff;border:0;border-radius:8px;cursor:pointer;font-size:12px;">Add</button>'
+      +'</div>'
+      +'<p class="muted small" style="margin:0 0 8px;">Type a name (exact match) or paste a user ID directly.</p>'
+      +'<div id="chInviteList" style="margin-top:4px;"></div>'
       +'</div>'
       +'<p class="muted small" style="margin:8px 0;">Stay safe and don\'t enter private or restricted areas.</p>'
       +'<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">'
@@ -5301,16 +5305,41 @@ function addChallengeInvite(){
   try{
     var input=document.getElementById('chInviteInput');
     if(!input)return;
-    var name=input.value.trim();
-    if(!name)return;
+    var val=input.value.trim();
+    if(!val)return;
+    // Check if it looks like a UUID (user ID)
+    var uuidRegex=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if(uuidRegex.test(val)){
+      // It's a user ID - fetch display name
+      if(window.EtieCloud&&window.EtieCloud.fetchDisplayNames){
+        window.EtieCloud.fetchDisplayNames([val], function(nameMap){
+          try{
+            var name=(nameMap&&nameMap[val])||val.substring(0,8)+'...';
+            if(_challengeInvites.some(function(u){return u.user_id===val;})){toast('Already invited.');return;}
+            _challengeInvites.push({user_id:val, name:name});
+            input.value='';
+            renderChallengeInvites();
+            toast('Added '+name);
+          }catch(e){}
+        });
+      }else{
+        if(_challengeInvites.some(function(u){return u.user_id===val;})){toast('Already invited.');return;}
+        _challengeInvites.push({user_id:val, name:val.substring(0,8)+'...'});
+        input.value='';
+        renderChallengeInvites();
+      }
+      return;
+    }
+    // Otherwise, search by name
     if(window.EtieCloud&&window.EtieCloud.exactMatchUser){
-      window.EtieCloud.exactMatchUser(name, function(user){
+      window.EtieCloud.exactMatchUser(val, function(user){
         try{
-          if(!user){toast('No exact match found.');return;}
+          if(!user){toast('No exact match found. Try pasting user ID.');return;}
           if(_challengeInvites.some(function(u){return u.user_id===user.user_id;})){toast('Already invited.');return;}
           _challengeInvites.push(user);
           input.value='';
           renderChallengeInvites();
+          toast('Added '+user.name);
         }catch(e){}
       });
     }else{
@@ -5476,22 +5505,46 @@ function deleteChallengeConfirm(challengeId){
 
 function openAddEntry(challengeId){
   try{
-    toast('Pick a memory to submit as your entry.');
-    // Open memory card or standalone log to pick a memory
-    // For now, use the first memory from fetchMyMemories
-    if(window.EtieCloud&&window.EtieCloud.fetchMyMemories){
-      window.EtieCloud.fetchMyMemories(function(logs){
+    if(!window.EtieCloud||!window.EtieCloud.fetchMyMemories){toast('Cloud not ready.');return;}
+    window.EtieCloud.fetchMyMemories(function(logs){
+      try{
+        if(!logs||!logs.length){toast('Log a memory first.');return;}
+        // Show memory picker
+        var old=document.getElementById('memPickerOverlay');if(old)old.remove();
+        var overlay=document.createElement('div');
+        overlay.id='memPickerOverlay';
+        overlay.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);';
+        var card=document.createElement('div');
+        card.style.cssText='background:#1a1428;border:1px solid rgba(244,63,94,.3);border-radius:16px;padding:20px;max-width:520px;width:90%;max-height:80vh;overflow-y:auto;color:#fff;';
+        var html='<h3 style="margin:0 0 12px;color:#f43f5e;">Choose a memory to submit</h3>';
+        html+='<div style="display:flex;flex-direction:column;gap:8px;">';
+        logs.forEach(function(mem){
+          if(!mem||!mem.id)return;
+          html+='<div onclick="submitEntryFromPicker(\''+challengeId+'\',\''+mem.id+'\')" style="display:flex;gap:8px;padding:8px;background:rgba(255,255,255,.05);border-radius:8px;cursor:pointer;">'
+            +'<img src="'+(mem.photo_url||'')+'" style="width:48px;height:48px;border-radius:6px;object-fit:cover;flex-shrink:0;">'
+            +'<div style="flex:1;min-width:0;"><div style="font-size:13px;color:#fff;font-weight:600;">'+(mem.title||mem.location||'Memory')+'</div>'
+            +'<div style="font-size:11px;color:rgba(255,255,255,.5);">'+(mem.location||'')+'</div></div>'
+            +'</div>';
+        });
+        html+='</div>';
+        html+='<button onclick="document.getElementById(\'memPickerOverlay\').remove()" style="margin-top:12px;padding:8px 16px;background:transparent;border:1px solid rgba(255,255,255,.16);color:#fff;border-radius:8px;cursor:pointer;font-size:12px;">Cancel</button>';
+        card.innerHTML=html;
+        overlay.appendChild(card);
+        overlay.onclick=function(e){if(e.target===overlay)overlay.remove();};
+        document.body.appendChild(overlay);
+      }catch(e){}
+    });
+  }catch(e){}
+}
+
+function submitEntryFromPicker(challengeId, memoryId){
+  try{
+    var overlay=document.getElementById('memPickerOverlay');if(overlay)overlay.remove();
+    if(window.EtieCloud&&window.EtieCloud.addChallengeEntry){
+      window.EtieCloud.addChallengeEntry(challengeId, memoryId, '', function(ok){
         try{
-          if(!logs||!logs.length){toast('Log a memory first.');return;}
-          var mem=logs[0];
-          if(window.EtieCloud&&window.EtieCloud.addChallengeEntry){
-            window.EtieCloud.addChallengeEntry(challengeId, mem.id, mem.title||mem.location||'', function(ok){
-              try{
-                if(ok){toast('Entry added!');openChallengeDetail({id:challengeId,theme_title:'Challenge',status:'active'});}
-                else{toast('Failed to add entry.');}
-              }catch(e){}
-            });
-          }
+          if(ok){toast('Entry added!');openChallengeDetail({id:challengeId,theme_title:'Challenge',status:'active'});}
+          else{toast('Failed to add entry. (Maybe already submitted?)');}
         }catch(e){}
       });
     }

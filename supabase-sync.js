@@ -1588,17 +1588,17 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
         ends_at:endsAt||null
       }).select('id').single().then(function(r){
         try{
-          if(r&&r.error){if(cb)cb(null);return;}
+          if(r&&r.error){console.warn('createChallenge insert error:',r.error.message);console.warn('details:',JSON.stringify(r.error));if(cb)cb(null);return;}
           var id=r.data&&r.data.id;
           if(id){
             // Add creator as accepted member
             client.from(CHALLENGES_SCHEMA+'demo_challenge_challenge_members').insert({
               challenge_id:id, user_id:session.user.id, status:'accepted', responded_at:new Date().toISOString()
-            }).then(function(){if(cb)cb(id);}).catch(function(){if(cb)cb(id);});
+            }).then(function(){if(cb)cb(id);}).catch(function(e){console.warn('member insert error:',e&&e.message);if(cb)cb(id);});
           }else{if(cb)cb(null);}
-        }catch(e){if(cb)cb(null);}
-      }).catch(function(){if(cb)cb(null);});
-    }catch(e){if(cb)cb(null);}
+        }catch(e){console.warn('createChallenge callback error:',e&&e.message);if(cb)cb(null);}
+      }).catch(function(e){console.warn('createChallenge catch:',e&&e.message);if(cb)cb(null);});
+    }catch(e){console.warn('createChallenge error:',e&&e.message);if(cb)cb(null);}
   }
   function inviteToChallenge(challengeId, userId, cb){
     try{

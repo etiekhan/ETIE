@@ -5343,12 +5343,17 @@ function submitCreateChallenge(){
     var stakes=document.getElementById('chStakes');
     var endsAt=document.getElementById('chEndsAt');
     var t=title?title.value.trim():'';
-    if(!t){toast('Theme title required.');return;}
-    var ends=endsAt&&endsAt.value?new Date(endsAt.value).toISOString():null;
+    var s=stakes?stakes.value.trim():'';
+    var e=endsAt?endsAt.value:'';
+    if(!t){toast('Theme title is required.');return;}
+    if(!s){toast('Stakes are required.');return;}
+    if(!e){toast('End date is required.');return;}
+    if(!_challengeInvites||!_challengeInvites.length){toast('Invite at least one player.');return;}
+    var ends=new Date(e).toISOString();
     if(window.EtieCloud&&window.EtieCloud.createChallenge){
-      window.EtieCloud.createChallenge(t, stakes?stakes.value.trim():'', ends, function(id){
+      window.EtieCloud.createChallenge(t, s, ends, function(id){
         try{
-          if(!id){toast('Create failed.');return;}
+          if(!id){toast('Create failed. Check console (F12).');return;}
           // Invite players
           _challengeInvites.forEach(function(u){
             try{window.EtieCloud.inviteToChallenge(id, u.user_id, function(){});}catch(e){}

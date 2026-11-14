@@ -5585,6 +5585,7 @@ function openAddEntry(challengeId){
     if(!window.EtieCloud||!window.EtieCloud.fetchMyMemories){toast('Cloud not ready.');return;}
     window.EtieCloud.fetchMyMemories(function(logs){
       try{
+        console.log('openAddEntry: logs=', logs ? logs.length : 0);
         if(!logs||!logs.length){toast('Log a memory first.');return;}
         // Show memory picker
         var old=document.getElementById('memPickerOverlay');if(old)old.remove();
@@ -5621,9 +5622,10 @@ function submitEntryFromPicker(challengeId, memoryId){
     if(window.EtieCloud&&window.EtieCloud.addChallengeEntry){
       window.EtieCloud.addChallengeEntry(challengeId, memoryId, '', function(ok){
         try{
+          console.log('addChallengeEntry result:', ok);
           if(ok){toast('Entry added!');openChallengeDetail({id:challengeId,theme_title:'Challenge',status:'active'});}
           else{toast('Failed to add entry. (Maybe already submitted?)');}
-        }catch(e){}
+        }catch(e){console.error('submitEntryFromPicker error:',e);}
       });
     }
   }catch(e){}

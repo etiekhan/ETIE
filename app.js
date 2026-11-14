@@ -225,18 +225,13 @@ function gateState(){
   try{
     var signed=false;try{signed=isSignedIn();}catch(e){}
     if(!signed)return 'signin';
+    // Onboarding check: first-time users see Coventry intro (before profile)
+    var onboarded=false;try{onboarded=!!ETIE.onboardingCompleted||!!ETIE.cloudOnboarded;}catch(e){}
+    if(!onboarded)return 'onboarding';
+    // Profile check
     var cloud=false;try{cloud=!!ETIE.cloudOnboarded;}catch(e){}
     var local=false;try{local=!!ETIE.profileComplete||isProfileComplete();}catch(e){}
     if(!(cloud||local))return 'profile';
-    // Onboarding check: first-time users see Coventry intro
-    var onboarded=false;try{onboarded=!!ETIE.onboardingCompleted;}catch(e){}
-    if(!onboarded && cloud){return 'onboarding';}
-    // If cloudOnboarded not yet loaded, check ETIE state
-    if(!onboarded && !cloud){
-      // Profile complete but onboarding not done and cloud not loaded yet
-      // Default to onboarding for signed-in users with complete profile
-      try{if(ETIE.profileComplete||isProfileComplete())return 'onboarding';}catch(e){}
-    }
   }catch(e){return 'signin';}
   return 'open';
 }
@@ -244,8 +239,27 @@ function refreshGate(){
   try{
     var st=gateState();
     var o=document.getElementById('gateOverlay');if(!o)return st;
-    if(st==='open'){o.classList.add('hidden');return st;}
+    if(st==='open'){
+      o.classList.add('hidden');
+      // Re-enable map interactions (in case onboarding was triggered by race condition)
+      if(_map){
+        try{_map.dragPan.enable();}catch(e){}
+        try{_map.scrollZoom.enable();}catch(e){}
+        try{_map.boxZoom.enable();}catch(e){}
+        try{_map.dragRotate.enable();}catch(e){}
+        try{_map.keyboard.enable();}catch(e){}
+        try{_map.doubleClickZoom.enable();}catch(e){}
+        try{_map.touchZoomRotate.enable();}catch(e){}
+      }
+      // Hide spotlight
+      var sp=document.getElementById('coventrySpotlight');
+      if(sp)sp.classList.add('hidden');
+      var modal=document.getElementById('introStoryModal');
+      if(modal)modal.classList.add('hidden');
+      return st;
+    }
     if(st==='onboarding'){o.classList.add('hidden');try{startOnboarding();}catch(e){}return st;}
+    if(st==='profile'){o.classList.remove('hidden');renderGateBody(st);return st;}
     try{var hp=document.getElementById('profile');if(hp&&hp.classList.contains('panel-open'))return st;}catch(e){}
     o.classList.remove('hidden');
     renderGateBody(st);

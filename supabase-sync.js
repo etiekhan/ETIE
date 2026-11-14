@@ -1700,26 +1700,13 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
   function deleteChallenge(challengeId, cb){
     try{
       if(!client||!session){if(cb)cb(false);return;}
-      // Delete in order: votes, comments, reactions, saves, been_here, nominations, entries, members, then challenge
-      client.from(CHALLENGES_SCHEMA+'demo_challenge_challenge_votes').delete().eq('challenge_id',challengeId).then(function(){
-        client.from(CHALLENGES_SCHEMA+'demo_challenge_entry_comments').delete().in('entry_id', client.from(CHALLENGES_SCHEMA+'demo_challenge_challenge_entries').select('id').eq('challenge_id',challengeId)).then(function(){
-          client.from(CHALLENGES_SCHEMA+'demo_challenge_entry_reactions').delete().in('entry_id', client.from(CHALLENGES_SCHEMA+'demo_challenge_challenge_entries').select('id').eq('challenge_id',challengeId)).then(function(){
-            client.from(CHALLENGES_SCHEMA+'demo_challenge_entry_saves').delete().in('entry_id', client.from(CHALLENGES_SCHEMA+'demo_challenge_challenge_entries').select('id').eq('challenge_id',challengeId)).then(function(){
-              client.from(CHALLENGES_SCHEMA+'demo_challenge_been_here').delete().in('entry_id', client.from(CHALLENGES_SCHEMA+'demo_challenge_challenge_entries').select('id').eq('challenge_id',challengeId)).then(function(){
-                client.from(CHALLENGES_SCHEMA+'demo_challenge_nominations').delete().eq('challenge_id',challengeId).then(function(){
-                  client.from(CHALLENGES_SCHEMA+'demo_challenge_challenge_entries').delete().eq('challenge_id',challengeId).then(function(){
-                    client.from(CHALLENGES_SCHEMA+'demo_challenge_challenge_members').delete().eq('challenge_id',challengeId).then(function(){
-                      client.from(CHALLENGES_SCHEMA+'demo_challenge_challenges').delete().eq('id',challengeId).then(function(r){
-                        try{if(cb)cb(!r||!r.error);}catch(e){if(cb)cb(false);}
-                      }).catch(function(){if(cb)cb(false);});
-                    }).catch(function(){if(cb)cb(false);});
-                  }).catch(function(){if(cb)cb(false);});
-                }).catch(function(){if(cb)cb(false);});
-              }).catch(function(){if(cb)cb(false);});
-            }).catch(function(){if(cb)cb(false);});
-          }).catch(function(){if(cb)cb(false);});
-        }).catch(function(){if(cb)cb(false);});
-      }).catch(function(){if(cb)cb(false);});
+      // Rely on ON DELETE CASCADE for child tables (RLS allows creator to delete)
+      client.from(CHALLENGES_SCHEMA+'demo_challenge_challenges').delete().eq('id',challengeId).then(function(r){
+        try{
+          if(r&&r.error){console.warn('deleteChallenge error:',r.error.message);if(cb)cb(false);return;}
+          if(cb)cb(true);
+        }catch(e){if(cb)cb(false);}
+      }).catch(function(e){console.warn('deleteChallenge catch:',e&&e.message);if(cb)cb(false);});
     }catch(e){if(cb)cb(false);}
   }
   function recordDemoItem(type, itemId, storagePath, cb){

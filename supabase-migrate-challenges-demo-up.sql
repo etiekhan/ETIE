@@ -252,6 +252,13 @@ drop policy if exists "cm update self" on demo_challenge_challenge_members;
 create policy "cm update self" on demo_challenge_challenge_members
   for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
+-- Delete: creator can delete members
+drop policy if exists "cm delete creator" on demo_challenge_challenge_members;
+create policy "cm delete creator" on demo_challenge_challenge_members
+  for delete using (
+    demo_challenge_is_creator(challenge_id, auth.uid())
+  );
+
 -- CHALLENGE ENTRIES: players and viewers can read
 drop policy if exists "ce read" on demo_challenge_challenge_entries;
 create policy "ce read" on demo_challenge_challenge_entries
@@ -285,6 +292,13 @@ create policy "cv insert" on demo_challenge_challenge_votes
 
 -- No select policy on challenge_votes (votes are hidden; totals via function)
 
+-- Delete: creator can delete votes on their challenge
+drop policy if exists "cv delete creator" on demo_challenge_challenge_votes;
+create policy "cv delete creator" on demo_challenge_challenge_votes
+  for delete using (
+    demo_challenge_is_creator(challenge_id, auth.uid())
+  );
+
 -- ENTRY SAVES
 drop policy if exists "es read" on demo_challenge_entry_saves;
 create policy "es read" on demo_challenge_entry_saves
@@ -304,6 +318,13 @@ create policy "es insert" on demo_challenge_entry_saves
 drop policy if exists "es delete own" on demo_challenge_entry_saves;
 create policy "es delete own" on demo_challenge_entry_saves
   for delete using (auth.uid() = user_id);
+
+-- Creator can also delete saves on their challenge
+drop policy if exists "es delete creator" on demo_challenge_entry_saves;
+create policy "es delete creator" on demo_challenge_entry_saves
+  for delete using (
+    demo_challenge_is_creator((select challenge_id from demo_challenge_challenge_entries where id = entry_id), auth.uid())
+  );
 
 -- ENTRY REACTIONS
 drop policy if exists "er read" on demo_challenge_entry_reactions;
@@ -325,6 +346,13 @@ drop policy if exists "er delete own" on demo_challenge_entry_reactions;
 create policy "er delete own" on demo_challenge_entry_reactions
   for delete using (auth.uid() = user_id);
 
+-- Creator can also delete reactions on their challenge
+drop policy if exists "er delete creator" on demo_challenge_entry_reactions;
+create policy "er delete creator" on demo_challenge_entry_reactions
+  for delete using (
+    demo_challenge_is_creator((select challenge_id from demo_challenge_challenge_entries where id = entry_id), auth.uid())
+  );
+
 -- ENTRY COMMENTS
 drop policy if exists "ec read" on demo_challenge_entry_comments;
 create policy "ec read" on demo_challenge_entry_comments
@@ -339,6 +367,14 @@ create policy "ec insert" on demo_challenge_entry_comments
   for insert with check (
     demo_challenge_is_enabled() and demo_challenge_is_allowed(auth.uid()) and
     auth.uid() = user_id
+  );
+
+-- Delete: comment author or challenge creator can delete
+drop policy if exists "ec delete" on demo_challenge_entry_comments;
+create policy "ec delete" on demo_challenge_entry_comments
+  for delete using (
+    auth.uid() = user_id or
+    demo_challenge_is_creator((select challenge_id from demo_challenge_challenge_entries where id = entry_id), auth.uid())
   );
 
 -- BEEN HERE
@@ -357,6 +393,14 @@ create policy "bh insert" on demo_challenge_been_here
     auth.uid() = user_id
   );
 
+-- Delete: own or creator
+drop policy if exists "bh delete" on demo_challenge_been_here;
+create policy "bh delete" on demo_challenge_been_here
+  for delete using (
+    auth.uid() = user_id or
+    demo_challenge_is_creator((select challenge_id from demo_challenge_challenge_entries where id = entry_id), auth.uid())
+  );
+
 -- NOMINATIONS
 drop policy if exists "nom read" on demo_challenge_nominations;
 create policy "nom read" on demo_challenge_nominations
@@ -370,6 +414,14 @@ create policy "nom insert" on demo_challenge_nominations
   for insert with check (
     demo_challenge_is_enabled() and demo_challenge_is_allowed(auth.uid()) and
     auth.uid() = user_id
+  );
+
+-- Delete: own or creator
+drop policy if exists "nom delete" on demo_challenge_nominations;
+create policy "nom delete" on demo_challenge_nominations
+  for delete using (
+    auth.uid() = user_id or
+    demo_challenge_is_creator(challenge_id, auth.uid())
   );
 
 -- DEMO CREATED ITEMS: admin only

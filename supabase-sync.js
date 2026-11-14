@@ -1540,12 +1540,12 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
   }
 
   // ---- Challenges Demo (C1-C4) ----
-  var CHALLENGES_SCHEMA = 'challenges_demo';
+  var CHALLENGES_SCHEMA = '';
 
   function isChallengesEnabled(cb){
     try{
       if(!client||!session||typeof cb!=='function'){cb(false);return;}
-      client.from(CHALLENGES_SCHEMA+'.config').select('value').eq('key','CHALLENGES_DEMO_ENABLED').maybeSingle().then(function(r){
+      client.from(CHALLENGES_SCHEMA+'demo_challenge_config').select('value').eq('key','CHALLENGES_DEMO_ENABLED').maybeSingle().then(function(r){
         try{cb(r&&!r.error&&r.data&&r.data.value==='true');}catch(e){cb(false);}
       }).catch(function(){cb(false);});
     }catch(e){try{cb(false);}catch(_){}}
@@ -1553,10 +1553,10 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
   function isChallengesAllowed(cb){
     try{
       if(!client||!session||typeof cb!=='function'){cb(false);return;}
-      client.from(CHALLENGES_SCHEMA+'.allowlist').select('user_id').eq('user_id',session.user.id).maybeSingle().then(function(r){
+      client.from(CHALLENGES_SCHEMA+'demo_challenge_allowlist').select('user_id').eq('user_id',session.user.id).maybeSingle().then(function(r){
         try{
           // If allowlist is empty, everyone is allowed
-          client.from(CHALLENGES_SCHEMA+'.allowlist').select('user_id', {count:'exact',head:true}).then(function(r2){
+          client.from(CHALLENGES_SCHEMA+'demo_challenge_allowlist').select('user_id', {count:'exact',head:true}).then(function(r2){
             try{
               var count=r2&&r2.count?r2.count:0;
               if(count===0){cb(true);return;} // empty allowlist = open to all
@@ -1570,7 +1570,7 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
   function fetchChallenges(cb){
     try{
       if(!client||!session||typeof cb!=='function'){cb([]);return;}
-      client.from(CHALLENGES_SCHEMA+'.challenges').select('*').order('created_at',{ascending:false}).limit(50).then(function(r){
+      client.from(CHALLENGES_SCHEMA+'demo_challenge_challenges').select('*').order('created_at',{ascending:false}).limit(50).then(function(r){
         try{cb(r&&!r.error?r.data||[]:[]);}catch(e){cb([]);}
       }).catch(function(){cb([]);});
     }catch(e){try{cb([]);}catch(_){}}
@@ -1578,7 +1578,7 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
   function createChallenge(title, stakes, endsAt, cb){
     try{
       if(!client||!session){if(cb)cb(null);return;}
-      client.from(CHALLENGES_SCHEMA+'.challenges').insert({
+      client.from(CHALLENGES_SCHEMA+'demo_challenge_challenges').insert({
         theme_title:String(title||'').slice(0,100),
         creator_id:session.user.id,
         status:'draft',
@@ -1592,7 +1592,7 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
           var id=r.data&&r.data.id;
           if(id){
             // Add creator as accepted member
-            client.from(CHALLENGES_SCHEMA+'.challenge_members').insert({
+            client.from(CHALLENGES_SCHEMA+'demo_challenge_challenge_members').insert({
               challenge_id:id, user_id:session.user.id, status:'accepted', responded_at:new Date().toISOString()
             }).then(function(){if(cb)cb(id);}).catch(function(){if(cb)cb(id);});
           }else{if(cb)cb(null);}
@@ -1603,7 +1603,7 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
   function inviteToChallenge(challengeId, userId, cb){
     try{
       if(!client||!session){if(cb)cb(false);return;}
-      client.from(CHALLENGES_SCHEMA+'.challenge_members').insert({
+      client.from(CHALLENGES_SCHEMA+'demo_challenge_challenge_members').insert({
         challenge_id:challengeId, user_id:userId, status:'invited'
       }).then(function(r){
         try{if(cb)cb(!r||!r.error);}catch(e){if(cb)cb(false);}
@@ -1613,7 +1613,7 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
   function respondToChallengeInvite(challengeId, accept, cb){
     try{
       if(!client||!session){if(cb)cb(false);return;}
-      client.from(CHALLENGES_SCHEMA+'.challenge_members').update({
+      client.from(CHALLENGES_SCHEMA+'demo_challenge_challenge_members').update({
         status:accept?'accepted':'declined',
         responded_at:new Date().toISOString()
       }).eq('challenge_id',challengeId).eq('user_id',session.user.id).then(function(r){
@@ -1624,7 +1624,7 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
   function fetchChallengeMembers(challengeId, cb){
     try{
       if(!client||!session||typeof cb!=='function'){cb([]);return;}
-      client.from(CHALLENGES_SCHEMA+'.challenge_members').select('*').eq('challenge_id',challengeId).then(function(r){
+      client.from(CHALLENGES_SCHEMA+'demo_challenge_challenge_members').select('*').eq('challenge_id',challengeId).then(function(r){
         try{cb(r&&!r.error?r.data||[]:[]);}catch(e){cb([]);}
       }).catch(function(){cb([]);});
     }catch(e){try{cb([]);}catch(_){}}
@@ -1633,12 +1633,12 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
     try{
       if(!client||!session){if(cb)cb(false);return;}
       // Check all members accepted
-      client.from(CHALLENGES_SCHEMA+'.challenge_members').select('status').eq('challenge_id',challengeId).then(function(r){
+      client.from(CHALLENGES_SCHEMA+'demo_challenge_challenge_members').select('status').eq('challenge_id',challengeId).then(function(r){
         try{
           var members=r&&!r.error?r.data||[]:[];
           var allAccepted=members.length>0 && members.every(function(m){return m.status==='accepted';});
           if(!allAccepted){if(cb)cb(false,'Not all members accepted');return;}
-          client.from(CHALLENGES_SCHEMA+'.challenges').update({status:'active',starts_at:new Date().toISOString()}).eq('id',challengeId).then(function(r2){
+          client.from(CHALLENGES_SCHEMA+'demo_challenge_challenges').update({status:'active',starts_at:new Date().toISOString()}).eq('id',challengeId).then(function(r2){
             try{if(cb)cb(!r2||!r2.error);}catch(e){if(cb)cb(false);}
           }).catch(function(){if(cb)cb(false);});
         }catch(e){if(cb)cb(false);}
@@ -1648,7 +1648,7 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
   function fetchChallengeEntries(challengeId, cb){
     try{
       if(!client||!session||typeof cb!=='function'){cb([]);return;}
-      client.from(CHALLENGES_SCHEMA+'.challenge_entries').select('*').eq('challenge_id',challengeId).then(function(r){
+      client.from(CHALLENGES_SCHEMA+'demo_challenge_challenge_entries').select('*').eq('challenge_id',challengeId).then(function(r){
         try{cb(r&&!r.error?r.data||[]:[]);}catch(e){cb([]);}
       }).catch(function(){cb([]);});
     }catch(e){try{cb([]);}catch(_){}}
@@ -1656,7 +1656,7 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
   function addChallengeEntry(challengeId, memoryId, note, cb){
     try{
       if(!client||!session){if(cb)cb(false);return;}
-      client.from(CHALLENGES_SCHEMA+'.challenge_entries').insert({
+      client.from(CHALLENGES_SCHEMA+'demo_challenge_challenge_entries').insert({
         challenge_id:challengeId, memory_id:memoryId, player_id:session.user.id, note:note||null
       }).then(function(r){
         try{if(cb)cb(!r||!r.error);}catch(e){if(cb)cb(false);}
@@ -1666,7 +1666,7 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
   function submitVote(challengeId, entryId, kind, cb){
     try{
       if(!client||!session){if(cb)cb(false);return;}
-      client.from(CHALLENGES_SCHEMA+'.challenge_votes').insert({
+      client.from(CHALLENGES_SCHEMA+'demo_challenge_challenge_votes').insert({
         challenge_id:challengeId, voter_id:session.user.id, entry_id:entryId, kind:kind
       }).then(function(r){
         try{if(cb)cb(!r||!r.error);}catch(e){if(cb)cb(false);}
@@ -1676,7 +1676,7 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
   function fetchChallengeResults(challengeId, cb){
     try{
       if(!client||!session||typeof cb!=='function'){cb(null);return;}
-      client.rpc('challenges_demo.get_challenge_results',{p_challenge_id:challengeId}).then(function(r){
+      client.rpc('demo_challenge_get_challenge_results',{p_challenge_id:challengeId}).then(function(r){
         try{cb(r&&!r.error?r.data:null);}catch(e){cb(null);}
       }).catch(function(){cb(null);});
     }catch(e){try{cb(null);}catch(_){}}
@@ -1684,7 +1684,7 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
   function fetchChallengeEntryMemories(challengeId, cb){
     try{
       if(!client||!session||typeof cb!=='function'){cb([]);return;}
-      client.from('challenges_demo.challenge_entry_memories').select('*').eq('challenge_id',challengeId).then(function(r){
+      client.from('demo_challenge_challenge_entry_memories').select('*').eq('challenge_id',challengeId).then(function(r){
         try{cb(r&&!r.error?r.data||[]:[]);}catch(e){cb([]);}
       }).catch(function(){cb([]);});
     }catch(e){try{cb([]);}catch(_){}}
@@ -1692,7 +1692,7 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
   function closeChallenge(challengeId, cb){
     try{
       if(!client||!session){if(cb)cb(false);return;}
-      client.from(CHALLENGES_SCHEMA+'.challenges').update({status:'closed'}).eq('id',challengeId).then(function(r){
+      client.from(CHALLENGES_SCHEMA+'demo_challenge_challenges').update({status:'closed'}).eq('id',challengeId).then(function(r){
         try{if(cb)cb(!r||!r.error);}catch(e){if(cb)cb(false);}
       }).catch(function(){if(cb)cb(false);});
     }catch(e){if(cb)cb(false);}
@@ -1700,7 +1700,7 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
   function recordDemoItem(type, itemId, storagePath, cb){
     try{
       if(!client||!session){if(cb)cb(false);return;}
-      client.from(CHALLENGES_SCHEMA+'.demo_created_items').insert({item_type:type, item_id:itemId, storage_path:storagePath}).then(function(r){
+      client.from(CHALLENGES_SCHEMA+'demo_challenge_demo_created_items').insert({item_type:type, item_id:itemId, storage_path:storagePath}).then(function(r){
         try{if(cb)cb(!r||!r.error);}catch(e){if(cb)cb(false);}
       }).catch(function(){if(cb)cb(false);});
     }catch(e){if(cb)cb(false);}
@@ -1708,7 +1708,7 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
   function fetchAllowlist(cb){
     try{
       if(!client||!session||typeof cb!=='function'){cb([]);return;}
-      client.from(CHALLENGES_SCHEMA+'.allowlist').select('*').then(function(r){
+      client.from(CHALLENGES_SCHEMA+'demo_challenge_allowlist').select('*').then(function(r){
         try{cb(r&&!r.error?r.data||[]:[]);}catch(e){cb([]);}
       }).catch(function(){cb([]);});
     }catch(e){try{cb([]);}catch(_){}}
@@ -1716,7 +1716,7 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
   function addToAllowlist(userId, cb){
     try{
       if(!client||!session){if(cb)cb(false);return;}
-      client.from(CHALLENGES_SCHEMA+'.allowlist').insert({user_id:userId}).then(function(r){
+      client.from(CHALLENGES_SCHEMA+'demo_challenge_allowlist').insert({user_id:userId}).then(function(r){
         try{if(cb)cb(!r||!r.error);}catch(e){if(cb)cb(false);}
       }).catch(function(){if(cb)cb(false);});
     }catch(e){if(cb)cb(false);}
@@ -1724,7 +1724,7 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
   function toggleFeatureFlag(enabled, cb){
     try{
       if(!client||!session){if(cb)cb(false);return;}
-      client.from(CHALLENGES_SCHEMA+'.config').upsert({key:'CHALLENGES_DEMO_ENABLED',value:enabled?'true':'false'}).then(function(r){
+      client.from(CHALLENGES_SCHEMA+'demo_challenge_config').upsert({key:'CHALLENGES_DEMO_ENABLED',value:enabled?'true':'false'}).then(function(r){
         try{if(cb)cb(!r||!r.error);}catch(e){if(cb)cb(false);}
       }).catch(function(){if(cb)cb(false);});
     }catch(e){if(cb)cb(false);}
@@ -1764,15 +1764,15 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
       function deleteNext(){
         if(idx >= tables.length){
           // Delete demo-created memories
-          client.from(CHALLENGES_SCHEMA+'.demo_created_items').select('*').then(function(r){
+          client.from(CHALLENGES_SCHEMA+'demo_challenge_demo_created_items').select('*').then(function(r){
             var items = r&&!r.error ? r.data||[] : [];
             items.filter(function(i){return i.item_type==='memory'&&i.item_id;}).forEach(function(i){
               client.from('hangout_logs').delete().eq('id', i.item_id).then(function(){}).catch(function(){});
             });
             // Reset demo_created_items
-            client.from(CHALLENGES_SCHEMA+'.demo_created_items').delete().neq('id','00000000-0000-0000-0000-000000000000').then(function(){
+            client.from(CHALLENGES_SCHEMA+'demo_challenge_demo_created_items').delete().neq('id','00000000-0000-0000-0000-000000000000').then(function(){
               // Reset metrics
-              client.from(CHALLENGES_SCHEMA+'.metrics').update({count:0}).neq('key','').then(function(){
+              client.from(CHALLENGES_SCHEMA+'demo_challenge_metrics').update({count:0}).neq('key','').then(function(){
                 if(cb)cb(true);
               }).catch(function(){if(cb)cb(true);});
             }).catch(function(){if(cb)cb(true);});
@@ -1781,7 +1781,7 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
         }
         var tbl = tables[idx];
         idx++;
-        client.from(CHALLENGES_SCHEMA+'.'+tbl).delete().neq('id','00000000-0000-0000-0000-000000000000').then(function(){
+        client.from(CHALLENGES_SCHEMA+'demo_challenge_'+tbl).delete().neq('id','00000000-0000-0000-0000-000000000000').then(function(){
           deleteNext();
         }).catch(function(){
           deleteNext();

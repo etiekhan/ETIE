@@ -375,7 +375,7 @@ function verifyInviteCode(){
 function showScreen(id){
   try{
     try{if(id==='map'&&gateState()!=='open'){refreshGate();return;}}catch(e){}
-    var panels=['messages','profile'];
+    var panels=['messages','profile','challenges'];
     var want=[id];
     panels.forEach(function(p){var el=document.getElementById(p);if(el)el.classList.toggle('panel-open',want.indexOf(p)!==-1);});
     // Disable map pointer events when a panel is open so map doesn't block
@@ -386,6 +386,7 @@ function showScreen(id){
     }
     if(id==='profile'){renderLiteProfile();try{addQuestionArchiveLink();}catch(e){}}
     if(id==='messages'){try{renderHookChatList();}catch(e){}}
+    if(id==='challenges'){try{renderChallengesScreen();}catch(e){}}
     if(id==='map'){try{initHKMap();if(window.maplibregl&&_map){setTimeout(function(){try{_map.resize();}catch(e){}},120);}renderMapPins();}catch(e){}}
   }catch(e){}
 }
@@ -5191,6 +5192,315 @@ function renderRequestsRow(box){
         }catch(e){}
       });
     }
+  }catch(e){}
+}
+
+// ===== Challenges Demo (C2-C4) =====
+var _challengesEnabled=false;
+var _challengesAllowed=false;
+
+function checkChallengesEnabled(cb){
+  try{
+    if(!window.EtieCloud||!window.EtieCloud.isChallengesEnabled||!window.EtieCloud.isChallengesAllowed){
+      if(cb)cb(false,false);return;
+    }
+    window.EtieCloud.isChallengesEnabled(function(enabled){
+      try{
+        if(!enabled){if(cb)cb(false,false);return;}
+        window.EtieCloud.isChallengesAllowed(function(allowed){
+          try{if(cb)cb(enabled,allowed);}catch(e){if(cb)cb(false,false);}
+        });
+      }catch(e){if(cb)cb(false,false);}
+    });
+  }catch(e){if(cb)cb(false,false);}
+}
+
+function renderChallengesScreen(){
+  try{
+    var box=document.getElementById('challengesContent');if(!box)return;
+    checkChallengesEnabled(function(enabled,allowed){
+      try{
+        if(!enabled||!allowed){
+          box.innerHTML='<div class="muted small" style="text-align:center;padding:24px;">Challenges are not available right now.</div>';
+          return;
+        }
+        box.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">'
+          +'<span class="muted small">Best spot challenges with friends</span>'
+          +'<button class="primary" onclick="openCreateChallenge()" style="padding:8px 16px;font-size:12px;min-height:40px;">+ Create Challenge</button>'
+          +'</div>'
+          +'<div id="challengesList"><div class="muted small">Loading...</div></div>'
+          +'<div style="margin-top:12px;"><button class="secondary" onclick="seedChallengeDemo()" style="padding:8px 16px;font-size:12px;">Seed sample challenge</button>'
+          +'<button class="secondary" onclick="resetDemoDataConfirm()" style="padding:8px 16px;font-size:12px;margin-left:8px;">Reset demo data</button>'
+          +'<button class="secondary" onclick="removeDemoConfirm()" style="padding:8px 16px;font-size:12px;margin-left:8px;">Remove demo</button></div>';
+        loadChallengesList();
+      }catch(e){box.innerHTML='<div class="muted small">Error loading challenges.</div>';}
+    });
+  }catch(e){box.innerHTML='<div class="muted small">Error.</div>';}
+}
+
+function loadChallengesList(){
+  try{
+    var box=document.getElementById('challengesList');if(!box)return;
+    if(!window.EtieCloud||!window.EtieCloud.fetchChallenges){box.innerHTML='<div class="muted small">Cloud not ready.</div>';return;}
+    window.EtieCloud.fetchChallenges(function(chs){
+      try{
+        if(!chs||!chs.length){box.innerHTML='<div class="muted small">No challenges yet. Create one!</div>';return;}
+        box.innerHTML='';
+        chs.forEach(function(ch){
+          try{
+            var row=document.createElement('div');
+            row.className='list-item';
+            row.style.cursor='pointer';
+            row.style.borderLeft='3px solid #f43f5e';
+            row.innerHTML='<div><strong></strong><br><span class="muted small"></span></div><span class="status"></span>';
+            row.querySelector('strong').textContent=ch.theme_title||'Challenge';
+            var status=ch.status||'draft';
+            var statusColor=status==='active'?'#4ade80':status==='closed'?'#a78bfa':'#fbbf24';
+            row.querySelector('span.muted').textContent=status+' \u00b7 '+new Date(ch.created_at).toLocaleDateString();
+            row.querySelector('span.status').textContent=status;
+            row.querySelector('span.status').style.color=statusColor;
+            row.onclick=function(){openChallengeDetail(ch);};
+            box.appendChild(row);
+          }catch(e){}
+        });
+      }catch(e){box.innerHTML='<div class="muted small">Error loading.</div>';}
+    });
+  }catch(e){}
+}
+
+function openCreateChallenge(){
+  try{
+    var old=document.getElementById('createChallengeOverlay');if(old)old.remove();
+    var overlay=document.createElement('div');
+    overlay.id='createChallengeOverlay';
+    overlay.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);';
+    var card=document.createElement('div');
+    card.style.cssText='background:#1a1428;border:1px solid rgba(244,63,94,.3);border-radius:16px;padding:20px;max-width:520px;width:90%;max-height:85vh;overflow-y:auto;color:#fff;';
+    card.innerHTML='<h3 style="margin:0 0 12px;color:#f43f5e;">Create Challenge</h3>'
+      +'<div class="field"><label>Theme title</label><input id="chTitle" maxlength="100" placeholder="e.g. Best breakup spot in Hong Kong" style="width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:#fff;font-size:13px;box-sizing:border-box;"></div>'
+      +'<div class="field"><label>Stakes (free text)</label><input id="chStakes" maxlength="200" placeholder="e.g. Lowest crew score buys drinks" style="width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:#fff;font-size:13px;box-sizing:border-box;"></div>'
+      +'<div class="field"><label>End date</label><input id="chEndsAt" type="date" style="width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:#fff;font-size:13px;box-sizing:border-box;"></div>'
+      +'<div class="field"><label>Invite players (exact name)</label>'
+      +'<input id="chInviteInput" maxlength="40" placeholder="Type name, Enter to add" style="width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:#fff;font-size:13px;box-sizing:border-box;" onkeydown="if(event.key===\'Enter\'){event.preventDefault();addChallengeInvite();}">'
+      +'<div id="chInviteList" style="margin-top:8px;"></div>'
+      +'</div>'
+      +'<p class="muted small" style="margin:8px 0;">Stay safe and don\'t enter private or restricted areas.</p>'
+      +'<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">'
+      +'<button onclick="document.getElementById(\'createChallengeOverlay\').remove()" style="padding:8px 16px;background:transparent;border:1px solid rgba(255,255,255,.16);color:#fff;border-radius:8px;cursor:pointer;font-size:12px;">Cancel</button>'
+      +'<button onclick="submitCreateChallenge()" style="padding:8px 16px;background:#f43f5e;color:#fff;border:0;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;">Create</button>'
+      +'</div>';
+    overlay.appendChild(card);
+    overlay.onclick=function(e){if(e.target===overlay)overlay.remove();};
+    document.body.appendChild(overlay);
+    window._challengeInvites=[];
+  }catch(e){console.error('openCreateChallenge error:',e);}
+}
+
+var _challengeInvites=[];
+function addChallengeInvite(){
+  try{
+    var input=document.getElementById('chInviteInput');
+    if(!input)return;
+    var name=input.value.trim();
+    if(!name)return;
+    if(window.EtieCloud&&window.EtieCloud.exactMatchUser){
+      window.EtieCloud.exactMatchUser(name, function(user){
+        try{
+          if(!user){toast('No exact match found.');return;}
+          if(_challengeInvites.some(function(u){return u.user_id===user.user_id;})){toast('Already invited.');return;}
+          _challengeInvites.push(user);
+          input.value='';
+          renderChallengeInvites();
+        }catch(e){}
+      });
+    }else{
+      toast('Cloud not ready.');
+    }
+  }catch(e){}
+}
+
+function renderChallengeInvites(){
+  try{
+    var box=document.getElementById('chInviteList');if(!box)return;
+    box.innerHTML='';
+    _challengeInvites.forEach(function(u,i){
+      var row=document.createElement('div');
+      row.style.cssText='display:flex;justify-content:space-between;align-items:center;padding:4px 8px;background:rgba(255,255,255,.05);border-radius:6px;margin-bottom:4px;';
+      row.innerHTML='<span style="font-size:12px;color:#fff;">'+(u.name||'Someone')+'</span>'
+        +'<button onclick="removeChallengeInvite('+i+')" style="background:transparent;border:0;color:rgba(255,255,255,.5);cursor:pointer;font-size:12px;">\u2715</button>';
+      box.appendChild(row);
+    });
+  }catch(e){}
+}
+
+function removeChallengeInvite(idx){
+  try{_challengeInvites.splice(idx,1);renderChallengeInvites();}catch(e){}
+}
+
+function submitCreateChallenge(){
+  try{
+    var title=document.getElementById('chTitle');
+    var stakes=document.getElementById('chStakes');
+    var endsAt=document.getElementById('chEndsAt');
+    var t=title?title.value.trim():'';
+    if(!t){toast('Theme title required.');return;}
+    var ends=endsAt&&endsAt.value?new Date(endsAt.value).toISOString():null;
+    if(window.EtieCloud&&window.EtieCloud.createChallenge){
+      window.EtieCloud.createChallenge(t, stakes?stakes.value.trim():'', ends, function(id){
+        try{
+          if(!id){toast('Create failed.');return;}
+          // Invite players
+          _challengeInvites.forEach(function(u){
+            try{window.EtieCloud.inviteToChallenge(id, u.user_id, function(){});}catch(e){}
+          });
+          // Start challenge
+          window.EtieCloud.startChallenge(id, function(ok){
+            try{
+              if(ok)toast('Challenge created and started!');
+              else toast('Challenge created. Waiting for members to accept.');
+              var overlay=document.getElementById('createChallengeOverlay');if(overlay)overlay.remove();
+              renderChallengesScreen();
+            }catch(e){}
+          });
+        }catch(e){}
+      });
+    }else{
+      toast('Cloud not ready.');
+    }
+  }catch(e){toast('Create failed.');}
+}
+
+function openChallengeDetail(ch){
+  try{
+    var old=document.getElementById('challengeDetailOverlay');if(old)old.remove();
+    var overlay=document.createElement('div');
+    overlay.id='challengeDetailOverlay';
+    overlay.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);';
+    var card=document.createElement('div');
+    card.style.cssText='background:#1a1428;border:1px solid rgba(244,63,94,.3);border-radius:16px;padding:20px;max-width:640px;width:90%;max-height:85vh;overflow-y:auto;color:#fff;';
+    card.innerHTML='<h3 style="margin:0 0 4px;color:#f43f5e;">'+(ch.theme_title||'Challenge')+'</h3>'
+      +'<p class="muted small" style="margin-bottom:12px;">'+(ch.status||'draft')+' \u00b7 '+(ch.stakes||'')+'</p>'
+      +'<div id="challengeDetailContent"><div class="muted small">Loading...</div></div>'
+      +'<div style="margin-top:12px;display:flex;gap:8px;">'
+      +'<button onclick="document.getElementById(\'challengeDetailOverlay\').remove()" style="padding:8px 16px;background:rgba(255,255,255,.08);color:#fff;border:0;border-radius:8px;cursor:pointer;font-size:12px;">Close</button>'
+      +'</div>';
+    overlay.appendChild(card);
+    overlay.onclick=function(e){if(e.target===overlay)overlay.remove();};
+    document.body.appendChild(overlay);
+    loadChallengeDetail(ch);
+  }catch(e){console.error('openChallengeDetail error:',e);}
+}
+
+function loadChallengeDetail(ch){
+  try{
+    var box=document.getElementById('challengeDetailContent');
+    if(!box)return;
+    var html='<div class="muted small">Loading...</div>';
+    box.innerHTML=html;
+    // Load members
+    if(window.EtieCloud&&window.EtieCloud.fetchChallengeMembers){
+      window.EtieCloud.fetchChallengeMembers(ch.id, function(members){
+        try{
+          html='<div style="margin-bottom:12px;"><strong style="font-size:13px;">Members ('+(members?members.length:0)+')</strong></div>';
+          if(members&&members.length){
+            members.forEach(function(m){
+              html+='<div style="font-size:12px;color:rgba(255,255,255,.7);padding:4px 0;">'+(m.user_id||'').substring(0,8)+'... '+(m.status||'invited')+'</div>';
+            });
+          }
+          if(ch.status==='active'){
+            html+='<div style="margin-top:12px;"><button onclick="openAddEntry(\''+ch.id+'\')" style="padding:8px 16px;background:#f43f5e;color:#fff;border:0;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;">+ Add your spot</button></div>';
+          }
+          // Load entries
+          if(window.EtieCloud&&window.EtieCloud.fetchChallengeEntryMemories){
+            window.EtieCloud.fetchChallengeEntryMemories(ch.id, function(entries){
+              try{
+                html+='<div style="margin-top:12px;"><strong style="font-size:13px;">Entries ('+(entries?entries.length:0)+')</strong></div>';
+                if(entries&&entries.length){
+                  entries.forEach(function(e){
+                    html+='<div style="padding:8px;background:rgba(255,255,255,.05);border-radius:8px;margin-bottom:6px;">';
+                    html+='<div style="font-size:12px;color:#fff;">'+(e.caption||'Entry')+'</div>';
+                    html+='<div style="font-size:10px;color:rgba(255,255,255,.5);">'+(e.location||'')+'</div>';
+                    html+='</div>';
+                  });
+                }else{
+                  html+='<div class="muted small">No entries yet.</div>';
+                }
+                box.innerHTML=html;
+              }catch(err){
+                box.innerHTML='<div class="muted small">Error loading entries.</div>';
+              }
+            });
+          }else{
+            box.innerHTML=html;
+          }
+        }catch(err){
+          box.innerHTML='<div class="muted small">Error loading members.</div>';
+        }
+      });
+    }else{
+      box.innerHTML='<div class="muted small">Cloud not ready.</div>';
+    }
+  }catch(e){
+    console.error('loadChallengeDetail error:',e);
+  }
+}
+
+function openAddEntry(challengeId){
+  try{
+    toast('Pick a memory to submit as your entry.');
+    // Open memory card or standalone log to pick a memory
+    // For now, use the first memory from fetchMyMemories
+    if(window.EtieCloud&&window.EtieCloud.fetchMyMemories){
+      window.EtieCloud.fetchMyMemories(function(logs){
+        try{
+          if(!logs||!logs.length){toast('Log a memory first.');return;}
+          var mem=logs[0];
+          if(window.EtieCloud&&window.EtieCloud.addChallengeEntry){
+            window.EtieCloud.addChallengeEntry(challengeId, mem.id, mem.title||mem.location||'', function(ok){
+              try{
+                if(ok){toast('Entry added!');openChallengeDetail({id:challengeId,theme_title:'Challenge',status:'active'});}
+                else{toast('Failed to add entry.');}
+              }catch(e){}
+            });
+          }
+        }catch(e){}
+      });
+    }
+  }catch(e){}
+}
+
+function seedChallengeDemo(){
+  try{
+    if(!window.EtieCloud||!window.EtieCloud.seedChallenge){toast('Cloud not ready.');return;}
+    if(!confirm('Create a sample challenge?'))return;
+    window.EtieCloud.seedChallenge(function(ok){
+      try{
+        if(ok){toast('Sample challenge created!');renderChallengesScreen();}
+        else{toast('Seed failed. (Check allowlist/feature flag)');}
+      }catch(e){}
+    });
+  }catch(e){}
+}
+
+function resetDemoDataConfirm(){
+  try{
+    if(!confirm('Delete ALL challenge data? This cannot be undone.'))return;
+    if(!window.EtieCloud||!window.EtieCloud.resetDemoData){toast('Cloud not ready.');return;}
+    window.EtieCloud.resetDemoData(function(ok){
+      try{
+        if(ok){toast('Demo data reset.');renderChallengesScreen();}
+        else{toast('Reset failed.');}
+      }catch(e){}
+    });
+  }catch(e){}
+}
+
+function removeDemoConfirm(){
+  try{
+    if(!confirm('Remove the demo completely? This runs the down migration.'))return;
+    if(!window.EtieCloud||!window.EtieCloud.removeDemo){toast('Cloud not ready.');return;}
+    toast('Run supabase-migrate-challenges-demo-down.sql in Supabase SQL Editor to remove the demo.');
+    window.open('https://supabase.com/dashboard','_blank');
   }catch(e){}
 }
 

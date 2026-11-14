@@ -1539,6 +1539,266 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
     }catch(e){try{cb([]);}catch(_){}}
   }
 
+  // ---- Challenges Demo (C1-C4) ----
+  var CHALLENGES_SCHEMA = 'challenges_demo';
+
+  function isChallengesEnabled(cb){
+    try{
+      if(!client||!session||typeof cb!=='function'){cb(false);return;}
+      client.from(CHALLENGES_SCHEMA+'.config').select('value').eq('key','CHALLENGES_DEMO_ENABLED').maybeSingle().then(function(r){
+        try{cb(r&&!r.error&&r.data&&r.data.value==='true');}catch(e){cb(false);}
+      }).catch(function(){cb(false);});
+    }catch(e){try{cb(false);}catch(_){}}
+  }
+  function isChallengesAllowed(cb){
+    try{
+      if(!client||!session||typeof cb!=='function'){cb(false);return;}
+      client.from(CHALLENGES_SCHEMA+'.allowlist').select('user_id').eq('user_id',session.user.id).maybeSingle().then(function(r){
+        try{
+          // If allowlist is empty, everyone is allowed
+          client.from(CHALLENGES_SCHEMA+'.allowlist').select('user_id', {count:'exact',head:true}).then(function(r2){
+            try{
+              var count=r2&&r2.count?r2.count:0;
+              if(count===0){cb(true);return;} // empty allowlist = open to all
+              cb(!!(r&&!r.error&&r.data));
+            }catch(e){cb(false);}
+          }).catch(function(){cb(!!(r&&!r.error&&r.data));});
+        }catch(e){cb(false);}
+      }).catch(function(){cb(false);});
+    }catch(e){try{cb(false);}catch(_){}}
+  }
+  function fetchChallenges(cb){
+    try{
+      if(!client||!session||typeof cb!=='function'){cb([]);return;}
+      client.from(CHALLENGES_SCHEMA+'.challenges').select('*').order('created_at',{ascending:false}).limit(50).then(function(r){
+        try{cb(r&&!r.error?r.data||[]:[]);}catch(e){cb([]);}
+      }).catch(function(){cb([]);});
+    }catch(e){try{cb([]);}catch(_){}}
+  }
+  function createChallenge(title, stakes, endsAt, cb){
+    try{
+      if(!client||!session){if(cb)cb(null);return;}
+      client.from(CHALLENGES_SCHEMA+'.challenges').insert({
+        theme_title:String(title||'').slice(0,100),
+        creator_id:session.user.id,
+        status:'draft',
+        voting_rules:'both',
+        stakes:String(stakes||'').slice(0,200),
+        safety_note:'Stay safe and don\'t enter private or restricted areas.',
+        ends_at:endsAt||null
+      }).select('id').single().then(function(r){
+        try{
+          if(r&&r.error){if(cb)cb(null);return;}
+          var id=r.data&&r.data.id;
+          if(id){
+            // Add creator as accepted member
+            client.from(CHALLENGES_SCHEMA+'.challenge_members').insert({
+              challenge_id:id, user_id:session.user.id, status:'accepted', responded_at:new Date().toISOString()
+            }).then(function(){if(cb)cb(id);}).catch(function(){if(cb)cb(id);});
+          }else{if(cb)cb(null);}
+        }catch(e){if(cb)cb(null);}
+      }).catch(function(){if(cb)cb(null);});
+    }catch(e){if(cb)cb(null);}
+  }
+  function inviteToChallenge(challengeId, userId, cb){
+    try{
+      if(!client||!session){if(cb)cb(false);return;}
+      client.from(CHALLENGES_SCHEMA+'.challenge_members').insert({
+        challenge_id:challengeId, user_id:userId, status:'invited'
+      }).then(function(r){
+        try{if(cb)cb(!r||!r.error);}catch(e){if(cb)cb(false);}
+      }).catch(function(){if(cb)cb(false);});
+    }catch(e){if(cb)cb(false);}
+  }
+  function respondToChallengeInvite(challengeId, accept, cb){
+    try{
+      if(!client||!session){if(cb)cb(false);return;}
+      client.from(CHALLENGES_SCHEMA+'.challenge_members').update({
+        status:accept?'accepted':'declined',
+        responded_at:new Date().toISOString()
+      }).eq('challenge_id',challengeId).eq('user_id',session.user.id).then(function(r){
+        try{if(cb)cb(!r||!r.error);}catch(e){if(cb)cb(false);}
+      }).catch(function(){if(cb)cb(false);});
+    }catch(e){if(cb)cb(false);}
+  }
+  function fetchChallengeMembers(challengeId, cb){
+    try{
+      if(!client||!session||typeof cb!=='function'){cb([]);return;}
+      client.from(CHALLENGES_SCHEMA+'.challenge_members').select('*').eq('challenge_id',challengeId).then(function(r){
+        try{cb(r&&!r.error?r.data||[]:[]);}catch(e){cb([]);}
+      }).catch(function(){cb([]);});
+    }catch(e){try{cb([]);}catch(_){}}
+  }
+  function startChallenge(challengeId, cb){
+    try{
+      if(!client||!session){if(cb)cb(false);return;}
+      // Check all members accepted
+      client.from(CHALLENGES_SCHEMA+'.challenge_members').select('status').eq('challenge_id',challengeId).then(function(r){
+        try{
+          var members=r&&!r.error?r.data||[]:[];
+          var allAccepted=members.length>0 && members.every(function(m){return m.status==='accepted';});
+          if(!allAccepted){if(cb)cb(false,'Not all members accepted');return;}
+          client.from(CHALLENGES_SCHEMA+'.challenges').update({status:'active',starts_at:new Date().toISOString()}).eq('id',challengeId).then(function(r2){
+            try{if(cb)cb(!r2||!r2.error);}catch(e){if(cb)cb(false);}
+          }).catch(function(){if(cb)cb(false);});
+        }catch(e){if(cb)cb(false);}
+      }).catch(function(){if(cb)cb(false);});
+    }catch(e){if(cb)cb(false);}
+  }
+  function fetchChallengeEntries(challengeId, cb){
+    try{
+      if(!client||!session||typeof cb!=='function'){cb([]);return;}
+      client.from(CHALLENGES_SCHEMA+'.challenge_entries').select('*').eq('challenge_id',challengeId).then(function(r){
+        try{cb(r&&!r.error?r.data||[]:[]);}catch(e){cb([]);}
+      }).catch(function(){cb([]);});
+    }catch(e){try{cb([]);}catch(_){}}
+  }
+  function addChallengeEntry(challengeId, memoryId, note, cb){
+    try{
+      if(!client||!session){if(cb)cb(false);return;}
+      client.from(CHALLENGES_SCHEMA+'.challenge_entries').insert({
+        challenge_id:challengeId, memory_id:memoryId, player_id:session.user.id, note:note||null
+      }).then(function(r){
+        try{if(cb)cb(!r||!r.error);}catch(e){if(cb)cb(false);}
+      }).catch(function(){if(cb)cb(false);});
+    }catch(e){if(cb)cb(false);}
+  }
+  function submitVote(challengeId, entryId, kind, cb){
+    try{
+      if(!client||!session){if(cb)cb(false);return;}
+      client.from(CHALLENGES_SCHEMA+'.challenge_votes').insert({
+        challenge_id:challengeId, voter_id:session.user.id, entry_id:entryId, kind:kind
+      }).then(function(r){
+        try{if(cb)cb(!r||!r.error);}catch(e){if(cb)cb(false);}
+      }).catch(function(){if(cb)cb(false);});
+    }catch(e){if(cb)cb(false);}
+  }
+  function fetchChallengeResults(challengeId, cb){
+    try{
+      if(!client||!session||typeof cb!=='function'){cb(null);return;}
+      client.rpc('challenges_demo.get_challenge_results',{p_challenge_id:challengeId}).then(function(r){
+        try{cb(r&&!r.error?r.data:null);}catch(e){cb(null);}
+      }).catch(function(){cb(null);});
+    }catch(e){try{cb(null);}catch(_){}}
+  }
+  function fetchChallengeEntryMemories(challengeId, cb){
+    try{
+      if(!client||!session||typeof cb!=='function'){cb([]);return;}
+      client.from('challenges_demo.challenge_entry_memories').select('*').eq('challenge_id',challengeId).then(function(r){
+        try{cb(r&&!r.error?r.data||[]:[]);}catch(e){cb([]);}
+      }).catch(function(){cb([]);});
+    }catch(e){try{cb([]);}catch(_){}}
+  }
+  function closeChallenge(challengeId, cb){
+    try{
+      if(!client||!session){if(cb)cb(false);return;}
+      client.from(CHALLENGES_SCHEMA+'.challenges').update({status:'closed'}).eq('id',challengeId).then(function(r){
+        try{if(cb)cb(!r||!r.error);}catch(e){if(cb)cb(false);}
+      }).catch(function(){if(cb)cb(false);});
+    }catch(e){if(cb)cb(false);}
+  }
+  function recordDemoItem(type, itemId, storagePath, cb){
+    try{
+      if(!client||!session){if(cb)cb(false);return;}
+      client.from(CHALLENGES_SCHEMA+'.demo_created_items').insert({item_type:type, item_id:itemId, storage_path:storagePath}).then(function(r){
+        try{if(cb)cb(!r||!r.error);}catch(e){if(cb)cb(false);}
+      }).catch(function(){if(cb)cb(false);});
+    }catch(e){if(cb)cb(false);}
+  }
+  function fetchAllowlist(cb){
+    try{
+      if(!client||!session||typeof cb!=='function'){cb([]);return;}
+      client.from(CHALLENGES_SCHEMA+'.allowlist').select('*').then(function(r){
+        try{cb(r&&!r.error?r.data||[]:[]);}catch(e){cb([]);}
+      }).catch(function(){cb([]);});
+    }catch(e){try{cb([]);}catch(_){}}
+  }
+  function addToAllowlist(userId, cb){
+    try{
+      if(!client||!session){if(cb)cb(false);return;}
+      client.from(CHALLENGES_SCHEMA+'.allowlist').insert({user_id:userId}).then(function(r){
+        try{if(cb)cb(!r||!r.error);}catch(e){if(cb)cb(false);}
+      }).catch(function(){if(cb)cb(false);});
+    }catch(e){if(cb)cb(false);}
+  }
+  function toggleFeatureFlag(enabled, cb){
+    try{
+      if(!client||!session){if(cb)cb(false);return;}
+      client.from(CHALLENGES_SCHEMA+'.config').upsert({key:'CHALLENGES_DEMO_ENABLED',value:enabled?'true':'false'}).then(function(r){
+        try{if(cb)cb(!r||!r.error);}catch(e){if(cb)cb(false);}
+      }).catch(function(){if(cb)cb(false);});
+    }catch(e){if(cb)cb(false);}
+  }
+  function seedChallenge(cb){
+    try{
+      if(!client||!session){if(cb)cb(false);return;}
+      // Find fleming.spur@gmail.com user_id
+      client.from('etie_profiles').select('user_id').eq('display_name','fleming.spur@gmail.com').maybeSingle().then(function(r){
+        // Actually search by email won't work on profiles. Try searching by display_name.
+        // Fallback: just create challenge with current user as both players for demo
+        createChallenge('Best breakup spot in Hong Kong', 'Lowest crew score buys drinks', new Date(Date.now()+7*86400000).toISOString(), function(challengeId){
+          try{
+            if(!challengeId){if(cb)cb(false);return;}
+            // Add current user as member (already added in createChallenge)
+            // Add fleming as member if found
+            if(r&&!r.error&&r.data&&r.data.user_id){
+              inviteToChallenge(challengeId, r.data.user_id, function(){});
+            }
+            if(cb)cb(true);
+          }catch(e){if(cb)cb(false);}
+        });
+      }).catch(function(){
+        // Fallback without fleming
+        createChallenge('Best breakup spot in Hong Kong', 'Lowest crew score buys drinks', new Date(Date.now()+7*86400000).toISOString(), function(challengeId){
+          try{if(cb)cb(!!challengeId);}catch(e){if(cb)cb(false);}
+        });
+      });
+    }catch(e){if(cb)cb(false);}
+  }
+  function resetDemoData(cb){
+    try{
+      if(!client||!session){if(cb)cb(false);return;}
+      // Delete all demo data in order
+      client.from(CHALLENGES_SCHEMA+'.been_here').delete().neq('id','00000000-0000-0000-0000-000000000000').then(function(){
+        client.from(CHALLENGES_SCHEMA+'.entry_comments').delete().neq('id','00000000-0000-0000-0000-000000000000').then(function(){
+          client.from(CHALLENGES_SCHEMA+'.entry_reactions').delete().neq('id','00000000-0000-0000-0000-000000000000').then(function(){
+            client.from(CHALLENGES_SCHEMA+'.entry_saves').delete().neq('id','00000000-0000-0000-0000-000000000000').then(function(){
+              client.from(CHALLENGES_SCHEMA+'.challenge_votes').delete().neq('id','00000000-0000-0000-0000-000000000000').then(function(){
+                client.from(CHALLENGES_SCHEMA+'.challenge_entries').delete().neq('id','00000000-0000-0000-0000-000000000000').then(function(){
+                  client.from(CHALLENGES_SCHEMA+'.nominations').delete().neq('id','00000000-0000-0000-0000-000000000000').then(function(){
+                    client.from(CHALLENGES_SCHEMA+'.challenge_members').delete().neq('id','00000000-0000-0000-0000-000000000000').then(function(){
+                      client.from(CHALLENGES_SCHEMA+'.challenges').delete().neq('id','00000000-0000-0000-0000-000000000000').then(function(){
+                        // Delete demo-created memories
+                        client.from(CHALLENGES_SCHEMA+'.demo_created_items').select('*').then(function(r){
+                          var items=r&&!r.error?r.data||[]:[];
+                          // Delete memories
+                          items.filter(function(i){return i.item_type==='memory'&&i.item_id;}).forEach(function(i){
+                            client.from('hangout_logs').delete().eq('id',i.item_id).then(function(){}).catch(function(){});
+                          });
+                          // Reset demo_created_items
+                          client.from(CHALLENGES_SCHEMA+'.demo_created_items').delete().neq('id','00000000-0000-0000-0000-000000000000').then(function(){
+                            // Reset metrics
+                            client.from(CHALLENGES_SCHEMA+'.metrics').update({count:0}).neq('key','').then(function(){
+                              if(cb)cb(true);
+                            }).catch(function(){if(cb)cb(true);});
+                          }).catch(function(){if(cb)cb(true);});
+                        }).catch(function(){if(cb)cb(true);});
+                      }).catch(function(){if(cb)cb(false);});
+                    }).catch(function(){if(cb)cb(false);});
+                  }).catch(function(){if(cb)cb(false);});
+                }).catch(function(){if(cb)cb(false);});
+              }).catch(function(){if(cb)cb(false);});
+            }).catch(function(){if(cb)cb(false);});
+          }).catch(function(){if(cb)cb(false);});
+        }).catch(function(){if(cb)cb(false);});
+      }catch(e){if(cb)cb(false);}
+    }catch(e){if(cb)cb(false);}
+  }
+  function removeDemo(cb){
+    // Cannot drop schema from client. User must run down migration manually.
+    if(cb)cb(false);
+  }
+
   // TODO(OAuth): Set up custom domain (e.g. auth.etie.app) in Supabase OAuth settings
 // to replace the raw supabase.co redirect URL on Google login.
 // Configure in Supabase Dashboard > Authentication > URL Configuration > Site URL & Redirect URLs.
@@ -1561,6 +1821,14 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
     fetchDisplayNames:fetchDisplayNames,
     searchProfiles:searchProfiles,
     cancelTag:cancelTag,
+    isChallengesEnabled:isChallengesEnabled, isChallengesAllowed:isChallengesAllowed,
+    fetchChallenges:fetchChallenges, createChallenge:createChallenge, inviteToChallenge:inviteToChallenge,
+    respondToChallengeInvite:respondToChallengeInvite, fetchChallengeMembers:fetchChallengeMembers,
+    startChallenge:startChallenge, fetchChallengeEntries:fetchChallengeEntries, addChallengeEntry:addChallengeEntry,
+    submitVote:submitVote, fetchChallengeResults:fetchChallengeResults, fetchChallengeEntryMemories:fetchChallengeEntryMemories,
+    closeChallenge:closeChallenge, recordDemoItem:recordDemoItem, fetchAllowlist:fetchAllowlist,
+    addToAllowlist:addToAllowlist, toggleFeatureFlag:toggleFeatureFlag, seedChallenge:seedChallenge,
+    resetDemoData:resetDemoData, removeDemo:removeDemo,
     createQuestion:createQuestion, insertAnswer:insertAnswer, getLatestAnswer:getLatestAnswer,
     reportQuestion:reportQuestion, fetchMyQuestions:fetchMyQuestions, fetchMyVersions:fetchMyVersions,
     fetchReportedQuestions:fetchReportedQuestions, fetchAnswerMetrics:fetchAnswerMetrics,

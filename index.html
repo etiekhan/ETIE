@@ -21,6 +21,7 @@
   <div class="nav-links">
     <button class="snav-btn" onclick="showScreen('map')">Map</button>
     <button class="snav-btn" onclick="showScreen('messages')">Messages</button>
+    <button class="snav-btn" onclick="showScreen('challenges')">Challenges</button>
     <button class="snav-btn" onclick="showScreen('profile')">Profile</button>
     <span class="derived-badge" id="derivedBadge">📍 …</span>
   </div>
@@ -88,6 +89,7 @@
 
 <!-- Supporting product views -->
 <section class="section overlay-panel" id="messages" data-section="messages"><div class="card panel"><div class="eyebrow">Messages</div><h2>Messages</h2><div class="eyebrow" style="margin-top:6px;">Requests & Chats</div><div class="list" id="hookChatList" style="margin-bottom:14px;"></div></div></section>
+<section class="section overlay-panel" id="challenges" data-section="challenges"><div class="card panel"><div class="eyebrow">Challenges</div><h2>Best Spot Challenges</h2><div id="challengesDemoBadge" style="display:inline-block;padding:2px 8px;background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.3);color:#fbbf24;border-radius:4px;font-size:10px;font-weight:700;margin-bottom:8px;">DEMO</div><div id="challengesContent"><div class="muted small">Loading challenges...</div></div></div></section>
 <section class="section overlay-panel" id="profile" data-section="profile"><div class="card panel"><div class="eyebrow">Profile</div><h2>Your profile</h2><div id="liteProfile">
   <div id="liteSignedOut">
     <p class="muted">Sign in to build your profile — nickname, photo and one ID check, under a minute.</p>
@@ -585,7 +587,7 @@
   <script src="runtime-config.js"></script>
   <script src="runtime-config.example.js"></script>
   <script src="map-style.js"></script>
-  <script src="app.js?v=180"></script>
+  <script src="app.js?v=181"></script>
   <script src="supabase-sync.js?v=132"></script>
 </body>
 </html>

@@ -15,7 +15,7 @@ create table if not exists challenges_demo.challenges (
   status text not null default 'draft' check (status in ('draft','active','closed')),
   voting_rules text not null default 'both' check (voting_rules in ('crew','crowd','both')),
   stakes text,
-  safety_note text default 'Stay safe and don\\'t enter private or restricted areas.',
+  safety_note text default 'Stay safe and don''t enter private or restricted areas.',
   starts_at timestamptz,
   ends_at timestamptz,
   created_at timestamptz not null default now(),

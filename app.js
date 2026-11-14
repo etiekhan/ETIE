@@ -267,7 +267,7 @@ function refreshGate(){
   }catch(e){return 'signin';}
 }
 // ===== Coventry Onboarding =====
-var ALBANY_LAT=52.4042, ALBANY_LNG=-1.5173;
+var ALBANY_LAT=52.402786, ALBANY_LNG=-1.526290;
 
 function startOnboarding(){
   try{

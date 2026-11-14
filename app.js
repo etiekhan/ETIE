@@ -5594,6 +5594,7 @@ function openAddEntry(challengeId){
         var card=document.createElement('div');
         card.style.cssText='background:#1a1428;border:1px solid rgba(244,63,94,.3);border-radius:16px;padding:20px;max-width:520px;width:90%;max-height:80vh;overflow-y:auto;color:#fff;';
         var html='<h3 style="margin:0 0 12px;color:#f43f5e;">Choose a memory to submit</h3>';
+        html+='<button onclick="document.getElementById(\'memPickerOverlay\').remove();openStandaloneLog();" style="width:100%;padding:10px 16px;margin-bottom:8px;background:#f43f5e;color:#fff;border:0;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;min-height:40px;">+ Create new memory</button>';
         html+='<div style="display:flex;flex-direction:column;gap:8px;">';
         logs.forEach(function(mem){
           if(!mem||!mem.id)return;

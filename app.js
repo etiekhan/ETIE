@@ -5555,7 +5555,8 @@ function openChallengeDetail(ch){
       +'<span style="padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;background:rgba(251,191,36,.15);color:#fbbf24;">countdown</span>'
       +'</div>'
       +'<p class="muted small" style="margin-bottom:12px;">Stakes: '+(ch.stakes||'None')+'</p>'
-      +'<div id="challengeDetailContent"><div class="muted small">Loading...</div></div>';
+      +'<div id="challengeDetailContent"><div class="muted small">Loading...</div></div>'
+      +'<div style="margin-top:12px;"><button onclick="nominateThemePrompt(\''+ch.id+'\')" style="padding:6px 12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.6);border-radius:6px;cursor:pointer;font-size:11px;">Nominate next theme</button></div>';
     overlay.appendChild(card);
     overlay.onclick=function(e){if(e.target===overlay)overlay.remove();};
     document.body.appendChild(overlay);
@@ -5628,12 +5629,27 @@ function loadChallengeDetail(ch){
                 html+='<div style="margin-top:12px;"><strong style="font-size:13px;">Entries ('+(entries?entries.length:0)+')</strong></div>';
                 if(entries&&entries.length){
                   entries.forEach(function(e){
-                    html+='<div style="display:flex;gap:8px;padding:8px;background:rgba(255,255,255,.05);border-radius:8px;margin-bottom:6px;">';
+                    html+='<div style="padding:8px;background:rgba(255,255,255,.05);border-radius:8px;margin-bottom:8px;">';
+                    html+='<div style="display:flex;gap:8px;">';
                     html+='<img src="'+(e.photo_url||'')+'" style="width:48px;height:48px;border-radius:6px;object-fit:cover;flex-shrink:0;background:#0b0b0e;">';
                     html+='<div style="flex:1;min-width:0;">';
                     html+='<div style="font-size:12px;color:#fff;font-weight:600;">'+(e.caption||'Entry')+'</div>';
                     html+='<div style="font-size:10px;color:rgba(255,255,255,.5);">'+(e.location||'')+' \u00b7 '+(e.player_id?e.player_id.substring(0,6)+'...':'')+'</div>';
                     html+='</div></div>';
+                    // Viewer actions
+                    html+='<div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;">';
+                    html+='<button onclick="toggleSaveEntry(\''+e.id+'\')" style="padding:3px 8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#fff;border-radius:4px;cursor:pointer;font-size:10px;" aria-label="Save spot">\ud83d\udd16 Save</button>';
+                    html+='<button onclick="toggleReaction(\''+e.id+'\',\'fire\')" style="padding:3px 8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#fff;border-radius:4px;cursor:pointer;font-size:10px;" aria-label="React fire">\ud83d\udd25</button>';
+                    html+='<button onclick="toggleReaction(\''+e.id+'\',\'heart\')" style="padding:3px 8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#fff;border-radius:4px;cursor:pointer;font-size:10px;" aria-label="React heart">\u2764\ufe0f</button>';
+                    html+='<button onclick="beenHereEntry(\''+e.id+'\',\''+(e.memory_id||'')+'\')" style="padding:3px 8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#fff;border-radius:4px;cursor:pointer;font-size:10px;" aria-label="I have been here">I\'ve been here</button>';
+                    html+='<button onclick="reportEntryPrompt(\''+e.id+'\')" style="padding:3px 8px;background:rgba(255,60,60,.1);border:1px solid rgba(255,60,60,.2);color:#f87171;border-radius:4px;cursor:pointer;font-size:10px;" aria-label="Report entry">\ud83d\udea9</button>';
+                    html+='</div>';
+                    html+='<div id="beenHereCount_'+e.id+'" style="font-size:10px;color:rgba(255,255,255,.4);margin-top:4px;"></div>';
+                    html+='<div style="margin-top:8px;">';
+                    html+='<input id="commentInput_'+e.id+'" placeholder="Add a comment..." style="width:100%;padding:6px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);color:#fff;font-size:11px;box-sizing:border-box;" onkeydown="if(event.key===\'Enter\'){event.preventDefault();submitComment(\''+e.id+'\');}">';
+                    html+='<div id="comments_'+e.id+'" style="margin-top:4px;"></div>';
+                    html+='</div>';
+                    html+='</div>';
                   });
                 }else{
                   html+='<div style="text-align:center;padding:16px;background:rgba(255,255,255,.03);border-radius:8px;border:1px dashed rgba(255,255,255,.1);">';
@@ -5741,6 +5757,124 @@ function closeChallengeNow(challengeId){
             });
           }
         }catch(e){}
+      });
+    }
+  }catch(e){}
+}
+
+function toggleSaveEntry(entryId){
+  try{
+    if(window.EtieCloud&&window.EtieCloud.fetchEntrySaves){
+      window.EtieCloud.fetchEntrySaves(entryId, function(saves){
+        try{
+          var myId=null;try{myId=myUid();}catch(e){}
+          var isSaved=saves.some(function(s){return s.user_id===myId;});
+          if(isSaved){
+            if(window.EtieCloud.unsaveEntry){window.EtieCloud.unsaveEntry(entryId, function(){toast('Unsaved.');});}
+          }else{
+            if(window.EtieCloud.saveEntry){window.EtieCloud.saveEntry(entryId, function(ok){toast(ok?'Saved!':'Save failed.');});}
+          }
+        }catch(e){}
+      });
+    }
+  }catch(e){}
+}
+
+function toggleReaction(entryId, reaction){
+  try{
+    if(window.EtieCloud&&window.EtieCloud.fetchReactions){
+      window.EtieCloud.fetchReactions(entryId, function(reactions){
+        try{
+          var myId=null;try{myId=myUid();}catch(e){}
+          var hasReacted=reactions.some(function(r){return r.user_id===myId&&r.reaction===reaction;});
+          if(hasReacted){
+            if(window.EtieCloud.removeReaction){window.EtieCloud.removeReaction(entryId, reaction, function(){toast('Removed.');});}
+          }else{
+            if(window.EtieCloud.addReaction){window.EtieCloud.addReaction(entryId, reaction, function(ok){toast(ok?'Reacted!':'React failed.');});}
+          }
+        }catch(e){}
+      });
+    }
+  }catch(e){}
+}
+
+function beenHereEntry(entryId, memoryId){
+  try{
+    if(!memoryId){toast('No memory to link.');return;}
+    if(window.EtieCloud&&window.EtieCloud.beenHere){
+      window.EtieCloud.beenHere(entryId, memoryId, function(ok){
+        try{
+          if(ok){
+            toast('Marked as been here!');
+            if(window.EtieCloud&&window.EtieCloud.fetchBeenHere){
+              window.EtieCloud.fetchBeenHere(entryId, function(bh){
+                try{
+                  var el=document.getElementById('beenHereCount_'+entryId);
+                  if(el)el.textContent=bh.length+' been here';
+                }catch(e){}
+              });
+            }
+          }else{toast('Failed.');}
+        }catch(e){}
+      });
+    }
+  }catch(e){}
+}
+
+function submitComment(entryId){
+  try{
+    var input=document.getElementById('commentInput_'+entryId);
+    if(!input)return;
+    var text=input.value.trim();
+    if(!text)return;
+    if(window.EtieCloud&&window.EtieCloud.addComment){
+      window.EtieCloud.addComment(entryId, text, function(ok){
+        try{
+          if(ok){input.value='';toast('Comment added.');loadComments(entryId);}
+          else{toast('Comment failed.');}
+        }catch(e){}
+      });
+    }
+  }catch(e){}
+}
+
+function loadComments(entryId){
+  try{
+    if(!window.EtieCloud||!window.EtieCloud.fetchComments)return;
+    window.EtieCloud.fetchComments(entryId, function(comments){
+      try{
+        var box=document.getElementById('comments_'+entryId);
+        if(!box)return;
+        if(!comments||!comments.length){box.innerHTML='';return;}
+        box.innerHTML=comments.map(function(c){
+          return '<div style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,.06);">'
+            +'<span style="font-size:11px;color:rgba(255,255,255,.5);">'+(c.user_id?c.user_id.substring(0,6)+'...':'Someone')+' \u00b7 '+new Date(c.created_at).toLocaleString()+'</span>'
+            +'<div style="font-size:12px;color:#fff;margin-top:2px;">'+(c.comment_text||'')+'</div>'
+            +'</div>';
+        }).join('');
+      }catch(e){}
+    });
+  }catch(e){}
+}
+
+function reportEntryPrompt(entryId){
+  try{
+    if(!confirm('Report this entry?'))return;
+    if(window.EtieCloud&&window.EtieCloud.reportEntry){
+      window.EtieCloud.reportEntry(entryId, function(ok){
+        try{toast(ok?'Reported.':'Report failed.');}catch(e){}
+      });
+    }
+  }catch(e){}
+}
+
+function nominateThemePrompt(challengeId){
+  try{
+    var theme=prompt('Nominate a theme for the next challenge:');
+    if(!theme||!theme.trim())return;
+    if(window.EtieCloud&&window.EtieCloud.nominateTheme){
+      window.EtieCloud.nominateTheme(challengeId, theme.trim(), function(ok){
+        try{toast(ok?'Nominated!':'Nominate failed.');}catch(e){}
       });
     }
   }catch(e){}

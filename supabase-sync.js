@@ -1844,6 +1844,112 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
     if(cb)cb(false);
   }
 
+  // ---- Challenge viewer interactions (C5) ----
+  function saveEntry(entryId, cb){
+    try{
+      if(!client||!session){if(cb)cb(false);return;}
+      client.from(CHALLENGES_SCHEMA+'demo_challenge_entry_saves').insert({entry_id:entryId, user_id:session.user.id}).then(function(r){
+        try{if(cb)cb(!r||!r.error);}catch(e){if(cb)cb(false);}
+      }).catch(function(){if(cb)cb(false);});
+    }catch(e){if(cb)cb(false);}
+  }
+  function unsaveEntry(entryId, cb){
+    try{
+      if(!client||!session){if(cb)cb(false);return;}
+      client.from(CHALLENGES_SCHEMA+'demo_challenge_entry_saves').delete().eq('entry_id',entryId).eq('user_id',session.user.id).then(function(r){
+        try{if(cb)cb(!r||!r.error);}catch(e){if(cb)cb(false);}
+      }).catch(function(){if(cb)cb(false);});
+    }catch(e){if(cb)cb(false);}
+  }
+  function fetchEntrySaves(entryId, cb){
+    try{
+      if(!client||!session||typeof cb!=='function'){cb([]);return;}
+      client.from(CHALLENGES_SCHEMA+'demo_challenge_entry_saves').select('*').eq('entry_id',entryId).then(function(r){
+        try{cb(r&&!r.error?r.data||[]:[]);}catch(e){cb([]);}
+      }).catch(function(){cb([]);});
+    }catch(e){try{cb([]);}catch(_){}}
+  }
+  function addReaction(entryId, reaction, cb){
+    try{
+      if(!client||!session){if(cb)cb(false);return;}
+      client.from(CHALLENGES_SCHEMA+'demo_challenge_entry_reactions').insert({entry_id:entryId, user_id:session.user.id, reaction:reaction}).then(function(r){
+        try{if(cb)cb(!r||!r.error);}catch(e){if(cb)cb(false);}
+      }).catch(function(){if(cb)cb(false);});
+    }catch(e){if(cb)cb(false);}
+  }
+  function removeReaction(entryId, reaction, cb){
+    try{
+      if(!client||!session){if(cb)cb(false);return;}
+      client.from(CHALLENGES_SCHEMA+'demo_challenge_entry_reactions').delete().eq('entry_id',entryId).eq('user_id',session.user.id).eq('reaction',reaction).then(function(r){
+        try{if(cb)cb(!r||!r.error);}catch(e){if(cb)cb(false);}
+      }).catch(function(){if(cb)cb(false);});
+    }catch(e){if(cb)cb(false);}
+  }
+  function fetchReactions(entryId, cb){
+    try{
+      if(!client||!session||typeof cb!=='function'){cb([]);return;}
+      client.from(CHALLENGES_SCHEMA+'demo_challenge_entry_reactions').select('*').eq('entry_id',entryId).then(function(r){
+        try{cb(r&&!r.error?r.data||[]:[]);}catch(e){cb([]);}
+      }).catch(function(){cb([]);});
+    }catch(e){try{cb([]);}catch(_){}}
+  }
+  function addComment(entryId, text, cb){
+    try{
+      if(!client||!session){if(cb)cb(false);return;}
+      client.from(CHALLENGES_SCHEMA+'demo_challenge_entry_comments').insert({entry_id:entryId, user_id:session.user.id, comment_text:String(text||'').slice(0,500)}).then(function(r){
+        try{if(cb)cb(!r||!r.error);}catch(e){if(cb)cb(false);}
+      }).catch(function(){if(cb)cb(false);});
+    }catch(e){if(cb)cb(false);}
+  }
+  function fetchComments(entryId, cb){
+    try{
+      if(!client||!session||typeof cb!=='function'){cb([]);return;}
+      client.from(CHALLENGES_SCHEMA+'demo_challenge_entry_comments').select('*').eq('entry_id',entryId).order('created_at',{ascending:true}).then(function(r){
+        try{cb(r&&!r.error?r.data||[]:[]);}catch(e){cb([]);}
+      }).catch(function(){cb([]);});
+    }catch(e){try{cb([]);}catch(_){}}
+  }
+  function beenHere(entryId, memoryId, cb){
+    try{
+      if(!client||!session){if(cb)cb(false);return;}
+      client.from(CHALLENGES_SCHEMA+'demo_challenge_been_here').insert({entry_id:entryId, memory_id:memoryId, user_id:session.user.id}).then(function(r){
+        try{if(cb)cb(!r||!r.error);}catch(e){if(cb)cb(false);}
+      }).catch(function(){if(cb)cb(false);});
+    }catch(e){if(cb)cb(false);}
+  }
+  function fetchBeenHere(entryId, cb){
+    try{
+      if(!client||!session||typeof cb!=='function'){cb([]);return;}
+      client.from(CHALLENGES_SCHEMA+'demo_challenge_been_here').select('*').eq('entry_id',entryId).then(function(r){
+        try{cb(r&&!r.error?r.data||[]:[]);}catch(e){cb([]);}
+      }).catch(function(){cb([]);});
+    }catch(e){try{cb([]);}catch(_){}}
+  }
+  function nominateTheme(challengeId, themeTitle, cb){
+    try{
+      if(!client||!session){if(cb)cb(false);return;}
+      client.from(CHALLENGES_SCHEMA+'demo_challenge_nominations').insert({challenge_id:challengeId, user_id:session.user.id, theme_title:themeTitle}).then(function(r){
+        try{if(cb)cb(!r||!r.error);}catch(e){if(cb)cb(false);}
+      }).catch(function(){if(cb)cb(false);});
+    }catch(e){if(cb)cb(false);}
+  }
+  function fetchNominations(challengeId, cb){
+    try{
+      if(!client||!session||typeof cb!=='function'){cb([]);return;}
+      client.from(CHALLENGES_SCHEMA+'demo_challenge_nominations').select('*').eq('challenge_id',challengeId).then(function(r){
+        try{cb(r&&!r.error?r.data||[]:[]);}catch(e){cb([]);}
+      }).catch(function(){cb([]);});
+    }catch(e){try{cb([]);}catch(_){}}
+  }
+  function reportEntry(entryId, cb){
+    try{
+      if(!client||!session){if(cb)cb(false);return;}
+      client.from('reports').insert({reporter_id:session.user.id, memory_id:entryId, reason:'challenge entry'}).then(function(r){
+        try{if(cb)cb(!r||!r.error);}catch(e){if(cb)cb(false);}
+      }).catch(function(){if(cb)cb(false);});
+    }catch(e){if(cb)cb(false);}
+  }
+
   // TODO(OAuth): Set up custom domain (e.g. auth.etie.app) in Supabase OAuth settings
 // to replace the raw supabase.co redirect URL on Google login.
 // Configure in Supabase Dashboard > Authentication > URL Configuration > Site URL & Redirect URLs.
@@ -1872,6 +1978,12 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
     startChallenge:startChallenge, fetchChallengeEntries:fetchChallengeEntries, addChallengeEntry:addChallengeEntry,
     submitVote:submitVote, fetchChallengeResults:fetchChallengeResults, fetchChallengeEntryMemories:fetchChallengeEntryMemories,
     closeChallenge:closeChallenge, deleteChallenge:deleteChallenge, recordDemoItem:recordDemoItem, fetchAllowlist:fetchAllowlist,
+    saveEntry:saveEntry, unsaveEntry:unsaveEntry, fetchEntrySaves:fetchEntrySaves,
+    addReaction:addReaction, removeReaction:removeReaction, fetchReactions:fetchReactions,
+    addComment:addComment, fetchComments:fetchComments,
+    beenHere:beenHere, fetchBeenHere:fetchBeenHere,
+    nominateTheme:nominateTheme, fetchNominations:fetchNominations,
+    reportEntry:reportEntry,
     addToAllowlist:addToAllowlist, toggleFeatureFlag:toggleFeatureFlag, seedChallenge:seedChallenge,
     resetDemoData:resetDemoData, removeDemo:removeDemo,
     createQuestion:createQuestion, insertAnswer:insertAnswer, getLatestAnswer:getLatestAnswer,

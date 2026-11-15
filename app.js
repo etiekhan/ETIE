@@ -5659,15 +5659,32 @@ function loadChallengeDetail(ch){
             var acceptedCount=members.filter(function(m){return m.status==='accepted';}).length;
             html+='<div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:8px;">'+acceptedCount+' of '+members.length+' accepted</div>';
             html+='<div style="width:100%;height:4px;background:rgba(255,255,255,.1);border-radius:2px;margin-bottom:8px;overflow:hidden;"><div style="width:'+Math.round(acceptedCount/members.length*100)+'%;height:100%;background:#4ade80;border-radius:2px;"></div></div>';
+            // Render members with IDs first (names loaded async below)
             members.forEach(function(m){
               var name=m.user_id?m.user_id.substring(0,8)+'...':'Friend';
               var statusColor=m.status==='accepted'?'#4ade80':m.status==='invited'?'#fbbf24':'#f87171';
-              html+='<div style="display:flex;align-items:center;gap:8px;padding:4px 0;">'
-                +'<div style="width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0;">'+(name.charAt(0)||'?').toUpperCase()+'</div>'
-                +'<span style="font-size:12px;color:#fff;flex:1;">'+name+'</span>'
+              html+='<div style="display:flex;align-items:center;gap:8px;padding:4px 0;" data-mid="'+(m.user_id||'')+'">'
+                +'<div style="width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0;" class="m-avatar">'+(name.charAt(0)||'?').toUpperCase()+'</div>'
+                +'<span style="font-size:12px;color:#fff;flex:1;" class="m-name">'+name+'</span>'
                 +'<span style="font-size:10px;padding:2px 6px;border-radius:4px;background:rgba(255,255,255,.08);color:'+statusColor+';">'+(m.status||'invited')+'</span>'
                 +'</div>';
             });
+            // Async: fetch display names and update
+            var memberIds=members.map(function(m){return m.user_id;}).filter(Boolean);
+            if(window.EtieCloud&&window.EtieCloud.fetchDisplayNames&&memberIds.length){
+              window.EtieCloud.fetchDisplayNames(memberIds, function(nameMap){
+                try{
+                  memberIds.forEach(function(uid){
+                    var el=document.querySelector('[data-mid="'+uid+'"] .m-name');
+                    if(el&&nameMap&&nameMap[uid]){
+                      el.textContent=nameMap[uid];
+                      var av=el.parentElement.querySelector('.m-avatar');
+                      if(av)av.textContent=(nameMap[uid].charAt(0)||'?').toUpperCase();
+                    }
+                  });
+                }catch(e){}
+              });
+            }
           }else{
             html+='<div class="muted small">No members yet.</div>';
           }

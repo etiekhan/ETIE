@@ -1062,6 +1062,12 @@ h1, h2, h3, h4, h5, h6, .logo-inline {
   #wrapupCardsContainer{left:8px;right:8px;width:auto;top:56px;}
 }
 
+/* Echo pulse animation */
+@keyframes echoPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(139,92,246,.4); }
+  50% { box-shadow: 0 0 0 8px rgba(139,92,246,0); }
+}
+
 /* Accessibility: visible focus rings */
 button:focus-visible,
 input:focus-visible,

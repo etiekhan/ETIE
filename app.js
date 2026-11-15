@@ -1079,9 +1079,20 @@ function createMemorySpotMarker(spot,mapInstance){
     el.style.width='64px';
     el.style.height='64px';
     el.style.borderRadius='8px';
-    el.style.overflow='hidden';
+    el.style.overflow='visible';
     el.style.position='relative';
     el.style.cursor='pointer';
+    // Paper-offset border for multi-photo stacks
+    if(spot.photos.length>1){
+      var offset1=document.createElement('div');
+      offset1.style.cssText='position:absolute;top:2px;left:2px;width:100%;height:100%;border-radius:8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);transform:rotate(3deg);z-index:0;';
+      el.appendChild(offset1);
+      var offset2=document.createElement('div');
+      offset2.style.cssText='position:absolute;top:1px;left:1px;width:100%;height:100%;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);transform:rotate(-2deg);z-index:1;';
+      el.appendChild(offset2);
+    }
+    var photoWrap=document.createElement('div');
+    photoWrap.style.cssText='position:relative;width:100%;height:100%;border-radius:8px;overflow:hidden;z-index:2;';
     
     var img=document.createElement('img');
     img.src=spot.photos[0]?.url||'';
@@ -1089,8 +1100,16 @@ function createMemorySpotMarker(spot,mapInstance){
     img.style.height='100%';
     img.style.objectFit='cover';
     img.style.transition='opacity 0.5s ease';
-    el.appendChild(img);
+    photoWrap.appendChild(img);
+    el.appendChild(photoWrap);
     
+    // Count badge for multi-photo stacks
+    if(spot.photos.length>1){
+      var badge=document.createElement('div');
+      badge.style.cssText='position:absolute;bottom:-4px;right:-4px;background:rgba(251,191,36,.9);color:#000;font-size:9px;font-weight:800;padding:1px 5px;border-radius:999px;z-index:3;box-shadow:0 2px 6px rgba(0,0,0,.3);';
+      badge.textContent='\ud83d\udcf8 '+spot.photos.length;
+      el.appendChild(badge);
+    }
     // Photo cycling if multiple
     if(spot.photos.length>1){
       var idx=0;
@@ -3920,6 +3939,29 @@ function renderMapPins(){
         renderPinCluster(group);
       }
     });
+    // Render 24h Echoes (ended hooks within 24h)
+    try{
+      var now=Date.now();
+      pins.forEach(function(p){
+        try{
+          var state=getPinLifecycleState(p);
+          if(state!=='ended')return;
+          var endAt=validTs(p.hangoutEndAt)||validTs(p.expires_at);
+          if(!endAt)return;
+          var hoursSinceEnd=(now-endAt)/3600000;
+          if(hoursSinceEnd>24||hoursSinceEnd<0)return;
+          // Don't render echo if already rendered as a pin
+          var coords=pinLatLng(p);
+          var el=document.createElement('div');
+          el.className='echo-marker';
+          el.style.cssText='width:32px;height:32px;border-radius:50%;background:rgba(139,92,246,.2);border:2px solid #8b5cf6;display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;animation:echoPulse 2s ease-in-out infinite;';
+          el.innerHTML='\ud83d\udd12';
+          var mk=new maplibregl.Marker({element:el,anchor:'center'}).setLngLat([coords[1],coords[0]]).addTo(_map);
+          mk.getElement().addEventListener('click',function(e){try{e.stopPropagation();}catch(_){} _pinJustClicked=true;setTimeout(function(){_pinJustClicked=false;},300); openPinDetail(p.id);});
+          _pinMarkers.push(mk);
+        }catch(e){}
+      });
+    }catch(e){}
     function renderSinglePin(p){
       try{
         var coords=pinLatLng(p);

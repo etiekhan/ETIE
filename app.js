@@ -5519,6 +5519,24 @@ function submitCreateChallenge(){
 function openChallengeDetail(ch){
   try{
     console.log('openChallengeDetail:', ch.id, ch.status, ch.theme_title);
+    // Auto-close check: close if deadline passed or all entries+votes in
+    if(ch.status==='active' && ch.ends_at){
+      var now=Date.now();
+      var end=new Date(ch.ends_at).getTime();
+      if(now>=end){
+        // Deadline passed - auto-close
+        if(window.EtieCloud&&window.EtieCloud.closeChallenge){
+          window.EtieCloud.closeChallenge(ch.id, function(ok){
+            try{
+              if(ok){ch.status='closed';}
+              // Re-open regardless (if close failed, still show as active)
+              openChallengeDetail(ch);
+            }catch(e){}
+          });
+          return;
+        }
+      }
+    }
     var old=document.getElementById('challengeDetailOverlay');if(old)old.remove();
     var overlay=document.createElement('div');
     overlay.id='challengeDetailOverlay';
@@ -5598,7 +5616,10 @@ function loadChallengeDetail(ch){
             html+='<div class="muted small">No members yet.</div>';
           }
           if(ch.status==='active'||ch.status==='draft'){
-            html+='<div style="margin-top:12px;"><button onclick="openAddEntry(\''+ch.id+'\')" style="padding:8px 16px;background:#f43f5e;color:#fff;border:0;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;">+ Add your spot</button></div>';
+            html+='<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">'
+              +'<button onclick="openAddEntry(\''+ch.id+'\')" style="padding:8px 16px;background:#f43f5e;color:#fff;border:0;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;">+ Add your spot</button>'
+              +'<button onclick="closeChallengeNow(\''+ch.id+'\')" style="padding:8px 16px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:#fff;border-radius:8px;cursor:pointer;font-size:12px;">Close now</button>'
+              +'</div>';
           }
           // Load entries
           if(window.EtieCloud&&window.EtieCloud.fetchChallengeEntryMemories){
@@ -5691,6 +5712,31 @@ function challengeMoreMenu(challengeId){
               try{
                 if(ok){toast('Challenge deleted.');document.getElementById('challengeDetailOverlay').remove();renderChallengesScreen();}
                 else{toast('Delete failed.');}
+              }catch(e){}
+            });
+          }
+        }catch(e){}
+      });
+    }
+  }catch(e){}
+}
+
+function closeChallengeNow(challengeId){
+  try{
+    // Check if user is creator
+    if(window.EtieCloud&&window.EtieCloud.fetchChallenges){
+      window.EtieCloud.fetchChallenges(function(chs){
+        try{
+          var ch=null;
+          (chs||[]).forEach(function(c){if(c.id===challengeId)ch=c;});
+          var myId=null;try{myId=myUid();}catch(e){}
+          if(!ch||!myId||ch.creator_id!==myId){toast('Only the creator can close.');return;}
+          if(!confirm('Close this challenge now? Results will be revealed.'))return;
+          if(window.EtieCloud&&window.EtieCloud.closeChallenge){
+            window.EtieCloud.closeChallenge(challengeId, function(ok){
+              try{
+                if(ok){toast('Challenge closed. Results revealed.');renderChallengesScreen();}
+                else{toast('Close failed.');}
               }catch(e){}
             });
           }

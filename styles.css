@@ -1057,6 +1057,12 @@ h1, h2, h3, h4, h5, h6, .logo-inline {
   z-index: var(--z-map);
 }
 
+/* Challenges panel: full-width on narrow screens */
+@media(max-width:390px){
+  #challengesContent .card { width: 100% !important; border-radius: 0; }
+  .memPickerOverlay .card { width: 100% !important; border-radius: 0; }
+}
+
 /* Wrap-up card: full-width on narrow screens */
 @media(max-width:640px){
   #wrapupCardsContainer{left:8px;right:8px;width:auto;top:56px;}
@@ -1066,6 +1072,12 @@ h1, h2, h3, h4, h5, h6, .logo-inline {
 @keyframes echoPulse {
   0%, 100% { box-shadow: 0 0 0 0 rgba(139,92,246,.4); }
   50% { box-shadow: 0 0 0 8px rgba(139,92,246,0); }
+}
+
+/* Respect prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  .echo-marker { animation: none !important; }
+  .memory-spot-marker img { transition: none !important; }
 }
 
 /* Accessibility: visible focus rings */

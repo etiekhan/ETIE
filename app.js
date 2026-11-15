@@ -5476,6 +5476,7 @@ function submitCreateChallenge(){
 
 function openChallengeDetail(ch){
   try{
+    console.log('openChallengeDetail:', ch.id, ch.status, ch.theme_title);
     var old=document.getElementById('challengeDetailOverlay');if(old)old.remove();
     var overlay=document.createElement('div');
     overlay.id='challengeDetailOverlay';
@@ -5515,6 +5516,7 @@ function openChallengeDetail(ch){
 
 function loadChallengeDetail(ch){
   try{
+    console.log('loadChallengeDetail:', ch.id, 'status:', ch.status);
     var box=document.getElementById('challengeDetailContent');
     if(!box)return;
     var html='<div class="muted small">Loading...</div>';
@@ -5553,7 +5555,7 @@ function loadChallengeDetail(ch){
           }else{
             html+='<div class="muted small">No members yet.</div>';
           }
-          if(ch.status==='active'){
+          if(ch.status==='active'||ch.status==='draft'){
             html+='<div style="margin-top:12px;"><button onclick="openAddEntry(\''+ch.id+'\')" style="padding:8px 16px;background:#f43f5e;color:#fff;border:0;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;">+ Add your spot</button></div>';
           }
           // Load entries

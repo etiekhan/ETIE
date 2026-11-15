@@ -3838,7 +3838,8 @@ function renderMemoryFilters(){
     var filters=[
       {id:'all',label:'All'},
       {id:'mine',label:'Mine'},
-      {id:'tagged',label:'Tagged with me'}
+      {id:'tagged',label:'Tagged with me'},
+      {id:'challenges',label:'Challenges'}
     ];
     var active=window._memFilter||'all';
     var group=document.createElement('div');
@@ -5063,6 +5064,30 @@ function applyMapMode(){
   }catch(e){}
 }
 
+function renderChallengeMapLayer(challengeId){
+  try{
+    if(!_map)return;
+    // Remove existing challenge layers
+    if(_map.getLayer('challenge-route'))_map.removeLayer('challenge-route');
+    if(_map.getSource('challenge-route'))_map.removeSource('challenge-route');
+    if(_map.getLayer('challenge-rings'))_map.removeLayer('challenge-rings');
+    if(_map.getSource('challenge-rings'))_map.removeSource('challenge-rings');
+    if(!window.EtieCloud||!window.EtieCloud.fetchChallengeEntryMemories)return;
+    window.EtieCloud.fetchChallengeEntryMemories(challengeId, function(entries){
+      try{
+        if(!entries||!entries.length)return;
+        // Build coordinates for dashed route
+        var coords=entries.map(function(e){return [e.lng,e.lat];}).filter(function(c){return c[0]&&c[1];});
+        if(coords.length>=2){
+          _map.addSource('challenge-route',{type:'geojson',data:{type:'Feature',geometry:{type:'LineString',coordinates:coords}}});
+          _map.addLayer({id:'challenge-route',type:'line',source:'challenge-route',paint:{'line-color':'#f43f5e','line-width':2,'line-dasharray':[2,2],'line-opacity':0.6}});
+        }
+        // Pink rings already rendered as markers
+      }catch(e){}
+    });
+  }catch(e){}
+}
+
 function filterMainMemoryMarkers(){
   try{
     if(_mapMode!=='memories')return;
@@ -5078,6 +5103,36 @@ function filterMainMemoryMarkers(){
           photoLogs=photoLogs.filter(function(l){return l.user_id===myId;});
         }else if(filter==='tagged'){
           photoLogs=photoLogs.filter(function(l){return l.tagged_user_id===myId;});
+        }else if(filter==='challenges'){
+          // Show challenge entry spots (fetch from challenges_demo)
+          // For now, show all memories (challenge spots loaded separately)
+          if(window.EtieCloud&&window.EtieCloud.fetchChallenges){
+            window.EtieCloud.fetchChallenges(function(chs){
+              try{
+                // Load challenge entries for each challenge
+                (chs||[]).forEach(function(ch){
+                  if(window.EtieCloud&&window.EtieCloud.fetchChallengeEntryMemories){
+                    window.EtieCloud.fetchChallengeEntryMemories(ch.id, function(entries){
+                      try{
+                        entries.forEach(function(e){
+                          // Render pink ring marker for each challenge entry
+                          if(e.lat&&e.lng){
+                            var el=document.createElement('div');
+                            el.className='challenge-ring-marker';
+                            el.style.cssText='width:48px;height:48px;border-radius:50%;border:3px solid #f43f5e;background:rgba(244,63,94,.1);display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;box-shadow:0 0 12px rgba(244,63,94,.3);';
+                            el.textContent='\ud83c\udfaf';
+                            el.onclick=function(ev){try{ev.stopPropagation();}catch(_){} openChallengeDetail(ch);};
+                            new maplibregl.Marker({element:el,anchor:'center'}).setLngLat([e.lng,e.lat]).addTo(_map);
+                          }
+                        });
+                      }catch(e){}
+                    });
+                  }
+                });
+              }catch(e){}
+            });
+          }
+          return; // Don't show normal memory markers in challenges mode
         }
         _mainMemoryMarkers.forEach(function(m){
           try{if(m._interval)clearInterval(m._interval);}catch(e){}
@@ -5878,6 +5933,86 @@ function nominateThemePrompt(challengeId){
       });
     }
   }catch(e){}
+}
+
+function generateShareImage(challenge, crewWinner, crowdWinner){
+  try{
+    var canvas=document.createElement('canvas');
+    canvas.width=800;canvas.height=600;
+    var ctx=canvas.getContext('2d');
+    // Background
+    ctx.fillStyle='#0b0b0e';
+    ctx.fillRect(0,0,800,600);
+    // Header
+    ctx.fillStyle='#f43f5e';
+    ctx.font='bold 28px Syne, sans-serif';
+    ctx.textAlign='center';
+    ctx.fillText(challenge.theme_title||'Challenge',400,60);
+    // Date stamp
+    var d=new Date();
+    var months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var dateStr=d.getDate()+' '+months[d.getMonth()]+' \u2019'+String(d.getFullYear()).slice(2);
+    ctx.font='bold 12px monospace';
+    ctx.fillStyle='#fb923c';
+    ctx.textAlign='right';
+    ctx.fillText(dateStr,780,40);
+    // Crew winner (left)
+    ctx.textAlign='center';
+    ctx.fillStyle='#fff';
+    ctx.font='bold 16px sans-serif';
+    ctx.fillText('Crew Pick',200,120);
+    if(crewWinner&&crewWinner.photo_url){
+      var img=new Image();
+      img.onload=function(){
+        ctx.drawImage(img,120,140,160,160);
+        ctx.fillStyle='#fff';
+        ctx.font='12px sans-serif';
+        ctx.fillText(crewWinner.caption||'Winner',200,320);
+        // Crowd winner (right)
+        ctx.fillStyle='#fff';
+        ctx.font='bold 16px sans-serif';
+        ctx.fillText('Crowd Favourite',600,120);
+        if(crowdWinner&&crowdWinner.photo_url){
+          var img2=new Image();
+          img2.onload=function(){
+            ctx.drawImage(img2,520,140,160,160);
+            ctx.fillStyle='#fff';
+            ctx.font='12px sans-serif';
+            ctx.fillText(crowdWinner.caption||'Winner',600,320);
+            // Footer
+            ctx.fillStyle='rgba(255,255,255,.4)';
+            ctx.font='10px sans-serif';
+            ctx.fillText('ETIE \u00b7 etie-delta.vercel.app',400,580);
+            // Download
+            canvas.toBlob(function(blob){
+              var url=URL.createObjectURL(blob);
+              var a=document.createElement('a');
+              a.href=url;
+              a.download='challenge-winners.png';
+              a.click();
+              URL.revokeObjectURL(url);
+            });
+          };
+          img2.src=crowdWinner.photo_url;
+        }
+      };
+      img.src=crewWinner.photo_url;
+    }else{
+      // No photos, just text
+      ctx.fillStyle='#fff';
+      ctx.font='12px sans-serif';
+      ctx.fillText('Crew: '+(crewWinner?crewWinner.caption:'N/A'),200,200);
+      ctx.fillText('Crowd: '+(crowdWinner?crowdWinner.caption:'N/A'),600,200);
+      canvas.toBlob(function(blob){
+        var url=URL.createObjectURL(blob);
+        var a=document.createElement('a');
+        a.href=url;
+        a.download='challenge-winners.png';
+        a.click();
+        URL.revokeObjectURL(url);
+      });
+    }
+  }catch(e){console.error('generateShareImage error:',e);toast('Share failed.');}
 }
 
 function openAddEntry(challengeId){

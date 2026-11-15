@@ -6147,6 +6147,8 @@ function submitHangoutLog(){
           closeLogSheet();
           if(p)renderPinLogs(p.id);
           refreshMapMode();
+          // Invalidate memory cache
+          try{if(window.EtieCloud)window.EtieCloud._invalidateMemCache();}catch(e){}
           // Auto-submit as challenge entry if in challenge mode
           if(_challengeEntryMode){
             var cid=_challengeEntryMode;

@@ -49,10 +49,14 @@
         try{ if(typeof updateAuthHeader==='function')updateAuthHeader(); if(typeof renderHeaderProfile==='function')renderHeaderProfile(); }catch(e){}
         if(session){
           paint('on','Cloud: on');
-          try{pull();}catch(e){} try{pullShared();}catch(e){} try{subscribeShared();}catch(e){}
-          try{subscribeLiveProfiles();}catch(e){} try{syncProfile();}catch(e){} try{pullPins();}catch(e){}
-          try{if(typeof retryLocalPins==='function')retryLocalPins();}catch(e){}
-          try{fetchOwnProfile();}catch(e){}
+          try{pull();}catch(e){}
+          setTimeout(function(){try{pullShared();}catch(e){}},200);
+          setTimeout(function(){try{subscribeShared();}catch(e){}},300);
+          setTimeout(function(){try{subscribeLiveProfiles();}catch(e){}},400);
+          setTimeout(function(){try{syncProfile();}catch(e){}},500);
+          setTimeout(function(){try{pullPins();}catch(e){}},600);
+          setTimeout(function(){try{if(typeof retryLocalPins==='function')retryLocalPins();}catch(e){}},700);
+          setTimeout(function(){try{fetchOwnProfile();}catch(e){}},800);
         }
         else{paint('offline','Cloud: offline — sign in');try{if(typeof refreshGate==='function')refreshGate();}catch(e){}}
         // safety net: session can land a beat after first paint — re-sync header once settled
@@ -69,10 +73,14 @@
         try{ if(typeof updateAuthHeader==='function')updateAuthHeader(); if(typeof renderHeaderProfile==='function')renderHeaderProfile(); }catch(e){}
         if(s){
           paint('on','Cloud: on');
-          try{pull();}catch(e){} try{pullShared();}catch(e){} try{subscribeShared();}catch(e){}
-          try{subscribeLiveProfiles();}catch(e){} try{syncProfile();}catch(e){} try{pullPins();subscribePins();}catch(e){}
-          try{if(typeof retryLocalPins==='function')retryLocalPins();}catch(e){}
-          try{fetchOwnProfile();}catch(e){}
+          try{pull();}catch(e){}
+          setTimeout(function(){try{pullShared();}catch(e){}},200);
+          setTimeout(function(){try{subscribeShared();}catch(e){}},300);
+          setTimeout(function(){try{subscribeLiveProfiles();}catch(e){}},400);
+          setTimeout(function(){try{syncProfile();}catch(e){}},500);
+          setTimeout(function(){try{pullPins();subscribePins();}catch(e){}},600);
+          setTimeout(function(){try{if(typeof retryLocalPins==='function')retryLocalPins();}catch(e){}},700);
+          setTimeout(function(){try{fetchOwnProfile();}catch(e){}},800);
         }
         else{paint('offline','Cloud: offline — sign in');try{if(typeof refreshGate==='function')refreshGate();}catch(e){}}
         setTimeout(function(){try{ if(typeof updateAuthHeader==='function')updateAuthHeader(); if(typeof renderHeaderProfile==='function')renderHeaderProfile(); }catch(e){}},800);
@@ -276,7 +284,7 @@
   function scheduleSharedPush(){
     if(!isSharedOn())return;
     clearTimeout(sharedSyncTimer);
-      sharedSyncTimer=setTimeout(pushSharedRequests, 3000); // quiet mode
+      sharedSyncTimer=setTimeout(pushSharedRequests, 5000); // quiet mode
   }
   function pushSharedRequest(localMockId){
     try{
@@ -322,11 +330,15 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
       });
     }catch(e){console.warn('pushSharedRequest skipped',e); return Promise.resolve(null);}
   }
+  var _pushSharedBusy=false;
   function pushSharedRequests(){
     try{
+      if(_pushSharedBusy)return;
       if(!isSharedOn()||typeof window.ETIE==='undefined'||!window.ETIE.requests)return;
+      _pushSharedBusy=true;
       Object.keys(window.ETIE.requests).forEach(function(k){ pushSharedRequest(k); });
-    }catch(e){}
+      setTimeout(function(){_pushSharedBusy=false;}, 5000);
+    }catch(e){_pushSharedBusy=false;}
   }
   function syncPendingMessages(localMockId, requestId){
     try{
@@ -391,10 +403,12 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
   function pullShared(){
     try{
       if(!isSharedOn())return;
+      if(_pullSharedBusy)return;
+      _pullSharedBusy=true;
       client.from(reqTable()).select('*').order('updated_at',{ascending:false}).limit(50).then(function(r){
         if(r&&r.error){ console.warn('pullShared requests failed',r.error.message); return; }
         var rows=r&&r.data||[];
-        if(!rows.length)return;
+        if(!rows.length){_pullSharedBusy=false;return;}
         var changed=false;
         rows.forEach(function(row){
           var k=row.local_mock_id;
@@ -411,11 +425,12 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
           try{ saveState(); }catch(e){}
           try{ if(typeof renderRequests==='function')renderRequests(); if(typeof renderLocalDashboard==='function')renderLocalDashboard(); if(typeof renderMessagesList==='function')renderMessagesList(); if(typeof renderMeetup==='function')renderMeetup(); if(typeof renderTrips==='function')renderTrips(); }catch(e){}
         }
+        _pullSharedBusy=false;
         var ids=rows.map(function(x){return x.id;});
         if(ids.length) pullSharedMessages(ids);
         if(ids.length) pullSharedMeetups(ids);
       });
-    }catch(e){console.warn('pullShared skipped',e);}
+    }catch(e){_pullSharedBusy=false;console.warn('pullShared skipped',e);}
   }
   function pullSharedMessages(requestIds){
     try{
@@ -775,12 +790,16 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
       region:p.region||'HK',photos:p.photos||[],
       members:p.members||[],pending:p.pending||[],requests:p.requests||[],spots_available:p.spotsAvailable,status:p.status||'open',starts_at:p.starts_at||null,ends_at:p.ends_at||null,updated_at:new Date().toISOString()};
   }
+  var _pullPinsBusy=false;
+  var _pullSharedBusy=false;
   function pullPins(){
     try{
       if(!client||!session)return; // hard wall: no pin data until login
+      if(_pullPinsBusy)return;
+      _pullPinsBusy=true;
       client.from(pinTable()).select('*').order('updated_at',{ascending:false}).limit(200).then(function(r){
         try{
-          if(r&&(r.error||!r.data))return; // table not migrated yet → stay local-only
+          if(r&&(r.error||!r.data)){_pullPinsBusy=false;return;} // table not migrated yet → stay local-only
           var cloud=(r.data||[]).map(pinRowToPin).filter(Boolean);
           if(typeof window.ETIE==='undefined')return;
           var local=(window.ETIE.mapPins||[]).filter(function(p){return p&&p.origin!=='cloud';});
@@ -814,6 +833,7 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
           // last-known pins instantly (otherwise cloud pins vanish until pull)
           try{if(pinsChanged&&typeof saveState==='function')saveState();}catch(e){}
           try{if(typeof renderMapPins==='function')renderMapPins();}catch(e){}
+          _pullPinsBusy=false;
           try{
             if(openReqN>=0&&typeof findPin==='function'&&typeof openPinDetail==='function'&&typeof _openPinId!=='undefined'&&_openPinId){
               var _np=findPin(_openPinId);
@@ -1117,13 +1137,26 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
     }catch(e){try{cb([]);}catch(_){}}
   }
   // Every memory visible to me: ones I logged + ones I was tagged in.
+  var _memCache=null, _memCacheTime=0;
+  function _invalidateMemCache(){_memCache=null;_memCacheTime=0;}
   function fetchMyMemories(cb){
     try{
       if(!client||!session||typeof cb!=='function'){cb([]);return;}
+      // Return cached if less than 30s old
+      var now=Date.now();
+      if(_memCache && now-_memCacheTime < 30000){
+        try{cb(_memCache.slice());}catch(e){cb([]);}
+        return;
+      }
       var me=session.user.id;
       client.from(hangoutTable()).select('*').or('user_id.eq.'+me+',tagged_user_id.eq.'+me)
         .order('taken_at',{ascending:false}).limit(300).then(function(r){
-          try{cb(r&&!r.error?(r.data||[]):[]);}catch(e){cb([]);}
+          try{
+            var data=r&&!r.error?(r.data||[]):[];
+            _memCache=data;
+            _memCacheTime=Date.now();
+            cb(data.slice());
+          }catch(e){cb([]);}
         }).catch(function(){cb([]);});
     }catch(e){try{cb([]);}catch(_){}}
   }
@@ -1823,7 +1856,7 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
     pushHookMessage:pushHookMessage, subscribeHookChat:subscribeHookChat,
     fetchProfile:fetchProfile, fetchOwnProfile:fetchOwnProfile, redeemInvite:redeemInvite,
     pushHangoutLog:pushHangoutLog, fetchHookLogs:fetchHookLogs, fetchUserLogs:fetchUserLogs, updateHangoutLog:updateHangoutLog, fetchTaggedLogs:fetchTaggedLogs,
-    fetchMyMemories:fetchMyMemories, deleteHangoutLog:deleteHangoutLog, searchPeople:searchPeople,
+    fetchMyMemories:fetchMyMemories, _invalidateMemCache:_invalidateMemCache, deleteHangoutLog:deleteHangoutLog, searchPeople:searchPeople,
     fetchConnections:fetchConnections, exactMatchUser:exactMatchUser, tagUser:tagUser,
     respondToTag:respondToTag, fetchPendingTags:fetchPendingTags, fetchMemoryTags:fetchMemoryTags,
     acceptHookConnection:acceptHookConnection,

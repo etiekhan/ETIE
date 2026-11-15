@@ -365,8 +365,18 @@ function renderAlbanyLorePin(mapInstance){
     el.textContent='\u2728';
     el.setAttribute('aria-label','Albany Student Village - Where it all started');
     el.onclick=function(e){
-      try{e.stopPropagation();}catch(_){}
-      toast('Albany Student Village \u00b7 Coventry \u00b7 Where it all started');
+      try{e.stopPropagation();e.preventDefault();}catch(_){}
+      // Show the intro story modal
+      var sp=document.getElementById('coventrySpotlight');
+      if(sp)sp.classList.remove('hidden');
+      var modal=document.getElementById('introStoryModal');
+      if(modal)modal.classList.remove('hidden');
+      // Change CTA to Close (viewing only, not onboarding)
+      var cta=modal?modal.querySelector('.primary'):null;
+      if(cta){
+        cta.textContent='Close';
+        cta.onclick=function(){closeIntroStory();};
+      }
     };
     new maplibregl.Marker({element:el,anchor:'center'}).setLngLat([ALBANY_LNG,ALBANY_LAT]).addTo(mapInstance);
   }catch(e){}

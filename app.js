@@ -269,6 +269,46 @@ function refreshGate(){
 // ===== Coventry Onboarding =====
 var ALBANY_LAT=52.402786, ALBANY_LNG=-1.526290;
 
+function showAlbany303(){
+  try{
+    showScreen('map');
+    setTimeout(function(){
+      try{
+        if(_map){
+          _map.flyTo({center:[ALBANY_LNG,ALBANY_LAT],zoom:14,duration:2000});
+        }
+      }catch(e){}
+      // Show spotlight
+      var sp=document.getElementById('coventrySpotlight');
+      if(sp)sp.classList.remove('hidden');
+      // Show intro story modal
+      var modal=document.getElementById('introStoryModal');
+      if(modal)modal.classList.remove('hidden');
+      // Change CTA to "Close" for Albany 303 (don't trigger onboarding)
+      var cta=modal?modal.querySelector('.primary'):null;
+      if(cta){
+        cta.textContent='Close';
+        cta.onclick=function(){closeIntroStory();};
+      }
+    },300);
+  }catch(e){console.error('showAlbany303 error:',e);}
+}
+
+function closeIntroStory(){
+  try{
+    var modal=document.getElementById('introStoryModal');
+    if(modal)modal.classList.add('hidden');
+    var sp=document.getElementById('coventrySpotlight');
+    if(sp)sp.classList.add('hidden');
+    // Restore CTA for onboarding
+    var cta=modal?modal.querySelector('.primary'):null;
+    if(cta){
+      cta.textContent='Find your friction... wherever you may be \u2192';
+      cta.onclick=function(){completeOnboarding();};
+    }
+  }catch(e){}
+}
+
 function startOnboarding(){
   try{
     if(_map){

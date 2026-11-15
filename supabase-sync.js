@@ -1204,20 +1204,41 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
       var q=String(displayName||'').trim();
       if(!q){cb(null);return;}
       client.from('etie_profiles').select('user_id,display_name,city')
-        .ilike('display_name', q).then(function(r){
+        .ilike('display_name', '%'+q+'%').limit(10).then(function(r){
           try{
             var rows=r&&!r.error?r.data||[]:[];
-            // Exact match only (case-insensitive)
-            var match=null;
+            if(!rows.length){cb(null);return;}
+            // If exact match exists, return it; otherwise return first match
+            var exact=null;
             rows.forEach(function(row){
               if(row.display_name && row.display_name.toLowerCase()===q.toLowerCase()){
-                match={user_id:row.user_id, name:row.display_name, city:row.city||''};
+                exact={user_id:row.user_id, name:row.display_name, city:row.city||''};
               }
             });
-            cb(match);
+            if(exact){cb(exact);return;}
+            // Return first match as suggestion
+            cb({user_id:rows[0].user_id, name:rows[0].display_name||'Someone', city:rows[0].city||''});
           }catch(e){cb(null);}
         }).catch(function(){cb(null);});
     }catch(e){try{cb(null);}catch(_){}}
+  }
+  // Fuzzy search for profile suggestions (returns multiple results)
+  function searchProfilesFuzzy(query, cb){
+    try{
+      if(!client||!session||typeof cb!=='function'){cb([]);return;}
+      var q=String(query||'').trim();
+      if(!q){cb([]);return;}
+      client.from('etie_profiles').select('user_id,display_name,city')
+        .ilike('display_name', '%'+q+'%').limit(8).then(function(r){
+          try{
+            var rows=r&&!r.error?r.data||[]:[];
+            var out=rows.map(function(row){
+              return {user_id:row.user_id, name:row.display_name||'Someone', city:row.city||''};
+            });
+            cb(out);
+          }catch(e){cb([]);}
+        }).catch(function(){cb([]);});
+    }catch(e){try{cb([]);}catch(_){}}
   }
   function tagUser(memoryId, userId, cb){
     try{
@@ -1971,6 +1992,7 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
     reportMemory:reportMemory, blockUser:blockUser, unblockUser:unblockUser, fetchReports:fetchReports,
     fetchDisplayNames:fetchDisplayNames,
     searchProfiles:searchProfiles,
+    searchProfilesFuzzy:searchProfilesFuzzy,
     cancelTag:cancelTag,
     isChallengesEnabled:isChallengesEnabled, isChallengesAllowed:isChallengesAllowed,
     fetchChallenges:fetchChallenges, createChallenge:createChallenge, inviteToChallenge:inviteToChallenge,

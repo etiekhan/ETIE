@@ -5497,11 +5497,28 @@ function addChallengeInvite(){
       }
       return;
     }
-    // Otherwise, search by name
-    if(window.EtieCloud&&window.EtieCloud.exactMatchUser){
+    // Otherwise, search by name (fuzzy)
+    if(window.EtieCloud&&window.EtieCloud.searchProfilesFuzzy){
+      window.EtieCloud.searchProfilesFuzzy(val, function(users){
+        try{
+          if(!users||!users.length){toast('No users found matching "'+val+'".');return;}
+          if(users.length===1){
+            var u=users[0];
+            if(_challengeInvites.some(function(x){return x.user_id===u.user_id;})){toast('Already invited.');return;}
+            _challengeInvites.push(u);
+            input.value='';
+            renderChallengeInvites();
+            toast('Added '+u.name);
+            return;
+          }
+          // Multiple matches - show picker
+          showInvitePicker(users, val);
+        }catch(e){}
+      });
+    }else if(window.EtieCloud&&window.EtieCloud.exactMatchUser){
       window.EtieCloud.exactMatchUser(val, function(user){
         try{
-          if(!user){toast('No exact match found. Try pasting user ID.');return;}
+          if(!user){toast('No match found. Try pasting user ID.');return;}
           if(_challengeInvites.some(function(u){return u.user_id===user.user_id;})){toast('Already invited.');return;}
           _challengeInvites.push(user);
           input.value='';
@@ -5512,6 +5529,38 @@ function addChallengeInvite(){
     }else{
       toast('Cloud not ready.');
     }
+  }catch(e){}
+}
+
+function showInvitePicker(users, query){
+  try{
+    var old=document.getElementById('invitePickerOverlay');if(old)old.remove();
+    var overlay=document.createElement('div');
+    overlay.id='invitePickerOverlay';
+    overlay.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);';
+    var card=document.createElement('div');
+    card.style.cssText='background:#1a1428;border:1px solid rgba(244,63,94,.3);border-radius:16px;padding:20px;max-width:400px;width:90%;color:#fff;';
+    var html='<h3 style="margin:0 0 12px;color:#f43f5e;">Multiple matches for "'+query+'"</h3>';
+    html+='<p style="font-size:12px;color:rgba(255,255,255,.5);margin-bottom:12px;">Select the user to invite:</p>';
+    users.forEach(function(u){
+      html+='<button onclick="pickInviteUser(\''+u.user_id+'\',\''+u.name.replace(/'/g,"\'")+'\')" style="display:block;width:100%;padding:10px 14px;margin-bottom:6px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:#fff;border-radius:8px;cursor:pointer;font-size:13px;text-align:left;min-height:44px;">'+(u.name||'Someone')+(u.city?' ('+u.city+')':'')+'</button>';
+    });
+    html+='<button onclick="document.getElementById(\'invitePickerOverlay\').remove()" style="margin-top:8px;padding:8px 16px;background:transparent;border:0;color:rgba(255,255,255,.5);cursor:pointer;font-size:12px;">Cancel</button>';
+    card.innerHTML=html;
+    overlay.appendChild(card);
+    overlay.onclick=function(e){if(e.target===overlay)overlay.remove();};
+    document.body.appendChild(overlay);
+  }catch(e){}
+}
+
+function pickInviteUser(userId, name){
+  try{
+    var overlay=document.getElementById('invitePickerOverlay');if(overlay)overlay.remove();
+    if(_challengeInvites.some(function(u){return u.user_id===userId;})){toast('Already invited.');return;}
+    _challengeInvites.push({user_id:userId, name:name});
+    var input=document.getElementById('chInviteInput');if(input)input.value='';
+    renderChallengeInvites();
+    toast('Added '+name);
   }catch(e){}
 }
 

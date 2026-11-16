@@ -1878,10 +1878,6 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
     // Cannot drop schema from client. User must run down migration manually.
     if(cb)cb(false);
   }
-  function removeDemo(cb){
-    // Cannot drop schema from client. User must run down migration manually.
-    if(cb)cb(false);
-  }
 
   // ---- Challenge viewer interactions (C5) ----
   function saveEntry(entryId, cb){

@@ -397,18 +397,6 @@ function renderGateBody(st){
     b.appendChild(ul);b.appendChild(btn3);
   }catch(e){}
 }
-function verifyInviteCode(){
-  try{
-    var inp=document.getElementById('inviteCodeInput');
-    var code=(inp&&inp.value||'').trim();
-    if(!code){toast('Enter your invite code.');return;}
-    toast('Verifying invite…');
-    window.EtieCloud.redeemInvite(code).then(function(ok){
-      if(ok){toast('Welcome in.');}
-      else toast('Invalid or claimed code — check it and retry.');
-    });
-  }catch(e){}
-}
 function showScreen(id){
   try{
     try{if(id==='map'&&gateState()!=='open'){refreshGate();return;}}catch(e){}
@@ -431,23 +419,6 @@ function showScreen(id){
 
 
 var ETIE_AVAIL_YM=null, ETIE_AVAIL_DRAG=null;
-
-
-function formatTripDates(f,t){
-  try{
-    var M=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    if(!f)return '';
-    var a=new Date(f+'T12:00');if(isNaN(a.getTime()))return f;
-    if(!t||t===f)return a.getDate()+' '+M[a.getMonth()];
-    var b=new Date(t+'T12:00');if(isNaN(b.getTime()))return a.getDate()+' '+M[a.getMonth()];
-    if(a.getMonth()===b.getMonth()&&a.getFullYear()===b.getFullYear())return a.getDate()+'–'+b.getDate()+' '+M[a.getMonth()];
-    var s=a.getDate()+' '+M[a.getMonth()]+' – '+b.getDate()+' '+M[b.getMonth()];
-    if(a.getFullYear()!==b.getFullYear())s+=' '+b.getFullYear();
-    return s;
-  }catch(e){return f+' – '+(t||'');}
-}
-
-
 
 
 window.ETIE_ADMINS=['kan.ethan.cy@gmail.com'];
@@ -802,17 +773,6 @@ function needProfile(action){
   return false;
 }
 function editProfile(){try{ETIE._editingProfile=true;ETIE.profileStep=1;saveState();renderLiteProfile();}catch(e){}}
-function myHookVibes(){
-  try{
-    var me=hookNick(),seen={},out=[];
-    (allMapPins()||[]).forEach(function(p){
-      var mine=(p.members||[]).some(function(m){return m.nick===me;});
-      if(!mine&&p.name!==me)return;
-      if(p.category&&!seen[p.category]){seen[p.category]=1;out.push(p.category);}
-    });
-    return out;
-  }catch(e){return [];}
-}
 function renderDoneView(){
   try{
     var tr=ETIE.traveller||{};
@@ -832,26 +792,6 @@ function renderDoneView(){
     renderMemories();renderSpots();renderPassions();
     renderFeaturedMemories();
     renderPassport();
-  }catch(e){}
-}
-function showProfileTab(tab){
-  try{
-    var prof=document.getElementById('liteDoneView');
-    var pass=document.getElementById('passportView');
-    var t1=document.getElementById('tabProfile');
-    var t2=document.getElementById('tabPassport');
-    if(tab==='passport'){
-      if(prof)prof.classList.remove('active');
-      if(pass)pass.classList.add('active');
-      if(t1)t1.classList.remove('active');
-      if(t2)t2.classList.add('active');
-      renderPassport();
-    }else{
-      if(prof)prof.classList.add('active');
-      if(pass)pass.classList.remove('active');
-      if(t1)t1.classList.add('active');
-      if(t2)t2.classList.remove('active');
-    }
   }catch(e){}
 }
 function getFeaturedMemories(){try{var m=ETIE.traveller&&ETIE.traveller.featuredMemories;return Array.isArray(m)?m.slice(0,3):[];}catch(e){return [];}}
@@ -878,130 +818,8 @@ function toggleFeaturedMemory(logEntry){
     saveFeaturedMemories(featured);
   }catch(e){}
 }
-function openProfileDrawer(){
-  try{
-    renderProfileDrawer();
-    var o=document.getElementById('profileDrawer');
-    if(o)o.classList.remove('hidden');
-  }catch(e){}
-}
-function closeProfileDrawer(){
-  try{
-    var o=document.getElementById('profileDrawer');
-    if(o)o.classList.add('hidden');
-  }catch(e){}
-}
-function showProfileDrawerTab(tab){
-  try{
-    var prof=document.getElementById('profileDrawerView');
-    var mem=document.getElementById('memoryMapDrawerView');
-    var pass=document.getElementById('passportDrawerView');
-    var t1=document.getElementById('tabDrawerProfile');
-    var t2=document.getElementById('tabDrawerMemories');
-    var t3=document.getElementById('tabDrawerPassport');
-    // Hide all
-    if(prof)prof.classList.remove('active');
-    if(mem)mem.classList.remove('active');
-    if(pass)pass.classList.remove('active');
-    if(t1)t1.classList.remove('active');
-    if(t2)t2.classList.remove('active');
-    if(t3)t3.classList.remove('active');
-    if(tab==='passport'){
-      var pass=document.getElementById('passportDrawerView'); if(pass)pass.classList.add('active');
-      var t3=document.getElementById('tabDrawerPassport'); if(t3)t3.classList.add('active');
-      renderPassportDrawer();
-    }else if(tab==='memories'){
-      var mem=document.getElementById('memoryMapDrawerView'); if(mem)mem.classList.add('active');
-      var t2=document.getElementById('tabDrawerMemories'); if(t2)t2.classList.add('active');
-      renderMemoryMapFull();
-    }else{
-      var prof=document.getElementById('profileDrawerView'); if(prof)prof.classList.add('active');
-      var t1=document.getElementById('tabDrawerProfile'); if(t1)t1.classList.add('active');
-      showProfileSegment('grid'); // default to grid
-    }
-  }catch(e){}
-}
-function renderProfileDrawer(){
-  try{
-    var tr=ETIE.traveller||{};
-    var nick=tr.nickname||ETIE.local.displayName||'Someone';
-    var photo=tr.photo||ETIE.local.photo||googleAvatar();
-    var av=document.getElementById('drawerAvatar');
-    if(av){if(photo)av.innerHTML='<img src="'+photo+'">';else av.innerHTML='<span>+</span>';}
-    var nm=document.getElementById('drawerName'); if(nm)nm.textContent=nick;
-    var vb=document.getElementById('drawerVerified');
-    if(vb){var v=(tr.verificationMethods||[]).length>0;vb.textContent=v?'✅ Verified':'';vb.style.display=v?'':'none';}
-    var rl=document.getElementById('drawerRole');
-    if(rl){var role=(ETIE.derivedRole||ETIE.activeRole||'traveller');rl.textContent=role==='local'?'🇭🇰 Local Host':'✈️ Traveller';rl.classList.toggle('city-host',role==='local');}
-    var ct=document.getElementById('drawerCity'); if(ct){var _nl=nationalityLabel();ct.textContent='🏠 '+homeCitiesLabelFlags()+(_nl?' · '+_nl:'');}
-    var vs=document.getElementById('drawerVibes');
-    if(vs){var _vp=vs.closest('.field');if(_vp)_vp.style.display='none';}
-    var hk=document.getElementById('drawerHook'); if(hk)hk.textContent='“'+(tr.bio||'No personal hook yet.')+'”';
-    renderDrawerMemories();
-    renderDrawerSpots();
-    renderDrawerPassions();
-    renderDrawerFeaturedMemories();
-  }catch(e){}
-}
 // ===== Profile Segment Toggle (Map / Grid) =====
-function showProfileSegment(seg){
-  try{
-    var map=document.getElementById('profileSegmentMap');
-    var grid=document.getElementById('profileSegmentGrid');
-    var btnMap=document.getElementById('segProfileMap');
-    var btnGrid=document.getElementById('segProfileGrid');
-    if(!map||!grid)return;
-    if(seg==='map'){
-      if(map)map.style.display='block';
-      if(grid)grid.style.display='none';
-      if(btnMap){btnMap.classList.add('active');btnMap.style.color='#fff';btnMap.style.background='rgba(244,63,94,.2)';btnMap.style.borderColor='rgba(244,63,94,.5)';}
-      if(btnGrid){btnGrid.classList.remove('active');btnGrid.style.color='rgba(255,255,255,.7)';btnGrid.style.background='rgba(255,255,255,.08)';btnGrid.style.borderColor='rgba(255,255,255,.16)';}
-      renderProfileMemoryMap();
-    }else{
-      if(map)map.style.display='none';
-      if(grid)grid.style.display='block';
-      if(btnGrid){btnGrid.classList.add('active');btnGrid.style.color='#fff';btnGrid.style.background='rgba(244,63,94,.2)';btnGrid.style.borderColor='rgba(244,63,94,.5)';}
-      if(btnMap){btnMap.classList.remove('active');btnMap.style.color='rgba(255,255,255,.7)';btnMap.style.background='rgba(255,255,255,.08)';btnMap.style.borderColor='rgba(255,255,255,.16)';}
-    }
-  }catch(e){}
-}
 // ===== Profile Memory Map (Map segment in Profile tab) =====
-var _profileMemoryMap=null;
-function renderProfileMemoryMap(){
-  try{
-    var container=document.getElementById('memoryMap');
-    if(!container)return;
-    if(_profileMemoryMap){try{if(_profileMemoryMap._memoryMarkers)_profileMemoryMap._memoryMarkers.forEach(function(m){try{if(m._interval)clearInterval(m._interval);}catch(e){}});}catch(e){}try{_profileMemoryMap.remove();}catch(e){}_profileMemoryMap=null;}
-    container.innerHTML='';
-    if(!window.maplibregl){container.innerHTML='<div class="muted" style="padding:20px;text-align:center;">Map loading…</div>';return;}
-    if(window.EtieMapStyle && typeof window.EtieMapStyle.load === 'function'){
-      window.EtieMapStyle.load(function(style){
-        if(!style){showMapConfigError('memoryMap');return;}
-        _profileMemoryMap = new maplibregl.Map({
-          container:'memoryMap',
-          projection:'globe',
-          style:style,
-          center:[HK_CENTER[1],HK_CENTER[0]],
-          zoom:11,
-          attributionControl:false
-        });
-        if(!_profileMemoryMap)return;
-        _profileMemoryMap.addControl(new maplibregl.NavigationControl({showCompass:false}),'bottom-right');
-        fetchAndRenderMemoryMarkers(_profileMemoryMap);
-        try{renderAlbanyLorePin(_profileMemoryMap);}catch(e){}
-      });
-    } else {
-      _profileMemoryMap=createEtieMap('memoryMap',{
-        center:[HK_CENTER[1],HK_CENTER[0]],
-        zoom:11,
-        attributionControl:false
-      });
-      if(!_profileMemoryMap)return;
-      _profileMemoryMap.addControl(new maplibregl.NavigationControl({showCompass:false}),'bottom-right');
-      fetchAndRenderMemoryMarkers(_profileMemoryMap);
-    }
-  }catch(e){console.error('renderProfileMemoryMap',e);}
-}
 // ===== Full Memory Map (Memories tab) =====
 var _memoryMapFull=null;
 function renderMemoryMapFull(){
@@ -1455,76 +1273,6 @@ function submitAskForm(uid, nick){
   }catch(e){}
 }
 
-function wrapupAnswerQuestion(pinId){
-  try{
-    var p=null;
-    (allMapPins()||[]).forEach(function(x){if(x&&(x.id===pinId||x.cloudId===pinId))p=x;});
-    if(!p)p=window._wrapupPin;
-    if(!p)return;
-    window._wrapupPin=p;
-    var me=hookNick();
-    var myId=null;try{myId=myUid();}catch(e){}
-    if(!myId)return;
-    if(window.EtieCloud&&window.EtieCloud.fetchMyQuestions){
-      window.EtieCloud.fetchMyQuestions(function(questions){
-        try{
-          var pending=(questions||[]).filter(function(q){return q.hangout_id===p.id&&q.answerer_id===myId&&q.status==='asked';});
-          if(!pending.length){toast('No pending questions.');return;}
-          var q=pending[0];
-          var overlay=document.createElement('div');
-          overlay.id='answerFormOverlay';
-          overlay.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);';
-          var card=document.createElement('div');
-          card.style.cssText='background:#1a1428;border:1px solid rgba(34,211,238,.3);border-radius:16px;padding:20px;max-width:480px;width:90%;color:#fff;';
-          card.innerHTML='<h3 style="margin:0 0 8px;color:#22d3ee;">Answer question</h3>'
-            +'<div style="font-size:14px;color:#fff;margin-bottom:12px;padding:10px;background:rgba(255,255,255,.05);border-radius:8px;">'+(q.question_text||'')+'</div>'
-            +'<textarea id="answerFormText" maxlength="600" placeholder="Your answer (min 1 char)" style="width:100%;min-height:100px;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:#fff;font-size:13px;resize:vertical;box-sizing:border-box;"></textarea>'
-            +'<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">'
-            +'<span id="answerFormCount" style="font-size:11px;color:rgba(255,255,255,.4);">0 / 600</span>'
-            +'<div style="display:flex;gap:8px;">'
-            +'<button onclick="document.getElementById(\'answerFormOverlay\').remove()" style="padding:8px 16px;background:transparent;border:1px solid rgba(255,255,255,.16);color:#fff;border-radius:8px;cursor:pointer;font-size:12px;">Cancel</button>'
-            +'<button onclick="submitAnswerForm(\''+q.id+'\')" style="padding:8px 16px;background:#22d3ee;color:#000;border:0;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;">Save answer</button>'
-            +'</div></div>'
-            +'<div style="margin-top:8px;"><button onclick="showAnswerHistory(\''+q.id+'\')" style="padding:4px 8px;background:transparent;border:0;color:rgba(255,255,255,.4);cursor:pointer;font-size:11px;">Your history</button></div>';
-          overlay.appendChild(card);
-          overlay.onclick=function(e){if(e.target===overlay)overlay.remove();};
-          document.body.appendChild(overlay);
-          var ta=document.getElementById('answerFormText');
-          var cnt=document.getElementById('answerFormCount');
-          if(ta&&cnt){
-            ta.oninput=function(){cnt.textContent=ta.value.length+' / 600';};
-          }
-          if(ta)setTimeout(function(){ta.focus();},100);
-        }catch(e){}
-      });
-    }
-  }catch(e){}
-}
-
-function submitAnswerForm(questionId){
-  try{
-    var ta=document.getElementById('answerFormText');
-    if(!ta)return;
-    var answer=ta.value.trim().slice(0,600);
-    if(answer.length<1){toast('Answer is required (min 1 char).');return;}
-    if(window.EtieCloud&&window.EtieCloud.insertAnswer){
-      window.EtieCloud.insertAnswer(questionId, answer, function(res){
-        try{
-          if(res&&res.ok){
-            var overlay=document.getElementById('answerFormOverlay');if(overlay)overlay.remove();
-            toast('Answer saved!');
-            window._wrapupAskStep=2;
-            checkWrapupCard();
-          }else{
-            toast('Failed: '+(res&&res.error||'unknown'));
-          }
-        }catch(e){}
-      });
-    }
-  }catch(e){}
-}
-
-// Gate: check if user owes questions for confirmed hangouts
 function checkQuestionGate(){
   try{
     if(!isSignedIn())return true;
@@ -2621,115 +2369,6 @@ function addMemoryToSpot(){
 }
 
 var _popupMemories=[];
-function openPopupMemory(i){
-  try{var l=_popupMemories[i];if(l)openMemoryCard(l);}catch(e){}
-}
-function addMemoryHereAt(i){
-  try{
-    var l=_popupMemories[i];if(!l)return;
-    openLogSheet(null);
-    _logSpot={lat:Number(l.lat),lng:Number(l.lng)};
-    var n=document.getElementById('logSpotNote');
-    if(n)n.textContent='Adding to this spot · '+Number(l.lat).toFixed(4)+', '+Number(l.lng).toFixed(4);
-    var loc=document.getElementById('logLocation');
-    if(loc&&!loc.value.trim())loc.value=l.location||'';
-  }catch(e){}
-}
-function memoryPopupHtml(list){
-  try{
-    var rows=list.map(function(l,i){
-      var when='';try{when=l.taken_at?fmtWhen(new Date(l.taken_at).getTime()):'';}catch(e){}
-      var sub=[when,l.location].filter(Boolean).join(' · ');
-      var who=(l._nicknames||[]).join(', ');
-      return '<div class="mem-pop-row" role="button" tabindex="0" onclick="openPopupMemory('+i+')">'
-        +'<div class="mem-pop-thumb">'+(l.photo_url?('<img src="'+l.photo_url+'" alt="">'):'')+'</div>'
-        +'<div class="mem-pop-meta"><strong>'+logEsc(l.title||l.location||'Hangout')+'</strong>'
-        +(sub?'<span class="muted small">'+logEsc(sub)+'</span>':'')
-        +(who?'<span class="muted small">with '+logEsc(who)+'</span>':'')
-        +'</div></div>';
-    }).join('');
-    return '<div class="mem-pop"><div class="mem-pop-head">'+list.length+' memor'+(list.length===1?'y':'ies')+' here</div>'
-      +rows+'<button class="mem-pop-add" onclick="addMemoryHereAt(0)">+ Add a photo here</button></div>';
-  }catch(e){return '';}
-}
-function memoryPhotoMarker(log,mapInstance){
-  var lat=Number(log.lat),lng=Number(log.lng);
-  var html='<div class="memory-marker" style="width:56px;height:56px;border-radius:12px;overflow:hidden;background:#000;border:3px solid #fff;box-shadow:0 4px 16px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;">'
-    +'<img src="'+log.photo_url+'" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">'
-    +'</div>';
-  var wrap=document.createElement('div');wrap.innerHTML=html;
-  var el=wrap.firstChild;
-  var mk=new maplibregl.Marker({element:el,anchor:'center'}).setLngLat([lng,lat]).addTo(mapInstance);
-  el.addEventListener('click',function(ev){try{ev.stopPropagation();ev.preventDefault();}catch(e){}_pinJustClicked=true;setTimeout(function(){_pinJustClicked=false;},300);openMemoryCard(log);});
-  return mk;
-}
-function clusterMemoryLogs(logs,mapInstance){
-  var groups=[];
-  (logs||[]).forEach(function(log){
-    try{
-      var pt=mapInstance.project([Number(log.lng),Number(log.lat)]),found=null;
-      for(var i=0;i<groups.length;i++){
-        var g=groups[i],dx=pt.x-g.x,dy=pt.y-g.y;
-        if(dx*dx+dy*dy<=2500){found=g;break;}
-      }
-      if(found){
-        found.logs.push(log);
-        var n=found.logs.length;
-        found.x=(found.x*(n-1)+pt.x)/n;
-        found.y=(found.y*(n-1)+pt.y)/n;
-      }else groups.push({x:pt.x,y:pt.y,logs:[log]});
-    }catch(e){}
-  });
-  return groups;
-}
-function buildMemoryCluster(rawLogs,mapInstance){
-  var state={markers:[],popup:null,destroyed:false};
-  function clear(){
-    state.markers.forEach(function(m){try{m.remove();}catch(e){}});
-    state.markers=[];
-    if(state.popup){try{state.popup.remove();}catch(e){}state.popup=null;}
-  }
-  function openCluster(group){
-    try{
-      var list=dedupeMemories(group.logs);
-      if(!list.length)return;
-      if(list.length===1){openMemoryCard(list[0]);return;}
-      _popupMemories=list;
-      if(state.popup){try{state.popup.remove();}catch(e){}state.popup=null;}
-      state.popup=new maplibregl.Popup({maxWidth:'290px',className:'mem-popup-wrap',closeButton:true,closeOnClick:true})
-        .setLngLat(mapInstance.unproject([group.x,group.y]))
-        .setHTML(memoryPopupHtml(list))
-        .addTo(mapInstance);
-    }catch(e){}
-  }
-  function refresh(){
-    if(state.destroyed||!mapInstance)return;
-    clear();
-    var groups=clusterMemoryLogs(rawLogs||[],mapInstance);
-    groups.forEach(function(group){
-      try{
-        if(group.logs.length===1){state.markers.push(memoryPhotoMarker(group.logs[0],mapInstance));return;}
-        var count=group.logs.length,size=count<10?'small':(count<100?'medium':'large');
-        var el=document.createElement('div');
-        el.className='memory-cluster memory-cluster-'+size;
-        el.innerHTML='<span>'+count+'</span>';
-        var mk=new maplibregl.Marker({element:el,anchor:'center'})
-          .setLngLat(mapInstance.unproject([group.x,group.y])).addTo(mapInstance);
-        el.addEventListener('click',function(ev){try{ev.stopPropagation();ev.preventDefault();}catch(e){}_pinJustClicked=true;setTimeout(function(){_pinJustClicked=false;},300);openCluster(group);});
-        state.markers.push(mk);
-      }catch(e){}
-    });
-  }
-  state.refresh=refresh;
-  state.remove=function(){
-    state.destroyed=true;clear();
-    try{mapInstance.off('zoomend',refresh);mapInstance.off('moveend',refresh);}catch(e){}
-  };
-  mapInstance.on('zoomend',refresh);
-  mapInstance.on('moveend',refresh);
-  refresh();
-  return state;
-}
 function fetchAndRenderMemoryMarkers(mapInstance,onDone){
   try{
     if(!window.EtieCloud||!window.EtieCloud.fetchMyMemories){if(onDone)onDone(0);return;}
@@ -2772,170 +2411,6 @@ function fetchAndRenderMemoryMarkers(mapInstance,onDone){
       }catch(e){console.error('fetchAndRenderMemoryMarkers',e);if(onDone)onDone(0);}
     });
   }catch(e){console.error('fetchAndRenderMemoryMarkers outer',e);if(onDone)onDone(0);}
-}
-function renderPassportDrawer(){
-  try{
-    var visitsBox=document.getElementById('drawerPassportVisits');
-    var connBox=document.getElementById('drawerPassportConnections');
-    if(!visitsBox || !connBox) return;
-    visitsBox.innerHTML='';
-    connBox.innerHTML='';
-    var tr=ETIE.traveller||{};
-    var diary=tr.activityDiary||[];
-    // Neighborhood Visit Log
-    var visits={};
-    diary.forEach(function(e){
-      if(e.neighborhood){
-        var key=e.neighborhood;
-        if(!visits[key]) visits[key]={count:0,last:0,icon:'🏙️'};
-        visits[key].count++;
-        if(e.timestamp>visits[key].last) visits[key].last=e.timestamp;
-      }
-    });
-    if(Object.keys(visits).length===0){
-      visitsBox.innerHTML='<div class="muted small" style="text-align:center;padding:24px;">No neighborhood visits yet.<br>Complete a verified hangout to log your first visit.</div>';
-    }else{
-      Object.entries(visits).sort(function(a,b){return b[1].last-a[1].last;}).forEach(function(entry){
-        var name=entry[0], data=entry[1];
-        var item=document.createElement('div');item.className='visit-item';
-        item.innerHTML='<div class="visit-icon">🏙️</div>'
-          +'<div class="visit-info"><div class="visit-name">'+name+'</div>'
-          +'<div class="visit-meta">'+data.count+' visit'+(data.count===1?'':'s')+' · Last: '+fmtWhen(data.last)+'</div></div>';
-        visitsBox.appendChild(item);
-      });
-    }
-    // Co-Signed Connections
-    var connections=diary.filter(function(e){return e.handshakeNote;});
-    if(connections.length===0){
-      connBox.innerHTML='<div class="muted small" style="text-align:center;padding:24px;">No co-signed connections yet.<br>Tag a friend in a memory to start a handshake.</div>';
-    }else{
-      connections.forEach(function(c){
-        var item=document.createElement('div');item.className='connection-card';
-        var initials=c.guestNick?c.guestNick.charAt(0).toUpperCase():'?';
-        item.innerHTML='<div class="connection-avatars">'
-          +'<div class="avatar" style="background:linear-gradient(135deg,#f43f5e,#fb7185);">'+initials+'</div>'
-          +'<div class="avatar" style="background:linear-gradient(135deg,#0ea5e9,#22d3ee);">'+(hookNick()||'?').charAt(0).toUpperCase()+'</div>'
-          +'</div>'
-          +'<div class="connection-info">'
-          +'<div class="connection-note">“'+c.handshakeNote+'”</div>'
-          +'<div class="connection-meta">with '+c.guestNick+' · '+fmtWhen(c.timestamp)+'</div>'
-          +'</div>';
-        connBox.appendChild(item);
-      });
-    }
-  }catch(e){}
-}
-function renderDrawerMemories(){
-  try{
-    var box=document.getElementById('drawerMemories');if(!box)return;
-    box.innerHTML='';
-    var mems=getMemories();
-    for(var i=0;i<3;i++){
-      (function(idx){
-        var m=mems[idx];
-        var card=document.createElement('div');card.className='mem-card';
-        if(m&&m.image_url){
-          var im=document.createElement('img');im.src=m.image_url;im.alt='Memory '+(idx+1);card.appendChild(im);
-          var cap=document.createElement('input');cap.className='mem-cap';cap.maxLength=80;cap.placeholder='Add a caption…';cap.value=m.caption||'';
-          cap.onchange=function(){var a=getMemories();if(a[idx]){a[idx].caption=cap.value.slice(0,80);saveMemories(a);}};
-          card.appendChild(cap);
-          var del=document.createElement('button');del.className='mem-del';del.textContent='✕ Remove';
-          del.onclick=function(){var a=getMemories();a.splice(idx,1);saveMemories(a);toast('Memory removed.');};
-          card.appendChild(del);
-        }else{
-          card.className='mem-card mem-empty';
-          var plus=document.createElement('button');plus.className='mem-plus';plus.textContent='+';plus.title='Add Memory Photo';
-          plus.onclick=function(){pickMemoryFile(idx);};
-          card.appendChild(plus);
-          var lab=document.createElement('span');lab.className='muted small';lab.textContent='Add Memory Photo';card.appendChild(lab);
-          var urlrow=document.createElement('div');urlrow.className='mem-urlrow';
-          var ui=document.createElement('input');ui.placeholder='or paste image URL…';
-          var ub=document.createElement('button');ub.className='secondary';ub.textContent='Add';
-          ub.onclick=function(){var u=(ui.value||'').trim();if(!u){toast('Paste an image URL first.');return;}var a=getMemories();a[idx]={id:Date.now(),image_url:u,caption:''};saveMemories(a);toast('Memory added.');};
-          urlrow.appendChild(ui);urlrow.appendChild(ub);card.appendChild(urlrow);
-        }
-        box.appendChild(card);
-      })(i);
-    }
-  }catch(e){}
-}
-function renderDrawerSpots(){
-  try{
-    var box=document.getElementById('drawerSpots');if(!box)return;
-    var title=document.getElementById('drawerSpotsTitle');
-    var tr=ETIE.traveller||{};var spots=tr.spots||[];
-    if(title)title.textContent=spots.length?'Local spots':'Local spots (add up to 3)';
-    box.innerHTML='';
-    for(var i=0;i<3;i++){
-      (function(idx){
-        var s=spots[idx];
-        var card=document.createElement('div');card.className='spot-card';
-        if(s&&s.name){
-          var em=document.createElement('div');em.className='spot-emoji';em.textContent=s.emoji||'📍';card.appendChild(em);
-          var nm=document.createElement('div');nm.className='spot-name';nm.textContent=s.name;card.appendChild(nm);
-          var nb=document.createElement('div');nb.className='spot-nbhd';nm.textContent=s.neighborhood||'';card.appendChild(nb);
-          var del=document.createElement('button');del.className='mem-del';del.textContent='✕';del.onclick=function(){var a=spots;a.splice(idx,1);tr.spots=a;saveState();renderLiteProfile();renderProfileDrawer();};
-          card.appendChild(del);
-        }else{
-          card.className='spot-card spot-empty';
-          var plus=document.createElement('button');plus.className='mem-plus';plus.textContent='+';plus.title='Add Local Spot';
-          plus.onclick=function(){pickSpotFile(idx);};
-          card.appendChild(plus);
-          var lab=document.createElement('span');lab.className='muted small';lab.textContent='Add Local Spot';card.appendChild(lab);
-        }
-        box.appendChild(card);
-      })(i);
-    }
-  }catch(e){}
-}
-function renderDrawerPassions(){
-  try{
-    var box=document.getElementById('drawerPassions');if(!box)return;
-    box.innerHTML='';
-    var stats=ETIE.traveller?.activityStats||{};
-    var keys=Object.keys(stats);
-    if(!keys.length){var e=document.createElement('span');e.className='muted small';e.textContent='No passion badges yet — log a hangout to earn one.';box.appendChild(e);return;}
-    keys.sort(function(a,b){return stats[b]-stats[a];});
-    keys.slice(0,6).forEach(function(k){
-      var cnt=stats[k];
-      var emoji=passionEmoji(k);
-      var badge=emoji+' '+k+(cnt>1?' ('+cnt+')':'');
-      var s=document.createElement('span');s.className='chip active';s.textContent=badge;box.appendChild(s);
-    });
-  }catch(e){}
-}
-function renderDrawerFeaturedMemories(){
-  try{
-    var box=document.getElementById('drawerFeaturedMemories');if(!box)return;
-    box.innerHTML='';
-    var featured=getFeaturedMemories();
-    if(!featured.length){
-      box.innerHTML='<div class="mem-card mem-empty" style="grid-column:1/-1;text-align:center;padding:24px;"><div class="muted small">No featured memories yet.<br>Confirm a handshake to unlock pinning.</div></div>';
-      return;
-    }
-    featured.forEach(function(f){
-      var card=document.createElement('div');card.className='featured-card';
-      if(f.photoUrl){
-        var im=document.createElement('img');im.src=f.photoUrl;im.alt='Featured Memory';card.appendChild(im);
-      }
-      var cap=document.createElement('div');cap.className='featured-caption';cap.textContent='“'+(f.handshakeNote||'')+'”';card.appendChild(cap);
-      var meta=document.createElement('div');meta.className='featured-meta';
-      meta.innerHTML='<span>'+(f.activity||'Hangout')+'</span><span>'+(f.guestNick||'Co-signer')+'</span><span>'+fmtWhen(f.timestamp)+'</span>';
-      card.appendChild(meta);
-      var pin=document.createElement('div');pin.className='featured-pin';
-      var isPinned=true;
-      var btn=document.createElement('button');btn.textContent='★';btn.className=isPinned?'pinned':'';btn.title='Unpin from featured';
-      btn.onclick=function(){toggleFeaturedMemory(f);};
-      pin.appendChild(btn);card.appendChild(pin);
-      box.appendChild(card);
-    });
-    var remaining=3-featured.length;
-    for(var i=0;i<remaining;i++){
-      var empty=document.createElement('div');empty.className='mem-card mem-empty';
-      empty.innerHTML='<button class="mem-plus" style="opacity:.4;" disabled>+</button><span class="muted small">Pin a memory</span>';
-      box.appendChild(empty);
-    }
-  }catch(e){}
 }
 function renderFeaturedMemories(){
   try{
@@ -3947,7 +3422,6 @@ function checkMemoryEmptyState(){
 }
 
 function setMapFilter(cat){MAP_FILTER=(MAP_FILTER===cat)?'All':cat;renderMapFilter();renderMapPins();}
-function setMapRole(role){MAP_ROLE=role;renderMapFilter();renderMapPins();}
 function selectIntent(id){if(id==='All'){MAP_ROLE='All';MAP_FILTER='All';}else{MAP_ROLE=id;}renderMapFilter();renderMapPins();}
 function renderMapPins(){
   try{
@@ -4414,22 +3888,6 @@ function storePin(p){
   }catch(e){}
 }
 function isPinExpired(p){try{var t=validTs(p.expires_at);return t===null?false:t<Date.now();}catch(e){return false;}}
-function hasApprovedRequest(p,nick){
-  try{
-    return (p.requests||[]).some(function(r){
-      return r.status==='approved' && r.nick===nick;
-    });
-  }catch(e){return false;}
-}
-function getApprovedRequestLocation(p,nick){
-  try{
-    var req=(p.requests||[]).find(function(r){return r.status==='approved' && r.nick===nick;});
-    if(req && req.locationRevealed){
-      return {lat:p.lat,lng:p.lng,address:p.location};
-    }
-    return null;
-  }catch(e){return null;}
-}
 function checkAndExpireRequests(p){
   try{
     var now=Date.now(),changed=false;
@@ -4569,21 +4027,6 @@ function getPinLifecycleState(p){
   if(requestCutoffAt!==null && now>=requestCutoffAt) return 'requests_closed';
   return 'active';
 }
-function getPinLifecycleLabel(p){
-  var state=getPinLifecycleState(p);
-  if(state==='active') return '🟢 Active & Accepting';
-  if(state==='requests_closed') return '🔒 Requests Closed';
-  if(state==='ended') return '🏁 Hangout Ended — Tap to Log Memory';
-  return '👻 Archived';
-}
-function getPinLifecycleClass(p){
-  var state=getPinLifecycleState(p);
-  if(state==='active') return 'lifecycle-active';
-  if(state==='requests_closed') return 'lifecycle-requests-closed';
-  if(state==='ended') return 'lifecycle-ended';
-  return 'lifecycle-vanished';
-}
-
 // ===== GUEST REQUEST STATUS TAB =====
 function renderGuestRequestTab(p, myReq, reqStatus, isMember, isHost){
   // hide old pending note
@@ -4692,7 +4135,6 @@ function clearMyDeclined(){
     storePin(p);openPinDetail(p.id);
   }catch(e){}
 }
-function acceptPinSidequest(){requestPinConnect();}
 function requestPinConnect(){
   try{
     if(needProfile('connect'))return;
@@ -4763,22 +4205,6 @@ function approveHookRequest(pinId,idx){
     }catch(e){}
     try{if(window.EtieCloud&&window.EtieCloud.pushSharedRequest)window.EtieCloud.pushSharedRequest(p.id);}catch(e){}
   }catch(e){toast('Could not approve.');}
-}
-function hostNextHook(pinId){
-  try{
-    var p=findPin(pinId);
-    if(!p) return;
-    // Pre-fill the drop hook sheet with current category/neighborhood
-    _hookDraft={category:p.category,role:'local',window:'now',capacity:3};
-    var ht0=document.getElementById('hookTitle');if(ht0)ht0.value='';
-    var hl=document.getElementById('hookLocation');if(hl)hl.value=p.location;
-    selectHookCategory(null,p.category);
-    selectHookWindow(null,'now');
-    hookCap(0);
-    renderHookRoleLine();
-    openDropHook();
-    toast('Create your next hook — same neighborhood, same vibe!');
-  }catch(e){toast('Could not open hook sheet.');}
 }
 function renderPinVibe(p,me){
   try{
@@ -4945,13 +4371,6 @@ function renderHookChat(){
   }catch(e){}
 }
 var _areasCollapsed=false;
-function toggleAreaSidebar(){
-  try{
-    _areasCollapsed=!_areasCollapsed;
-    var b=document.getElementById('areaList');if(b)b.style.display=_areasCollapsed?'none':'';
-    var t=document.getElementById('areaToggle');if(t)t.textContent=_areasCollapsed?'▸ Areas':'▾ Areas';
-  }catch(e){}
-}
 function toggleGlobalView(){
   try{
     if(!window.maplibregl||!_map)return;
@@ -5098,30 +4517,6 @@ function applyMapMode(){
       // Filter memories by current filter
       filterMainMemoryMarkers();
     }
-  }catch(e){}
-}
-
-function renderChallengeMapLayer(challengeId){
-  try{
-    if(!_map)return;
-    // Remove existing challenge layers
-    if(_map.getLayer('challenge-route'))_map.removeLayer('challenge-route');
-    if(_map.getSource('challenge-route'))_map.removeSource('challenge-route');
-    if(_map.getLayer('challenge-rings'))_map.removeLayer('challenge-rings');
-    if(_map.getSource('challenge-rings'))_map.removeSource('challenge-rings');
-    if(!window.EtieCloud||!window.EtieCloud.fetchChallengeEntryMemories)return;
-    window.EtieCloud.fetchChallengeEntryMemories(challengeId, function(entries){
-      try{
-        if(!entries||!entries.length)return;
-        // Build coordinates for dashed route
-        var coords=entries.map(function(e){return [e.lng,e.lat];}).filter(function(c){return c[0]&&c[1];});
-        if(coords.length>=2){
-          _map.addSource('challenge-route',{type:'geojson',data:{type:'Feature',geometry:{type:'LineString',coordinates:coords}}});
-          _map.addLayer({id:'challenge-route',type:'line',source:'challenge-route',paint:{'line-color':'#f43f5e','line-width':2,'line-dasharray':[2,2],'line-opacity':0.6}});
-        }
-        // Pink rings already rendered as markers
-      }catch(e){}
-    });
   }catch(e){}
 }
 
@@ -6692,26 +6087,6 @@ function processPhotoOutbox(){
 // ---- Handshake / Co-tagging ----
 var _handshakeLogId=null;
 var _handshakeTimer=null;
-function openHandshakeModal(log){
-  try{
-    _handshakeLogId=log.id;
-    var card=document.getElementById('handshakeCard');
-    if(card){
-      card.innerHTML='<img src="'+log.photo_url+'" style="width:100%;max-height:200px;object-fit:cover;border-radius:12px;margin-bottom:12px;">'
-        +'<div style="font-weight:600;color:#fff;">'+(log.activity||'Hangout')+'</div>'
-        +'<div class="muted small">with '+log.nickname+' · '+fmtWhen(new Date(log.taken_at).getTime())+'</div>';
-    }
-    var inp=document.getElementById('handshakeNoteInput');
-    if(inp){inp.value=''; inp.placeholder='One sentence: what made this hangout special?';}
-    var cnt=document.getElementById('handshakeCount');
-    if(cnt)cnt.textContent='0';
-    if(inp){
-      inp.oninput=function(){var c=document.getElementById('handshakeCount');if(c)c.textContent=this.value.length;};
-    }
-    startHandshakeTimer(log);
-    var o=document.getElementById('handshakeModal');if(o)o.classList.remove('hidden');
-  }catch(e){}
-}
 function closeHandshakeModal(){try{_handshakeLogId=null;if(_handshakeTimer){clearInterval(_handshakeTimer);_handshakeTimer=null;}var o=document.getElementById('handshakeModal');if(o)o.classList.add('hidden');}catch(e){}}
 // ---- Quest / Custom Quest Engine ----
 var _questPinId=null;
@@ -7218,28 +6593,6 @@ function dataURLtoFile(du,name){
     return new File([u8],name||'img.jpg',{type:mime});
   }catch(e){return null;}
 }
-function startHandshakeTimer(log){
-  try{
-    if(_handshakeTimer){clearInterval(_handshakeTimer);}
-    var created=log.created_at?new Date(log.created_at).getTime():Date.now();
-    var expires=created+24*60*60*1000;
-    var el=document.getElementById('handshakeTimer');
-    var tick=function(){
-      var left=expires-Date.now();
-      if(left<=0){
-        if(el)el.textContent='⏰ Expired';
-        if(_handshakeTimer){clearInterval(_handshakeTimer);_handshakeTimer=null;}
-        return;
-      }
-      var h=Math.floor(left/3600000);
-      var m=Math.floor((left%3600000)/60000);
-      var s=Math.floor((left%60000)/1000);
-      if(el)el.textContent='⏳ '+(h<10?'0':'')+h+':'+(m<10?'0':'')+m+':'+(s<10?'0':'')+s+' remaining';
-    };
-    tick();
-    _handshakeTimer=setInterval(tick,1000);
-  }catch(e){}
-}
 function confirmHandshake(){
   try{
     if(!_handshakeLogId){toast('No handshake pending.');return;}
@@ -7303,30 +6656,6 @@ function publishToActivityDiary(logId, handshakeNote, guestNick){
       }
       saveState();
     });
-  }catch(e){}
-}
-function checkPendingHandshakes(){
-  try{
-    var me=hookNick();
-    // Check local state for pending handshakes
-    var pending=(ETIE.traveller?.activityDiary||[]).filter(function(e){return e.status==='pending';});
-    // Also fetch from cloud if needed
-    if(window.EtieCloud && window.EtieCloud.fetchTaggedLogs){
-      var uid=myUid();
-      if(uid){
-        window.EtieCloud.fetchTaggedLogs(uid, function(logs){
-          logs.forEach(function(log){
-            // Show notification or open modal
-            var notif=document.getElementById('handshakeNotif');
-            if(notif){
-              notif.style.display='block';
-              notif.textContent='🤝 New handshake request from '+log.nickname;
-              notif.onclick=function(){openHandshakeModal(log);};
-            }
-          });
-        });
-      }
-    }
   }catch(e){}
 }
 function bumpPassion(act){
@@ -7410,7 +6739,7 @@ document.addEventListener('DOMContentLoaded',function(){
   // Check for wrap-up card (ended hangouts needing questions)
   try{setTimeout(function(){checkWrapupCard();},3000);}catch(e){}
   try{ window.addEventListener('online',function(){try{processPhotoOutbox();}catch(e){}}); }catch(e){}
-  document.addEventListener('keydown',function(e){if(e.key==='Escape'){try{closeQuestDrawer();}catch(e2){}try{closeProfileDrawer();}catch(e2b){}try{closeAdmin();}catch(e3){}try{closeAvatarMenu();}catch(e4){}try{closeChatDrawer();}catch(e5){}try{closePinDetail();}catch(e6){}try{closeGroupModal();}catch(e7){}try{closeDropHook();}catch(e8){}try{closeLogSheet();}catch(e9){}try{closeMemoryCard();}catch(e10){}}});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'){try{closeQuestDrawer();}catch(e2){}try{closeAdmin();}catch(e3){}try{closeAvatarMenu();}catch(e4){}try{closeChatDrawer();}catch(e5){}try{closePinDetail();}catch(e6){}try{closeGroupModal();}catch(e7){}try{closeDropHook();}catch(e8){}try{closeLogSheet();}catch(e9){}try{closeMemoryCard();}catch(e10){}}});
   document.addEventListener('click',function(e){try{var d=document.getElementById('avatarDropdown');var btn=document.getElementById('headerProfile');if(d&&!d.classList.contains('hidden')&&e.target!==btn&&!d.contains(e.target)&&e.target!==btn)closeAvatarMenu();}catch(err){}});
   // re-sync header whenever the tab regains focus (session may have landed elsewhere)
   try{

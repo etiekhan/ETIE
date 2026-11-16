@@ -472,6 +472,7 @@
     <div class="quest-drawer-head"><div><strong>⚡ Side Quest</strong></div><button class="secondary" onclick="closeQuestDrawer()" aria-label="Close" style="padding:8px 12px;">✕</button></div>
     <div class="quest-drawer-body" style="padding:20px 24px;">
       <!-- Quest of the Week Card -->
+      <div id="questNoPinHint" style="display:none;padding:12px 16px;margin-bottom:12px;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.3);border-radius:12px;color:#fbbf24;font-size:13px;font-weight:600;">⚠️ Open a hook's chat first, then propose a quest here.</div>
       <div id="questWeekCard" class="quest-week-card" style="background:linear-gradient(135deg,rgba(244,63,94,.15),rgba(251,113,133,.15));border:1px solid rgba(244,63,94,.3);border-radius:16px;padding:20px;margin-bottom:16px;">
         <div style="display:flex;gap:12px;align-items:flex-start;">
           <span class="quest-icon" style="font-size:28px;flex-shrink:0;">⚡</span>
@@ -484,7 +485,7 @@
         </div>
         <div class="quest-week-actions" style="display:flex;gap:8px;margin-top:16px;">
           <button class="quest-accept primary" style="flex:1;padding:12px 16px;border-radius:12px;font-weight:700;font-size:13px;" onclick="acceptCuratedQuest()">Accept Quest of the Week</button>
-          <button class="quest-custom secondary" style="padding:12px 16px;border-radius:12px;font-weight:600;font-size:13px;" onclick="openCustomQuestInput()">✍️ Propose Custom</button>
+          <button class="quest-custom secondary" style="padding:12px 16px;border-radius:12px;font-weight:600;font-size:13px;" onclick="openCustomQuestInput()">✍️ Propose Sidequest</button>
         </div>
       </div>
       <!-- Custom Quest Input (hidden initially) -->
@@ -495,7 +496,7 @@
         </div>
         <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
           <button class="secondary" onclick="closeCustomQuestInput()">Cancel</button>
-          <button class="primary" onclick="acceptCustomQuest()">Accept Custom Quest</button>
+          <button class="primary" onclick="acceptCustomQuest()">Propose Sidequest</button>
         </div>
       </div>
       <!-- Active Quest Display (shown after accepting) -->
@@ -574,7 +575,7 @@
   <script src="runtime-config.js"></script>
   <script src="runtime-config.example.js"></script>
   <script src="map-style.js"></script>
-  <script src="app.js?v=198"></script>
+  <script src="app.js?v=199"></script>
   <script src="supabase-sync.js?v=136"></script>
 </body>
 </html>

@@ -6776,6 +6776,7 @@ function dismissWeeklyQuest(){
 }
 function openQuestDrawer(){  try{
     var p=null;try{p=findPin(_chatPinId);}catch(e){}
+    var hint=document.getElementById('questNoPinHint');if(hint)hint.style.display=p?'none':'block';
     var paint=function(q){
       try{
         window._weeklyQuest=(q&&q.title)?{title:q.title,desc:q.description||q.desc||'',ends_at:q.ends_at||null}:null;
@@ -6934,7 +6935,8 @@ function closeMemoryCard(){
 }
 function acceptCuratedQuest(){
   try{
-    var p=findPin(_chatPinId);if(!p)return;
+    var p=findPin(_chatPinId);
+    if(!p){toast('Open a hook\'s chat first, then accept a quest.');return;}
     var qw=null;try{qw=window._weeklyQuest;}catch(e){}
     if(!qw||!qw.title){toast('No live sidequest right now.');return;}
     p.quest={title:qw.title,setBy:'Side Quest',setAt:Date.now(),completed:false};
@@ -6966,13 +6968,14 @@ function acceptCustomQuest(){
     var title=inp?inp.value.trim():'';
     if(!title){toast('Enter a quest title.');return;}
     if(title.length>60){toast('Max 60 characters.');return;}
-    var p=findPin(_chatPinId);if(!p)return;
+    var p=findPin(_chatPinId);
+    if(!p){toast('Open a hook\'s chat first, then propose a quest.');return;}
     p.quest={title:title,setBy:hookNick(),setAt:Date.now(),completed:false};
     storePin(p);
     closeQuestDrawer();
     renderQuestBanner(p);
     pinQuestToChat(p);
-    toast('Custom quest set: '+title);
+    toast('Sidequest proposed: '+title);
   }catch(e){toast('Could not set quest.');}
 }
 function pinQuestToChat(p){

@@ -284,12 +284,8 @@ function showAlbany303(){
       // Show intro story modal
       var modal=document.getElementById('introStoryModal');
       if(modal)modal.classList.remove('hidden');
-      // Change CTA to "Close" for Albany 303 (don't trigger onboarding)
-      var cta=modal?modal.querySelector('.primary'):null;
-      if(cta){
-        cta.textContent='Close';
-        cta.onclick=function(){closeIntroStory();};
-      }
+      // Keep CTA as "Find your friction..." (triggers completeOnboarding)
+      // Only the X button uses closeIntroStory
     },300);
   }catch(e){console.error('showAlbany303 error:',e);}
 }
@@ -300,12 +296,7 @@ function closeIntroStory(){
     if(modal)modal.classList.add('hidden');
     var sp=document.getElementById('coventrySpotlight');
     if(sp)sp.classList.add('hidden');
-    // Restore CTA for onboarding
-    var cta=modal?modal.querySelector('.primary'):null;
-    if(cta){
-      cta.textContent='Find your friction... wherever you may be \u2192';
-      cta.onclick=function(){completeOnboarding();};
-    }
+    // CTA is already "Find your friction..." in HTML; nothing to restore
   }catch(e){}
 }
 
@@ -371,12 +362,8 @@ function renderAlbanyLorePin(mapInstance){
       if(sp)sp.classList.remove('hidden');
       var modal=document.getElementById('introStoryModal');
       if(modal)modal.classList.remove('hidden');
-      // Change CTA to Close (viewing only, not onboarding)
-      var cta=modal?modal.querySelector('.primary'):null;
-      if(cta){
-        cta.textContent='Close';
-        cta.onclick=function(){closeIntroStory();};
-      }
+      // Keep CTA as "Find your friction..." (triggers completeOnboarding)
+      // Only the X button uses closeIntroStory
     };
     new maplibregl.Marker({element:el,anchor:'center'}).setLngLat([ALBANY_LNG,ALBANY_LAT]).addTo(mapInstance);
   }catch(e){}

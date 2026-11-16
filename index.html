@@ -530,48 +530,28 @@
   <div class="chat-drawer-foot"><input id="chatMsgInput" placeholder="Message the group..." onkeydown="if(event.key==='Enter')sendHookMessage()"><button class="primary" onclick="sendHookMessage()">Send</button></div>
 </div>
 <!-- Intro Story Modal (Coventry onboarding) -->
-<div class="chat-overlay hidden" id="introStoryModal" style="align-items:center;justify-content:center;background:rgba(0,0,0,.85);">
-  <div class="glass-modal" role="dialog" aria-modal="true" aria-label="Intro Story" style="width:min(560px,calc(100vw - 24px));max-height:90vh;overflow-y:auto;padding:24px;">
-    <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
-      <button onclick="closeIntroStory()" style="padding:4px 8px;background:transparent;border:0;color:rgba(255,255,255,.5);cursor:pointer;font-size:18px;" aria-label="Close">✕</button>
+<div class="chat-overlay hidden" id="introStoryModal" style="align-items:center;justify-content:center;background:rgba(10,8,18,.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);">
+  <div class="glass-modal" role="dialog" aria-modal="true" aria-label="Intro Story" style="width:min(520px,calc(100vw - 32px));max-height:88vh;overflow-y:auto;padding:28px 24px;border-radius:24px;box-shadow:0 24px 80px rgba(0,0,0,.65),0 0 0 1px rgba(244,63,94,.12);position:relative;">
+    <button onclick="closeIntroStory()" style="position:absolute;top:12px;right:12px;padding:6px 10px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);border-radius:8px;color:rgba(255,255,255,.7);cursor:pointer;font-size:14px;line-height:1;" aria-label="Close">✕</button>
+    <div style="text-align:center;margin-bottom:18px;">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.18em;color:#fb7185;font-weight:800;margin-bottom:10px;">Albany 303</div>
+      <div style="font-size:16px;font-style:italic;color:rgba(255,255,255,.85);line-height:1.5;margin-bottom:4px;">"Friction is what gives life texture, flavour, meaning."</div>
     </div>
-    <div style="text-align:center;margin-bottom:16px;">
-      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.15em;color:rgba(255,255,255,.5);font-weight:800;margin-bottom:8px;">Albany 303</div>
-      <div style="font-size:15px;font-style:italic;color:rgba(255,255,255,.8);line-height:1.5;margin-bottom:16px;">"Friction is what gives life texture, flavour, meaning."</div>
+    <div style="font-size:13.5px;color:rgba(255,255,255,.75);line-height:1.65;margin-bottom:20px;">
+      <p style="margin:0 0 12px;">A wise woman said friction is what gives life texture, flavour, meaning. It made me think of my good friend Carla, the way we truly became good friends.</p>
+      <p style="margin:0 0 12px;">It was a spontaneous party I was doing and I just thought fuck it, let's ask Carla she'll love to see my friends. Long story short, my mate drank too much and she was there for her, all night caring for her. We still bond for that.</p>
+      <p style="margin:0;">Spontaneity pulled us closer, and I'm so grateful for that. In a way I always thought it was quite poetic as well, as it was my exchange mate Capucine who had too much to drink, and we were really really good mates. One of her final gifts to me at Warwick, was introducing Carla into my life on that silly silly night, and I've never been more grateful for a person like her. We all need friction. That unpredictability, that spontaneity. The kind of stuff you don't have to plan in advance.</p>
     </div>
-    <div style="font-size:13px;color:rgba(255,255,255,.7);line-height:1.6;margin-bottom:16px;">
-      <p>I want to make an introduction to my website, like the inspiration of why I wanted to start this project.</p>
-      <p>Its probably on my ig reposts or sth, but a wise woman said friction is what gives life texture, flavour, meaning. It made me think of my good friend Carla, the way we truly became good friends.</p>
-      <p>It was a spontaneous party I was doing and I just thought fuck it, let's ask Carla she'll love to see my friends. Long story short, my mate drank too much and she was there for her, all night caring for her. We still bond for that.</p>
-      <p>Spontaneity pulled us closer, and I'm so grateful for that. In a way I always thought it was quite poetic as well, as it was my exchange mate Capucine who had too much to drink, and we were really really good mates.</p>
-      <p>One of her final gifts to me at Warwick, was introducing Carla into my life on that silly silly night, and I've never been more grateful for a person like her.</p>
-      <p>We all need friction. That unpredictability, that spontaneity. The kind of stuff you don't have to plan in advance.</p>
+    <div style="display:flex;justify-content:center;align-items:center;gap:0;margin-bottom:8px;padding:8px 0 16px;position:relative;min-height:170px;">
+      <img src="photos/albany%20carla%20spontaneity/166bcae4-a6cd-475b-94a6-60a481e65f19.JPG" style="width:110px;height:140px;object-fit:cover;border-radius:8px;border:3px solid #fff;box-shadow:0 6px 20px rgba(0,0,0,.5);transform:rotate(-6deg);position:relative;z-index:1;" alt="Albany Student Village">
+      <img src="photos/albany%20carla%20spontaneity/A0F21595-C434-40A7-AA41-1BFCC60345A1.JPG" style="width:110px;height:140px;object-fit:cover;border-radius:8px;border:3px solid #fff;box-shadow:0 6px 20px rgba(0,0,0,.5);transform:rotate(3deg);position:relative;z-index:2;margin-left:-20px;" alt="Albany Student Village">
+      <img src="photos/albany%20carla%20spontaneity/IMG_5113.jpg" style="width:110px;height:140px;object-fit:cover;border-radius:8px;border:3px solid #fff;box-shadow:0 6px 20px rgba(0,0,0,.5);transform:rotate(-2deg);position:relative;z-index:3;margin-left:-20px;" alt="Albany Student Village">
+      <img src="photos/albany%20carla%20spontaneity/IMG_5114.jpg" style="width:110px;height:140px;object-fit:cover;border-radius:8px;border:3px solid #fff;box-shadow:0 6px 20px rgba(0,0,0,.5);transform:rotate(5deg);position:relative;z-index:4;margin-left:-20px;" alt="Albany Student Village">
+      <img src="photos/albany%20carla%20spontaneity/IMG_5121.jpg" style="width:110px;height:140px;object-fit:cover;border-radius:8px;border:3px solid #fff;box-shadow:0 6px 20px rgba(0,0,0,.5);transform:rotate(-4deg);position:relative;z-index:5;margin-left:-20px;" alt="Albany Student Village">
     </div>
-    <div style="display:flex;gap:8px;overflow-x:auto;margin-bottom:16px;padding-bottom:8px;">
-      <div style="flex:0 0 auto;text-align:center;">
-        <img src="photos/albany%20carla%20spontaneity/166bcae4-a6cd-475b-94a6-60a481e65f19.JPG" style="width:120px;height:150px;object-fit:cover;border-radius:4px;border:3px solid #fff;box-shadow:0 4px 12px rgba(0,0,0,.4);transform:rotate(-3deg);" alt="Albany Student Village">
-        <div style="font-size:10px;color:rgba(255,255,255,.5);margin-top:4px;">Albany Student Village \u00b7 Coventry</div>
-      </div>
-      <div style="flex:0 0 auto;text-align:center;">
-        <img src="photos/albany%20carla%20spontaneity/A0F21595-C434-40A7-AA41-1BFCC60345A1.JPG" style="width:120px;height:150px;object-fit:cover;border-radius:4px;border:3px solid #fff;box-shadow:0 4px 12px rgba(0,0,0,.4);transform:rotate(2deg);" alt="Albany Student Village">
-        <div style="font-size:10px;color:rgba(255,255,255,.5);margin-top:4px;">Albany Student Village \u00b7 Coventry</div>
-      </div>
-      <div style="flex:0 0 auto;text-align:center;">
-        <img src="photos/albany%20carla%20spontaneity/IMG_5113.jpg" style="width:120px;height:150px;object-fit:cover;border-radius:4px;border:3px solid #fff;box-shadow:0 4px 12px rgba(0,0,0,.4);transform:rotate(-1deg);" alt="Albany Student Village">
-        <div style="font-size:10px;color:rgba(255,255,255,.5);margin-top:4px;">Albany Student Village \u00b7 Coventry</div>
-      </div>
-      <div style="flex:0 0 auto;text-align:center;">
-        <img src="photos/albany%20carla%20spontaneity/IMG_5114.jpg" style="width:120px;height:150px;object-fit:cover;border-radius:4px;border:3px solid #fff;box-shadow:0 4px 12px rgba(0,0,0,.4);transform:rotate(3deg);" alt="Albany Student Village">
-        <div style="font-size:10px;color:rgba(255,255,255,.5);margin-top:4px;">Albany Student Village \u00b7 Coventry</div>
-      </div>
-      <div style="flex:0 0 auto;text-align:center;">
-        <img src="photos/albany%20carla%20spontaneity/IMG_5121.jpg" style="width:120px;height:150px;object-fit:cover;border-radius:4px;border:3px solid #fff;box-shadow:0 4px 12px rgba(0,0,0,.4);transform:rotate(-2deg);" alt="Albany Student Village">
-        <div style="font-size:10px;color:rgba(255,255,255,.5);margin-top:4px;">Albany Student Village \u00b7 Coventry</div>
-      </div>
-    </div>
-</div>
+    <div style="text-align:center;font-size:12px;color:rgba(255,255,255,.5);margin-bottom:20px;letter-spacing:.05em;">📍 Albany 303 · Coventry</div>
     <div style="text-align:center;">
-      <button class="primary" onclick="completeOnboarding()" style="padding:12px 24px;font-size:14px;font-weight:700;">Find your friction... wherever you may be \u2192</button>
+      <button class="primary" onclick="completeOnboarding()" style="padding:13px 28px;font-size:14px;font-weight:700;border-radius:12px;width:100%;max-width:360px;">Find your friction... wherever you may be →</button>
     </div>
   </div>
 </div>
@@ -591,7 +571,7 @@
   <script src="runtime-config.js"></script>
   <script src="runtime-config.example.js"></script>
   <script src="map-style.js"></script>
-  <script src="app.js?v=195"></script>
+  <script src="app.js?v=196"></script>
   <script src="supabase-sync.js?v=136"></script>
 </body>
 </html>

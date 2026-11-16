@@ -455,7 +455,7 @@ function debugGroupsEnabled(){try{return new URLSearchParams(window.location.sea
 function isEtieAdmin(){try{var s=window.EtieCloud&&window.EtieCloud.getSession&&window.EtieCloud.getSession();var em=s&&s.user&&s.user.email;if(em&&window.ETIE_ADMINS.indexOf(em.toLowerCase())!==-1)return true;}catch(e){} try{var q=new URLSearchParams(window.location.search).get('admin');if(q==='1'&&localStorage.getItem('etie-admin-unlock')==='1')return true;}catch(e){} return false;}
 function canManagePin(p){try{var myId=myUid();if(myId&&p&&p.authorId&&myId===p.authorId)return true;}catch(e){}return false;}
 function updateAdminVisibility(){try{var b=document.getElementById('adminBtn');if(b)b.style.display=isEtieAdmin()?'':'none';if(!isEtieAdmin())closeAdmin();}catch(e){}}
-function openAdmin(){if(!isEtieAdmin()){toast('Admin restricted.');return;}try{var o=document.getElementById('adminOverlay');if(o)o.classList.remove('hidden');}catch(e){} try{ refreshAdminLive(); }catch(e){}}
+function openAdmin(){if(!isEtieAdmin()){toast('Admin restricted.');return;}try{var o=document.getElementById('adminOverlay');if(o)o.classList.remove('hidden');}catch(e){} try{ refreshAdminLive(); }catch(e){} try{ renderSidequestHistory(); }catch(e){}}
 function closeAdmin(){try{var o=document.getElementById('adminOverlay');if(o)o.classList.add('hidden');}catch(e){}}
 function toggleAdmin(){if(!isEtieAdmin()){toast('Admin restricted.');return;}try{var o=document.getElementById('adminOverlay');if(!o)return;if(o.classList.contains('hidden'))openAdmin();else closeAdmin();}catch(e){}}
 
@@ -6752,7 +6752,7 @@ function refreshWeeklyBanner(){
         if(!b)return;
         var dismissed=null;try{dismissed=ETIE.dismissedWeeklyQuest;}catch(e){}
         if(q&&q.title&&q.id!==dismissed){
-          window._weeklyQuest={id:q.id,title:q.title,desc:q.descr||''};
+          window._weeklyQuest={id:q.id,title:q.title,desc:q.description||'',ends_at:q.ends_at||null};
           var t=document.getElementById('weeklyQuestBannerText');if(t)t.textContent=q.title;
           b.classList.remove('hidden');
           try{document.body.classList.add('has-weekly-quest');}catch(e){}
@@ -6778,10 +6778,17 @@ function openQuestDrawer(){  try{
     var p=null;try{p=findPin(_chatPinId);}catch(e){}
     var paint=function(q){
       try{
-        window._weeklyQuest=(q&&q.title)?{title:q.title,desc:q.descr||q.desc||''}:null;
+        window._weeklyQuest=(q&&q.title)?{title:q.title,desc:q.description||q.desc||'',ends_at:q.ends_at||null}:null;
         var has=!!window._weeklyQuest;
         var t=document.getElementById('questWeekTitle');if(t)t.textContent=has?window._weeklyQuest.title:'No sidequest this week yet.';
         var d=document.getElementById('questWeekDesc');if(d)d.textContent=has?window._weeklyQuest.desc:'Check back soon — new quests drop weekly.';
+        var cd=document.getElementById('questWeekCountdown');if(cd){
+          if(has&&window._weeklyQuest.ends_at){
+            var ms=new Date(window._weeklyQuest.ends_at).getTime()-Date.now();
+            if(ms>0){var days=Math.floor(ms/86400000);var hrs=Math.floor((ms%86400000)/3600000);cd.textContent='⏱ '+days+'d '+hrs+'h remaining';cd.style.display='block';}
+            else{cd.textContent='⏱ Expired';cd.style.display='block';}
+          }else{cd.style.display='none';}
+        }
         var c=document.getElementById('questWeekCard');if(c)c.style.display='block';
         var ab=document.querySelector('#questWeekCard .quest-accept');if(ab)ab.style.display=(has&&p)?'':'none';
       }catch(e){}
@@ -6827,18 +6834,54 @@ function saveSidequest(){
       try{
         var s=document.getElementById('sqStatus');
         if(ok){if(s)s.textContent='Live now: '+t;toast('Sidequest live.');
-          try{document.getElementById('sqTitle').value='';document.getElementById('sqDesc').value='';clearSqPhoto();}catch(e){}}
+          try{document.getElementById('sqTitle').value='';document.getElementById('sqDesc').value='';clearSqPhoto();}catch(e){}
+          try{renderSidequestHistory();}catch(e){}
+          try{refreshWeeklyBanner();}catch(e){}}
         else{if(s)s.textContent='Save failed. Check console (F12).';toast('Could not save sidequest. Check browser console (F12).');}
       }catch(e){}
     });
   }catch(e){toast('Could not save sidequest.');}
 }
+function renderSidequestHistory(){
+  try{
+    var box=document.getElementById('sqHistoryList');if(!box)return;
+    if(!window.EtieCloud||!window.EtieCloud.fetchAllSidequests){box.innerHTML='<div class="muted small">Cloud not ready.</div>';return;}
+    window.EtieCloud.fetchAllSidequests(function(rows){
+      try{
+        box.innerHTML='';
+        if(!rows||!rows.length){box.innerHTML='<div class="muted small">No sidequests yet.</div>';return;}
+        rows.forEach(function(q){
+          var item=document.createElement('div');item.className='list-item';
+          var active=q.is_active?'🟢 Live':'';
+          var date=q.created_at?new Date(q.created_at).toLocaleDateString():'';
+          var ends=q.ends_at?' · ends '+new Date(q.ends_at).toLocaleDateString():'';
+          item.innerHTML='<div style="flex:1;min-width:0;"><strong>'+ (q.title||'Untitled') +'</strong>'
+            +'<div class="muted small">'+date+ends+' '+(active?'· '+active:'')+'</div>'
+            +(q.description?'<div class="muted small" style="margin-top:2px;">'+q.description.slice(0,80)+'</div>':'')+'</div>'
+            +'<button class="secondary" style="padding:4px 8px;font-size:11px;" onclick="deleteSidequestAdmin(\''+q.id+'\')">Delete</button>';
+          box.appendChild(item);
+        });
+      }catch(e){box.innerHTML='<div class="muted small">Error loading history.</div>';}
+    });
+  }catch(e){}
+}
+function deleteSidequestAdmin(id){
+  try{
+    if(!confirm('Delete this sidequest?'))return;
+    if(!window.EtieCloud||!window.EtieCloud.deleteSidequest){toast('Cloud not ready.');return;}
+    window.EtieCloud.deleteSidequest(id).then(function(ok){
+      if(ok){toast('Sidequest deleted.');renderSidequestHistory();refreshWeeklyBanner();}
+      else toast('Delete failed.');
+    });
+  }catch(e){toast('Delete failed.');}
+}
+
 function clearSidequestLive(){
   try{
     if(!(window.EtieCloud&&window.EtieCloud.clearSidequest)){toast('Cloud not ready — sign in first.');return;}
     window.EtieCloud.clearSidequest().then(function(ok){
       try{var s=document.getElementById('sqStatus');if(s)s.textContent=ok?'No live sidequest.':'Clear failed.';}catch(e){}
-      if(ok){toast('Sidequest cleared.');clearSqPhoto();}
+      if(ok){toast('Sidequest cleared.');clearSqPhoto();try{renderSidequestHistory();}catch(e){}try{refreshWeeklyBanner();}catch(e){}}
     });
   }catch(e){}
 }

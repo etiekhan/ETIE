@@ -983,7 +983,9 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
         if(!client||!session){console.warn('pushSidequest: no client/session');resolve(null);return;}
         client.from(sidequestTable()).update({is_active:false}).eq('is_active',true).then(function(upRes){
           if(upRes&&upRes.error){console.warn('pushSidequest deactivate error:',upRes.error.message);}
-          client.from(sidequestTable()).insert({title:String(title||'').slice(0,80),description:String(desc||'').slice(0,280),image_url:imageUrl||null,is_active:true}).then(function(r){
+          var now=new Date();
+          var ends=new Date(now.getTime()+7*24*60*60*1000);
+          client.from(sidequestTable()).insert({title:String(title||'').slice(0,80),description:String(desc||'').slice(0,280),image_url:imageUrl||null,is_active:true,starts_at:now.toISOString(),ends_at:ends.toISOString()}).then(function(r){
             if(r&&r.error){console.warn('pushSidequest insert error:',r.error.message);console.warn('pushSidequest insert details:',JSON.stringify(r.error));}
             resolve(r&&!r.error);
           }).catch(function(e){console.warn('pushSidequest insert catch:',e&&e.message);resolve(null);});
@@ -1004,6 +1006,22 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
       try{
         if(!client||!session){resolve(null);return;}
         client.from(sidequestTable()).update({is_active:false}).eq('is_active',true).then(function(r){resolve(r&&!r.error);}).catch(function(){resolve(null);});
+      }catch(e){resolve(null);}
+    });
+  }
+  function fetchAllSidequests(cb){
+    try{
+      if(!client||typeof cb!=='function'){cb([]);return;}
+      client.from(sidequestTable()).select('*').order('created_at',{ascending:false}).limit(50).then(function(r){
+        try{cb(r&&!r.error?(r.data||[]):[]);}catch(e){cb([]);}
+      }).catch(function(){cb([]);});
+    }catch(e){try{cb([]);}catch(_){}}
+  }
+  function deleteSidequest(id){
+    return new Promise(function(resolve){
+      try{
+        if(!client||!session||!id){resolve(null);return;}
+        client.from(sidequestTable()).delete().eq('id',id).then(function(r){resolve(r&&!r.error);}).catch(function(){resolve(null);});
       }catch(e){resolve(null);}
     });
   }
@@ -2013,7 +2031,7 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
     fetchReportedQuestions:fetchReportedQuestions, fetchAnswerMetrics:fetchAnswerMetrics,
     confirmHangout:confirmHangout, markPopupSeen:markPopupSeen, checkHangoutConfirmation:checkHangoutConfirmation,
     fetchMyConfirmations:fetchMyConfirmations,
-    pushSidequest:pushSidequest, fetchSidequest:fetchSidequest, clearSidequest:clearSidequest,
+    pushSidequest:pushSidequest, fetchSidequest:fetchSidequest, clearSidequest:clearSidequest, fetchAllSidequests:fetchAllSidequests, deleteSidequest:deleteSidequest,
     syncProfile:syncProfile, pushSharedRequest:pushSharedRequest, pushSharedMessage:pushSharedMessage, pushSharedMeetup:pushSharedMeetup,
     pushSharedReview:pushSharedReview, pushSharedReport:pushSharedReport,
     uploadPhoto:uploadPhoto,

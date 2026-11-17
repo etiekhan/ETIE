@@ -290,6 +290,14 @@ function showAlbany303(){
       console.log('modal in DOM:', document.body.contains(modal));
       console.log('modal parent:', modal.parentElement ? modal.parentElement.tagName : 'none');
       console.log('modal offsetWidth:', modal.offsetWidth, 'offsetHeight:', modal.offsetHeight);
+      var el = modal;
+      while(el && el !== document.body){
+        var cs = getComputedStyle(el);
+        if(cs.display === 'none' || cs.visibility === 'hidden' || parseFloat(cs.opacity) === 0){
+          console.log('HIDDEN ANCESTOR:', el.id || el.tagName, 'display:', cs.display, 'visibility:', cs.visibility, 'opacity:', cs.opacity);
+        }
+        el = el.parentElement;
+      }
       // Force a bright background to make it obvious
       modal.style.background='rgba(255,0,0,0.9)';
     }
@@ -376,9 +384,14 @@ function renderAlbanyLorePin(mapInstance){
       var sp=document.getElementById('coventrySpotlight');
       if(sp)sp.classList.remove('hidden');
       var modal=document.getElementById('introStoryModal');
-      if(modal)modal.classList.remove('hidden');
-      // Keep CTA as "Find your friction..." (triggers completeOnboarding)
-      // Only the X button uses closeIntroStory
+      if(modal){
+        modal.classList.remove('hidden');
+        modal.style.display='flex';
+        modal.style.zIndex='99999';
+        modal.style.position='fixed';
+        modal.style.inset='0';
+        modal.style.background='rgba(10,8,18,.72)';
+      }
     };
     new maplibregl.Marker({element:el,anchor:'center'}).setLngLat([ALBANY_LNG,ALBANY_LAT]).addTo(mapInstance);
   }catch(e){}

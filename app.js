@@ -266,6 +266,25 @@ function refreshGate(){
     return st;
   }catch(e){return 'signin';}
 }
+function startOnboarding(){
+  try{
+    if(_map){
+      try{_map.setCenter([ALBANY_LNG,ALBANY_LAT]);}catch(e){}
+      try{_map.setZoom(14);}catch(e){}
+      try{_map.dragPan.disable();}catch(e){}
+      try{_map.scrollZoom.disable();}catch(e){}
+      try{_map.boxZoom.disable();}catch(e){}
+      try{_map.dragRotate.disable();}catch(e){}
+      try{_map.keyboard.disable();}catch(e){}
+      try{_map.doubleClickZoom.disable();}catch(e){}
+      try{_map.touchZoomRotate.disable();}catch(e){}
+    }
+    var sp=document.getElementById('coventrySpotlight');
+    if(sp)sp.classList.remove('hidden');
+    showAlbany303();
+  }catch(e){console.error('startOnboarding error:',e);}
+}
+
 // ===== Coventry Onboarding =====
 var ALBANY_LAT=52.402786, ALBANY_LNG=-1.526290;
 
@@ -611,7 +630,7 @@ function closeAllModals(){
   try{closeQuestCamera();}catch(_){}
   try{closeSetQuestModal();}catch(_){}
   try{closeCustomQuestInput();}catch(_){}
-  try{closeProfileDrawer();}catch(_){}
+
   try{closeHandshakeModal();}catch(_){}
   try{closeAdmin();}catch(_){}
 }
@@ -647,7 +666,7 @@ function addQuestionArchiveLink(){
   }catch(e){}
 }
 function openQuestionArchiveFromProfile(){
-  try{closeProfileDrawer();openQuestionArchive();}catch(e){}
+  try{openQuestionArchive();}catch(e){}
 }
 
 function renderLiteProfile(){

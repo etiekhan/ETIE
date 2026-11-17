@@ -271,104 +271,26 @@ var ALBANY_LAT=52.402786, ALBANY_LNG=-1.526290;
 
 function showAlbany303(){
   try{
-    console.log('showAlbany303 called');
+    alert('Albany 303 clicked!');
     showScreen('map');
-    // Show spotlight
-    var sp=document.getElementById('coventrySpotlight');
-    if(sp)sp.classList.remove('hidden');
-    // Show intro story modal immediately
     var modal=document.getElementById('introStoryModal');
-    if(modal){
-      modal.classList.remove('hidden');
-      modal.style.display='flex';
-      modal.style.zIndex='99999';
-      modal.style.position='fixed';
-      modal.style.inset='0';
-      console.log('MODAL SHOULD BE VISIBLE NOW');
-      console.log('modal className:', modal.className);
-      console.log('modal display:', modal.style.display);
-      console.log('modal in DOM:', document.body.contains(modal));
-      console.log('modal parent:', modal.parentElement ? modal.parentElement.tagName : 'none');
-      console.log('modal offsetWidth:', modal.offsetWidth, 'offsetHeight:', modal.offsetHeight);
-      var el = modal;
-      while(el && el !== document.body){
-        var cs = getComputedStyle(el);
-        if(cs.display === 'none' || cs.visibility === 'hidden' || parseFloat(cs.opacity) === 0){
-          console.log('HIDDEN ANCESTOR:', el.id || el.tagName, 'display:', cs.display, 'visibility:', cs.visibility, 'opacity:', cs.opacity);
-        }
-        el = el.parentElement;
-      }
-      // Force a bright background to make it obvious
-      modal.style.background='rgba(255,0,0,0.9)';
-    }
-    else{console.error('introStoryModal not found!');}
-    // Fly to Albany
-    setTimeout(function(){
-      try{
-        if(_map){
-          _map.flyTo({center:[ALBANY_LNG,ALBANY_LAT],zoom:14,duration:2000});
-        }
-      }catch(e){console.error('flyTo error:',e);}
-    },100);
-  }catch(e){console.error('showAlbany303 error:',e);}
-}
-
-function closeIntroStory(){
-  try{
-    var modal=document.getElementById('introStoryModal');
-    if(modal)modal.classList.add('hidden');
-    var sp=document.getElementById('coventrySpotlight');
-    if(sp)sp.classList.add('hidden');
-    // CTA is already "Find your friction..." in HTML; nothing to restore
-  }catch(e){}
-}
-
-function startOnboarding(){
-  try{
-    if(_map){
-      try{_map.setCenter([ALBANY_LNG,ALBANY_LAT]);}catch(e){}
-      try{_map.setZoom(14);}catch(e){}
-      try{_map.dragPan.disable();}catch(e){}
-      try{_map.scrollZoom.disable();}catch(e){}
-      try{_map.boxZoom.disable();}catch(e){}
-      try{_map.dragRotate.disable();}catch(e){}
-      try{_map.keyboard.disable();}catch(e){}
-      try{_map.doubleClickZoom.disable();}catch(e){}
-      try{_map.touchZoomRotate.disable();}catch(e){}
-    }
-    var sp=document.getElementById('coventrySpotlight');
-    if(sp)sp.classList.remove('hidden');
-    var modal=document.getElementById('introStoryModal');
-    if(modal)modal.classList.remove('hidden');
-  }catch(e){console.error('startOnboarding error:',e);}
-}
-
-function completeOnboarding(){
-  try{
-    ETIE.onboardingCompleted=true;
-    ETIE.cloudOnboarded=true;
-    saveState();
-    try{if(window.EtieCloud&&window.EtieCloud.syncProfile)window.EtieCloud.syncProfile();}catch(e){}
-    var sp=document.getElementById('coventrySpotlight');
-    if(sp)sp.classList.add('hidden');
-    var modal=document.getElementById('introStoryModal');
-    if(modal)modal.classList.add('hidden');
-    if(_map){
-      try{_map.dragPan.enable();}catch(e){}
-      try{_map.scrollZoom.enable();}catch(e){}
-      try{_map.boxZoom.enable();}catch(e){}
-      try{_map.dragRotate.enable();}catch(e){}
-      try{_map.keyboard.enable();}catch(e){}
-      try{_map.doubleClickZoom.enable();}catch(e){}
-      try{_map.touchZoomRotate.enable();}catch(e){}
-    }
-    var anchor=getAnchor();
-    if(_map){
-      try{_map.flyTo({center:[anchor.lng,anchor.lat],zoom:13,duration:3000});}catch(e){}
-    }
-    try{refreshGate();}catch(e){}
-    toast('Welcome to ETIE!');
-  }catch(e){console.error('completeOnboarding error:',e);}
+    if(!modal){alert('Modal not found!');return;}
+    modal.classList.remove('hidden');
+    modal.style.display='flex';
+    modal.style.zIndex='2147483647';
+    modal.style.position='fixed';
+    modal.style.top='0';
+    modal.style.left='0';
+    modal.style.right='0';
+    modal.style.bottom='0';
+    modal.style.background='rgba(255,0,0,0.95)';
+    modal.style.alignItems='center';
+    modal.style.justifyContent='center';
+    // Force inner content visible
+    var inner=modal.querySelector('.glass-modal');
+    if(inner){inner.style.background='#fff';inner.style.color='#000';inner.style.padding='40px';inner.style.borderRadius='20px';}
+    alert('Modal should be visible now. className: '+modal.className);
+  }catch(e){alert('Error: '+e.message);}
 }
 
 function renderAlbanyLorePin(mapInstance){

@@ -287,6 +287,11 @@ function showAlbany303(){
       console.log('MODAL SHOULD BE VISIBLE NOW');
       console.log('modal className:', modal.className);
       console.log('modal display:', modal.style.display);
+      console.log('modal in DOM:', document.body.contains(modal));
+      console.log('modal parent:', modal.parentElement ? modal.parentElement.tagName : 'none');
+      console.log('modal offsetWidth:', modal.offsetWidth, 'offsetHeight:', modal.offsetHeight);
+      // Force a bright background to make it obvious
+      modal.style.background='rgba(255,0,0,0.9)';
     }
     else{console.error('introStoryModal not found!');}
     // Fly to Albany

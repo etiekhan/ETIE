@@ -700,7 +700,7 @@ function renderLiteProfile(){
     var nx=document.getElementById('liteNext');
     if(nx)nx.textContent=(step>=3)?(done?'Done — back to Map':'Complete Profile & Unlock Map'):'Continue';
     var dv=document.getElementById('liteDoneView'); if(dv)dv.style.display=showDone?'':'none';
-    if(showDone){try{renderDoneView();console.log('renderDoneView called, showDone=true');}catch(e){console.error('renderDoneView error:',e);}}else{console.log('renderDoneView NOT called, showDone=false, done='+done+', editing='+editing);}
+    if(showDone){try{renderDoneView();}catch(e){}}
     var rep=document.getElementById('liteRepBlock'); if(rep)rep.style.display=done?'':'none';
     try{renderHeaderProfile();}catch(e){}
   }catch(e){}
@@ -789,7 +789,7 @@ function renderDoneView(){
     var vs=document.getElementById('doneVibes');
     if(vs){var _vp=vs.closest('.field');if(_vp)_vp.style.display='none';}
     var hk=document.getElementById('doneHook'); if(hk)hk.textContent='“'+(tr.bio||'No personal hook yet.')+'”';
-    try{renderPinnedMemories();console.log('renderPinnedMemories called');}catch(e){console.error('renderPinnedMemories error:',e);}
+    try{renderPinnedMemories();}catch(e){}
     try{renderFootprint();}catch(e){}
     try{renderLocalSpotsReadOnly();}catch(e){}
   }catch(e){}

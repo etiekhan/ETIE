@@ -271,21 +271,53 @@ var ALBANY_LAT=52.402786, ALBANY_LNG=-1.526290;
 
 function showAlbany303(){
   try{
-    alert('Step 1: function called');
     showScreen('map');
-    alert('Step 2: showScreen done');
-    // Create a brand new modal from scratch
+    // Remove any existing dynamic modal
     var old=document.getElementById('albanyTestModal');if(old)old.remove();
+    // Create modal dynamically
     var m=document.createElement('div');
     m.id='albanyTestModal';
-    m.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;z-index:2147483647;background:rgba(255,0,0,0.9);display:flex;align-items:center;justify-content:center;';
+    m.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;z-index:2147483647;background:rgba(10,8,18,.85);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px);';
+    m.onclick=function(e){if(e.target===m)m.remove();};
     var inner=document.createElement('div');
-    inner.style.cssText='background:#fff;color:#000;padding:40px;border-radius:20px;max-width:500px;text-align:center;';
-    inner.innerHTML='<h2 style="margin:0 0 16px;">Albany 303</h2><p style="margin:0 0 16px;">Friction is what gives life texture, flavour, meaning.</p><p style="margin:0 0 16px;">A wise woman said friction is what gives life texture, flavour, meaning. It made me think of my good friend Carla...</p><button onclick="this.parentElement.parentElement.remove()" style="padding:12px 24px;background:#f43f5e;color:#fff;border:0;border-radius:12px;font-weight:700;cursor:pointer;">Close</button>';
+    inner.style.cssText='width:min(520px,calc(100vw - 32px));max-height:88vh;overflow-y:auto;padding:28px 24px;border-radius:24px;background:rgba(20,16,28,.95);border:1px solid rgba(255,255,255,.14);box-shadow:0 24px 80px rgba(0,0,0,.65);position:relative;color:#f5f3ef;';
+    inner.innerHTML=''
+      +'<button onclick="document.getElementById(\'albanyTestModal\').remove()" style="position:absolute;top:12px;right:12px;padding:6px 10px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);border-radius:8px;color:rgba(255,255,255,.7);cursor:pointer;font-size:14px;line-height:1;" aria-label="Close">✕</button>'
+      +'<div style="text-align:center;margin-bottom:18px;">'
+      +'<div style="font-size:11px;text-transform:uppercase;letter-spacing:.18em;color:#fb7185;font-weight:800;margin-bottom:10px;">Albany 303</div>'
+      +'<div style="font-size:16px;font-style:italic;color:rgba(255,255,255,.85);line-height:1.5;margin-bottom:4px;">"Friction is what gives life texture, flavour, meaning."</div>'
+      +'</div>'
+      +'<div style="font-size:13.5px;color:rgba(255,255,255,.75);line-height:1.65;margin-bottom:20px;">'
+      +'<p style="margin:0 0 12px;">A wise woman said friction is what gives life texture, flavour, meaning. It made me think of my good friend Carla, the way we truly became good friends.</p>'
+      +'<p style="margin:0 0 12px;">It was a spontaneous party I was doing and I just thought fuck it, let\'s ask Carla she\'ll love to see my friends. Long story short, my mate drank too much and she was there for her, all night caring for her. We still bond for that.</p>'
+      +'<p style="margin:0;">Spontaneity pulled us closer, and I\'m so grateful for that. In a way I always thought it was quite poetic as well, as it was my exchange mate Capucine who had too much to drink, and we were really really good mates. One of her final gifts to me at Warwick, was introducing Carla into my life on that silly silly night, and I\'ve never been more grateful for a person like her. We all need friction. That unpredictability, that spontaneity. The kind of stuff you don\'t have to plan in advance.</p>'
+      +'</div>'
+      +'<div style="display:flex;justify-content:center;align-items:center;gap:0;margin-bottom:8px;padding:8px 0 16px;position:relative;min-height:170px;">'
+      +'<img src="photos/albany%20carla%20spontaneity/166bcae4-a6cd-475b-94a6-60a481e65f19.JPG" style="width:110px;height:140px;object-fit:cover;border-radius:8px;border:3px solid #fff;box-shadow:0 6px 20px rgba(0,0,0,.5);transform:rotate(-6deg);position:relative;z-index:1;" alt="Albany Student Village">'
+      +'<img src="photos/albany%20carla%20spontaneity/A0F21595-C434-40A7-AA41-1BFCC60345A1.JPG" style="width:110px;height:140px;object-fit:cover;border-radius:8px;border:3px solid #fff;box-shadow:0 6px 20px rgba(0,0,0,.5);transform:rotate(3deg);position:relative;z-index:2;margin-left:-20px;" alt="Albany Student Village">'
+      +'<img src="photos/albany%20carla%20spontaneity/IMG_5113.jpg" style="width:110px;height:140px;object-fit:cover;border-radius:8px;border:3px solid #fff;box-shadow:0 6px 20px rgba(0,0,0,.5);transform:rotate(-2deg);position:relative;z-index:3;margin-left:-20px;" alt="Albany Student Village">'
+      +'<img src="photos/albany%20carla%20spontaneity/IMG_5114.jpg" style="width:110px;height:140px;object-fit:cover;border-radius:8px;border:3px solid #fff;box-shadow:0 6px 20px rgba(0,0,0,.5);transform:rotate(5deg);position:relative;z-index:4;margin-left:-20px;" alt="Albany Student Village">'
+      +'<img src="photos/albany%20carla%20spontaneity/IMG_5121.jpg" style="width:110px;height:140px;object-fit:cover;border-radius:8px;border:3px solid #fff;box-shadow:0 6px 20px rgba(0,0,0,.5);transform:rotate(-4deg);position:relative;z-index:5;margin-left:-20px;" alt="Albany Student Village">'
+      +'</div>'
+      +'<div style="text-align:center;font-size:12px;color:rgba(255,255,255,.5);margin-bottom:20px;letter-spacing:.05em;">📍 Albany 303 · Coventry</div>'
+      +'<div style="text-align:center;">'
+      +'<button class="primary" onclick="completeOnboarding();document.getElementById(\'albanyTestModal\').remove();" style="padding:13px 28px;font-size:14px;font-weight:700;border-radius:12px;width:100%;max-width:360px;">Find your friction... wherever you may be →</button>'
+      +'</div>';
     m.appendChild(inner);
     document.body.appendChild(m);
-    alert('Step 3: modal appended to body');
-  }catch(e){alert('Error: '+e.message);}
+    // Also fly to Albany
+    setTimeout(function(){
+      try{if(_map)_map.flyTo({center:[ALBANY_LNG,ALBANY_LAT],zoom:14,duration:2000});}catch(e){}
+    },100);
+  }catch(e){console.error('showAlbany303 error:',e);}
+}
+
+function closeIntroStory(){
+  try{
+    var m=document.getElementById('albanyTestModal');if(m)m.remove();
+    var sp=document.getElementById('coventrySpotlight');
+    if(sp)sp.classList.add('hidden');
+  }catch(e){}
 }
 
 function renderAlbanyLorePin(mapInstance){
@@ -297,18 +329,7 @@ function renderAlbanyLorePin(mapInstance){
     el.setAttribute('aria-label','Albany Student Village - Where it all started');
     el.onclick=function(e){
       try{e.stopPropagation();e.preventDefault();}catch(_){}
-      // Show the intro story modal
-      var sp=document.getElementById('coventrySpotlight');
-      if(sp)sp.classList.remove('hidden');
-      var modal=document.getElementById('introStoryModal');
-      if(modal){
-        modal.classList.remove('hidden');
-        modal.style.display='flex';
-        modal.style.zIndex='99999';
-        modal.style.position='fixed';
-        modal.style.inset='0';
-        modal.style.background='rgba(10,8,18,.72)';
-      }
+      showAlbany303();
     };
     new maplibregl.Marker({element:el,anchor:'center'}).setLngLat([ALBANY_LNG,ALBANY_LAT]).addTo(mapInstance);
   }catch(e){}

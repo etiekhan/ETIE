@@ -271,22 +271,23 @@ var ALBANY_LAT=52.402786, ALBANY_LNG=-1.526290;
 
 function showAlbany303(){
   try{
+    console.log('showAlbany303 called');
     showScreen('map');
+    // Show spotlight
+    var sp=document.getElementById('coventrySpotlight');
+    if(sp)sp.classList.remove('hidden');
+    // Show intro story modal immediately
+    var modal=document.getElementById('introStoryModal');
+    if(modal){modal.classList.remove('hidden');console.log('modal shown, hidden class removed');}
+    else{console.error('introStoryModal not found!');}
+    // Fly to Albany
     setTimeout(function(){
       try{
         if(_map){
           _map.flyTo({center:[ALBANY_LNG,ALBANY_LAT],zoom:14,duration:2000});
         }
-      }catch(e){}
-      // Show spotlight
-      var sp=document.getElementById('coventrySpotlight');
-      if(sp)sp.classList.remove('hidden');
-      // Show intro story modal
-      var modal=document.getElementById('introStoryModal');
-      if(modal)modal.classList.remove('hidden');
-      // Keep CTA as "Find your friction..." (triggers completeOnboarding)
-      // Only the X button uses closeIntroStory
-    },300);
+      }catch(e){console.error('flyTo error:',e);}
+    },100);
   }catch(e){console.error('showAlbany303 error:',e);}
 }
 

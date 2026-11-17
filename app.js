@@ -3428,7 +3428,6 @@ function initHKMap(){
           renderMapFilter();
           try{renderMapPins();}catch(e){}
           try{renderAlbanyLorePin(_map);}catch(e){}
-          try{startGlobeSpin();}catch(e){}
         });
       });
     } else {
@@ -3442,7 +3441,6 @@ function initHKMap(){
         renderMapFilter();
         try{renderMapPins();}catch(e){}
         try{renderAlbanyLorePin(_map);}catch(e){}
-        try{startGlobeSpin();}catch(e){}
       });
     }
   }catch(e){}

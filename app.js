@@ -789,11 +789,255 @@ function renderDoneView(){
     var vs=document.getElementById('doneVibes');
     if(vs){var _vp=vs.closest('.field');if(_vp)_vp.style.display='none';}
     var hk=document.getElementById('doneHook'); if(hk)hk.textContent='“'+(tr.bio||'No personal hook yet.')+'”';
-    renderMemories();renderSpots();renderPassions();
-    renderFeaturedMemories();
-    renderPassport();
+    try{renderPinnedMemories();}catch(e){}
+    try{renderFootprint();}catch(e){}
+    try{renderLocalSpotsReadOnly();}catch(e){}
   }catch(e){}
 }
+function renderPinnedMemories(){
+  try{
+    var box=document.getElementById('pinnedMemories');if(!box)return;
+    box.innerHTML='';
+    var pinned=getFeaturedMemories();
+    for(var i=0;i<3;i++){
+      (function(idx){
+        var f=pinned[idx];
+        var card=document.createElement('div');
+        if(f){
+          card.className='polaroid-card';
+          if(f.photoUrl){
+            var im=document.createElement('img');im.src=f.photoUrl;im.alt='Pinned Memory';card.appendChild(im);
+          }
+          var cap=document.createElement('div');cap.className='polaroid-caption';cap.textContent='“'+(f.handshakeNote||f.title||'Memory')+'”';card.appendChild(cap);
+          var meta=document.createElement('div');meta.className='polaroid-meta';meta.textContent=(f.location||'')+(f.timestamp?' · '+fmtWhen(f.timestamp):'');card.appendChild(meta);
+          var unpin=document.createElement('button');unpin.className='polaroid-unpin';unpin.textContent='✕';unpin.title='Unpin';
+          unpin.onclick=function(){unpinMemory(idx);};
+          card.appendChild(unpin);
+          card.onclick=function(e){if(e.target===unpin)return;try{openMemoryCard(f);}catch(e){}};
+        }else{
+          card.className='polaroid-card polaroid-empty';
+          var plus=document.createElement('button');plus.className='polaroid-plus';plus.textContent='+';plus.title='Pin a memory';
+          plus.onclick=function(){openPinMemoryPicker(idx);};
+          card.appendChild(plus);
+          var lab=document.createElement('span');lab.className='muted small';lab.textContent='Pin a memory';card.appendChild(lab);
+        }
+        box.appendChild(card);
+      })(i);
+    }
+  }catch(e){}
+}
+
+function renderFootprint(){
+  try{
+    var box=document.getElementById('footprintStrip');if(!box)return;
+    box.innerHTML='';
+    // Cities logged: distinct locations from memories
+    var cities=new Set();
+    var totalMemories=0;
+    if(window.EtieCloud&&window.EtieCloud.fetchMyMemories){
+      window.EtieCloud.fetchMyMemories(function(rows){
+        try{
+          (rows||[]).forEach(function(r){
+            totalMemories++;
+            if(r.location)cities.add(r.location);
+            else if(r.lat!=null&&r.lng!=null)cities.add(r.lat.toFixed(2)+','+r.lng.toFixed(2));
+          });
+          // Sidequests joined/won from activityDiary
+          var diary=(ETIE.traveller&&ETIE.traveller.activityDiary)||[];
+          var sidequestsJoined=0;var sidequestsWon=0;
+          diary.forEach(function(e){
+            if(e.sidequestJoined)sidequestsJoined++;
+            if(e.sidequestWon)sidequestsWon++;
+          });
+          // Render footprint
+          var items=[
+            {icon:'🏙️',label:'Cities logged',value:cities.size||0},
+            {icon:'⚡',label:'Sidequests joined',value:sidequestsJoined+' joined · '+sidequestsWon+' won'},
+            {icon:'📸',label:'Memories logged',value:totalMemories}
+          ];
+          items.forEach(function(it){
+            var cell=document.createElement('div');cell.className='footprint-cell';
+            var ic=document.createElement('div');ic.className='footprint-icon';ic.textContent=it.icon;cell.appendChild(ic);
+            var vl=document.createElement('div');vl.className='footprint-value';vl.textContent=it.value;cell.appendChild(vl);
+            var lb=document.createElement('div');lb.className='footprint-label';lb.textContent=it.label;cell.appendChild(lb);
+            box.appendChild(cell);
+          });
+        }catch(e){}
+      });
+    }else{
+      // Fallback: show zeros
+      var items=[
+        {icon:'🏙️',label:'Cities logged',value:0},
+        {icon:'⚡',label:'Sidequests joined',value:'0 joined · 0 won'},
+        {icon:'📸',label:'Memories logged',value:0}
+      ];
+      items.forEach(function(it){
+        var cell=document.createElement('div');cell.className='footprint-cell';
+        var ic=document.createElement('div');ic.className='footprint-icon';ic.textContent=it.icon;cell.appendChild(ic);
+        var vl=document.createElement('div');vl.className='footprint-value';vl.textContent=it.value;cell.appendChild(vl);
+        var lb=document.createElement('div');lb.className='footprint-label';lb.textContent=it.label;cell.appendChild(lb);
+        box.appendChild(cell);
+      });
+    }
+  }catch(e){}
+}
+
+function renderLocalSpotsReadOnly(){
+  try{
+    var box=document.getElementById('doneSpots');if(!box)return;
+    var title=document.getElementById('doneSpotsTitle');
+    var tr=ETIE.traveller||{};var spots=tr.spots||[];
+    var editing=!!ETIE._editingProfile;
+    if(title)title.textContent=spots.length?'Local Spots':'Local Spots (add up to 3)';
+    box.innerHTML='';
+    if(editing){
+      // Edit mode: show inputs
+      box.classList.remove('spot-readonly');
+      for(var i=0;i<3;i++){
+        (function(idx){
+          var s=spots[idx];
+          var card=document.createElement('div');card.className='spot-card';
+          if(s&&s.name){
+            var em=document.createElement('div');em.className='spot-emoji';em.textContent=s.emoji||'📍';card.appendChild(em);
+            var nm=document.createElement('div');nm.className='spot-name';nm.textContent=s.name;card.appendChild(nm);
+            var hd=document.createElement('div');hd.className='muted small';hd.textContent=s.hood||s.neighborhood||'';card.appendChild(hd);
+            var del=document.createElement('button');del.className='mem-del';del.textContent='✕ Remove';
+            del.onclick=function(){var a=getSpots();a.splice(idx,1);saveSpots(a);toast('Spot removed.');};
+            card.appendChild(del);
+          }else{
+            card.classList.add('spot-empty');
+            var nI=document.createElement('input');nI.placeholder='Venue name';nI.maxLength=40;
+            var hI=document.createElement('input');hI.placeholder='Neighborhood';hI.maxLength=40;
+            var eS=document.createElement('select');
+            SPOT_EMOJIS.forEach(function(e){var o=document.createElement('option');o.value=e;o.textContent=e;eS.appendChild(o);});
+            var add=document.createElement('button');add.className='secondary';add.textContent='Save spot';
+            add.onclick=function(){
+              var nm=(nI.value||'').trim();if(!nm){toast('Name the venue first.');return;}
+              var a=getSpots();a[idx]={name:nm.slice(0,40),hood:(hI.value||'').trim().slice(0,40),emoji:eS.value};
+              saveSpots(a);toast('Spot saved.');
+            };
+            card.appendChild(nI);card.appendChild(hI);card.appendChild(eS);card.appendChild(add);
+          }
+          box.appendChild(card);
+        })(i);
+      }
+    }else{
+      // Read-only mode
+      box.classList.add('spot-readonly');
+      if(!spots.length){
+        var empty=document.createElement('div');empty.className='muted small';empty.style.padding='12px';empty.textContent='No local spots yet. Click Edit Profile to add.';box.appendChild(empty);
+        return;
+      }
+      spots.forEach(function(s){
+        if(!s||!s.name)return;
+        var card=document.createElement('div');card.className='spot-card spot-readonly-card';
+        var em=document.createElement('div');em.className='spot-emoji';em.textContent=s.emoji||'📍';card.appendChild(em);
+        var info=document.createElement('div');info.style.flex='1';
+        var nm=document.createElement('div');nm.className='spot-name';nm.textContent=s.name;info.appendChild(nm);
+        var nb=document.createElement('div');nb.className='spot-nbhd';nb.textContent=s.hood||s.neighborhood||'';info.appendChild(nb);
+        card.appendChild(info);
+        box.appendChild(card);
+      });
+    }
+  }catch(e){}
+}
+
+function openSettingsModal(){
+  try{var o=document.getElementById('settingsModal');if(o)o.classList.remove('hidden');}catch(e){}
+}
+function closeSettingsModal(){
+  try{var o=document.getElementById('settingsModal');if(o)o.classList.add('hidden');}catch(e){}
+}
+
+function toggleEditMode(){
+  try{
+    var editing=!!ETIE._editingProfile;
+    ETIE._editingProfile=!editing;
+    saveState();renderLiteProfile();
+  }catch(e){}
+}
+
+function openPinMemoryPicker(slot){
+  try{
+    window._pinSlot=slot;
+    var o=document.getElementById('pinMemoryPickerModal');if(o)o.classList.remove('hidden');
+    renderPinMemoryGrid();
+  }catch(e){}
+}
+function closePinMemoryPicker(){
+  try{
+    var o=document.getElementById('pinMemoryPickerModal');if(o)o.classList.add('hidden');
+    window._pinSlot=null;
+  }catch(e){}
+}
+function renderPinMemoryGrid(){
+  try{
+    var box=document.getElementById('pinMemoryGrid');if(!box)return;
+    box.innerHTML='';
+    if(!window.EtieCloud||!window.EtieCloud.fetchMyMemories){box.innerHTML='<div class="muted small">Cloud not ready.</div>';return;}
+    window.EtieCloud.fetchMyMemories(function(rows){
+      try{
+        if(!rows||!rows.length){box.innerHTML='<div class="muted small" style="grid-column:1/-1;text-align:center;padding:24px;">No logged memories yet. Log a memory on the map first.</div>';return;}
+        var pinned=getFeaturedMemories();
+        var pinnedIds=pinned.map(function(f){return f.logId;});
+        rows.forEach(function(r){
+          if(!r||!r.photo_url)return;
+          var isPinned=pinnedIds.indexOf(r.id)!==-1;
+          var card=document.createElement('div');card.className='pin-memory-card'+(isPinned?' pinned':'');
+          var im=document.createElement('img');im.src=r.photo_url;im.alt=r.title||r.location||'Memory';card.appendChild(im);
+          var cap=document.createElement('div');cap.className='pin-memory-caption';cap.textContent=(r.title||r.location||'Memory').slice(0,40);card.appendChild(cap);
+          if(isPinned){
+            var badge=document.createElement('div');badge.className='pin-memory-badge';badge.textContent='📌 Pinned';card.appendChild(badge);
+          }
+          card.onclick=function(){
+            if(isPinned){
+              // Unpin
+              var idx=pinnedIds.indexOf(r.id);
+              if(idx>=0){unpinMemory(idx);renderPinMemoryGrid();}
+            }else{
+              // Pin
+              var slot=window._pinSlot!=null?window._pinSlot:getFeaturedMemories().length;
+              if(slot>=3){toast('Max 3 pinned memories. Unpin one first.');return;}
+              pinMemory(r);
+              renderPinMemoryGrid();
+            }
+          };
+          box.appendChild(card);
+        });
+      }catch(e){}
+    });
+  }catch(e){}
+}
+function pinMemory(log){
+  try{
+    var featured=getFeaturedMemories();
+    if(featured.length>=3){toast('Max 3 pinned memories.');return;}
+    var entry={
+      logId:log.id,
+      photoUrl:log.photo_url,
+      handshakeNote:log.title||log.location||'Memory',
+      title:log.title||'',
+      location:log.location||'',
+      timestamp:log.taken_at||log.created_at||Date.now()
+    };
+    featured.unshift(entry);
+    saveFeaturedMemories(featured);
+    toast('Pinned to profile!');
+    try{renderPinnedMemories();}catch(e){}
+  }catch(e){}
+}
+function unpinMemory(idx){
+  try{
+    var featured=getFeaturedMemories();
+    if(idx>=0&&idx<featured.length){
+      featured.splice(idx,1);
+      saveFeaturedMemories(featured);
+      toast('Unpinned.');
+      try{renderPinnedMemories();}catch(e){}
+    }
+  }catch(e){}
+}
+
 function getFeaturedMemories(){try{var m=ETIE.traveller&&ETIE.traveller.featuredMemories;return Array.isArray(m)?m.slice(0,3):[];}catch(e){return [];}}
 function saveFeaturedMemories(arr){
   try{
@@ -6739,7 +6983,7 @@ document.addEventListener('DOMContentLoaded',function(){
   // Check for wrap-up card (ended hangouts needing questions)
   try{setTimeout(function(){checkWrapupCard();},3000);}catch(e){}
   try{ window.addEventListener('online',function(){try{processPhotoOutbox();}catch(e){}}); }catch(e){}
-  document.addEventListener('keydown',function(e){if(e.key==='Escape'){try{closeQuestDrawer();}catch(e2){}try{closeAdmin();}catch(e3){}try{closeAvatarMenu();}catch(e4){}try{closeChatDrawer();}catch(e5){}try{closePinDetail();}catch(e6){}try{closeGroupModal();}catch(e7){}try{closeDropHook();}catch(e8){}try{closeLogSheet();}catch(e9){}try{closeMemoryCard();}catch(e10){}}});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'){try{closeQuestDrawer();}catch(e2){}try{closeAdmin();}catch(e3){}try{closeAvatarMenu();}catch(e4){}try{closeChatDrawer();}catch(e5){}try{closePinDetail();}catch(e6){}try{closeGroupModal();}catch(e7){}try{closeDropHook();}catch(e8){}try{closeLogSheet();}catch(e9){}try{closeMemoryCard();}catch(e10){}try{closeSettingsModal();}catch(e11){}try{closePinMemoryPicker();}catch(e12){}}});
   document.addEventListener('click',function(e){try{var d=document.getElementById('avatarDropdown');var btn=document.getElementById('headerProfile');if(d&&!d.classList.contains('hidden')&&e.target!==btn&&!d.contains(e.target)&&e.target!==btn)closeAvatarMenu();}catch(err){}});
   // re-sync header whenever the tab regains focus (session may have landed elsewhere)
   try{

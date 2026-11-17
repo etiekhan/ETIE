@@ -129,6 +129,9 @@
       <button class="primary" id="liteNext" onclick="stepProfile(1)" style="flex:1;">Continue</button>
     </div>
 <div id="liteDoneView" style="display:none;" class="profile-view">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
+        <button onclick="openSettingsModal()" style="padding:6px 10px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);border-radius:8px;color:rgba(255,255,255,.7);cursor:pointer;font-size:16px;line-height:1;" aria-label="Settings">⚙️</button>
+      </div>
       <div class="lite-idrow">
         <div class="lite-avatar" id="doneAvatar"><span>+</span></div>
         <div style="flex:1;min-width:0;">
@@ -137,11 +140,10 @@
           <div class="muted small" id="doneCity">—</div>
         </div>
       </div>
-      <div class="field"><label>Personal Hook</label><p class="pin-hook" id="doneHook" style="font-size:16px;">—</p></div>
-      <div class="field"><label>Featured Memories <span class="small muted">(pin up to 3)</span></label><div id="featuredMemories" class="featured-grid"></div></div>
-      <div class="field"><label>Favourite memories & hangouts (up to 3)</label><div id="liteMemories" class="mem-grid"></div></div>
-      <div class="field"><label>Passion badges</label><div class="chips" id="donePassions"></div></div>
-      <div class="field" id="doneSpotsWrap"><label id="doneSpotsTitle">Local spots</label><div id="doneSpots" class="spot-grid"></div></div>
+      <div class="field"><label>Personal Hook</label><p class="pin-hook" id="doneHook" style="font-size:20px;font-style:italic;line-height:1.5;">—</p></div>
+      <div class="field"><label>Pinned Memories <span class="small muted">(up to 3)</span></label><div id="pinnedMemories" class="pinned-grid"></div></div>
+      <div class="field"><label>Footprint</label><div id="footprintStrip" class="footprint-strip"></div></div>
+      <div class="field" id="doneSpotsWrap"><label id="doneSpotsTitle">Local Spots <span class="small muted">(up to 3)</span></label><div id="doneSpots" class="spot-grid spot-readonly"></div></div>
       <div style="display:flex;gap:8px;margin-top:12px;"><button class="secondary" onclick="editProfile()">Edit Profile</button></div>
     </div>
     <!-- Passport Tab -->
@@ -151,9 +153,8 @@
       <div class="field"><label>Neighborhood Visit Log</label><div id="passportVisits" class="visit-list"></div></div>
       <div class="field"><label>Co-Signed Connections</label><div id="passportConnections" class="connection-list"></div></div>
     </div>
-    <div class="sidebar-note" id="liteRepBlock" style="margin-top:14px;"><strong>Reputation</strong><p class="muted" id="liteStats">No meetups yet.</p></div>
+    <div class="sidebar-note" id="liteRepBlock" style="display:none;"></div>
   </div>
-  <div style="margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.12);"><button class="secondary" style="background:rgba(176,0,32,.15)!important;border-color:rgba(232,180,180,.4)!important;color:#ff8f8f!important;" onclick="wipeEverything()">Reset my data</button><p class="muted small" style="margin:6px 0 0;">Deletes your profile, trips and chats on this device + cloud for this login.</p></div>
 </div></section>
 
 
@@ -500,6 +501,34 @@
     </div>
   </div>
 </div>
+<!-- Settings Modal -->
+<div class="chat-overlay hidden" id="settingsModal" onclick="if(event.target===this)closeSettingsModal()" style="align-items:center;justify-content:center;background:rgba(10,8,18,.72);backdrop-filter:blur(6px);">
+  <div class="glass-modal" role="dialog" aria-modal="true" aria-label="Settings" style="width:min(480px,calc(100vw - 32px));max-height:80vh;overflow-y:auto;padding:24px;border-radius:20px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <strong style="font-size:18px;color:#fff;">⚙️ Settings</strong>
+      <button onclick="closeSettingsModal()" style="padding:4px 8px;background:transparent;border:0;color:rgba(255,255,255,.5);cursor:pointer;font-size:18px;" aria-label="Close">✕</button>
+    </div>
+    <div style="padding:12px 0;border-bottom:1px solid rgba(255,255,255,.1);">
+      <h4 style="color:#fff;margin:0 0 8px;font-size:14px;">Danger Zone</h4>
+      <button class="secondary" style="background:rgba(176,0,32,.15)!important;border-color:rgba(232,180,180,.4)!important;color:#ff8f8f!important;width:100%;padding:12px;" onclick="wipeEverything()">Reset my data</button>
+      <p class="muted small" style="margin:6px 0 0;">Deletes your profile, trips and chats on this device + cloud for this login.</p>
+    </div>
+  </div>
+</div>
+<!-- Pin Memory Picker Modal -->
+<div class="chat-overlay hidden" id="pinMemoryPickerModal" onclick="if(event.target===this)closePinMemoryPicker()" style="align-items:center;justify-content:center;background:rgba(10,8,18,.72);backdrop-filter:blur(6px);">
+  <div class="glass-modal" role="dialog" aria-modal="true" aria-label="Pin a Memory" style="width:min(520px,calc(100vw - 32px));max-height:80vh;overflow-y:auto;padding:24px;border-radius:20px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <strong style="font-size:18px;color:#fff;">📌 Pin a Memory</strong>
+      <button onclick="closePinMemoryPicker()" style="padding:4px 8px;background:transparent;border:0;color:rgba(255,255,255,.5);cursor:pointer;font-size:18px;" aria-label="Close">✕</button>
+    </div>
+    <p class="muted small" style="margin-bottom:12px;">Select a memory from your logged map memories to pin to your profile.</p>
+    <div id="pinMemoryGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;"></div>
+    <div style="text-align:center;margin-top:16px;">
+      <button class="secondary" onclick="closePinMemoryPicker()" style="padding:10px 20px;">Done</button>
+    </div>
+  </div>
+</div>
 <div id="gateOverlay" class="hidden">
   <div class="gate-card">
     <div class="eyebrow" style="color:#fb7185;font-weight:700;letter-spacing:1px;">ETIE · PRIVATE NETWORK 🇭🇰</div>
@@ -516,7 +545,7 @@
   <script src="runtime-config.js"></script>
   <script src="runtime-config.example.js"></script>
   <script src="map-style.js"></script>
-  <script src="app.js?v=200"></script>
+  <script src="app.js?v=201"></script>
   <script src="supabase-sync.js?v=136"></script>
 </body>
 </html>

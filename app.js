@@ -271,25 +271,20 @@ var ALBANY_LAT=52.402786, ALBANY_LNG=-1.526290;
 
 function showAlbany303(){
   try{
-    alert('Albany 303 clicked!');
+    alert('Step 1: function called');
     showScreen('map');
-    var modal=document.getElementById('introStoryModal');
-    if(!modal){alert('Modal not found!');return;}
-    modal.classList.remove('hidden');
-    modal.style.display='flex';
-    modal.style.zIndex='2147483647';
-    modal.style.position='fixed';
-    modal.style.top='0';
-    modal.style.left='0';
-    modal.style.right='0';
-    modal.style.bottom='0';
-    modal.style.background='rgba(255,0,0,0.95)';
-    modal.style.alignItems='center';
-    modal.style.justifyContent='center';
-    // Force inner content visible
-    var inner=modal.querySelector('.glass-modal');
-    if(inner){inner.style.background='#fff';inner.style.color='#000';inner.style.padding='40px';inner.style.borderRadius='20px';}
-    alert('Modal should be visible now. className: '+modal.className);
+    alert('Step 2: showScreen done');
+    // Create a brand new modal from scratch
+    var old=document.getElementById('albanyTestModal');if(old)old.remove();
+    var m=document.createElement('div');
+    m.id='albanyTestModal';
+    m.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;z-index:2147483647;background:rgba(255,0,0,0.9);display:flex;align-items:center;justify-content:center;';
+    var inner=document.createElement('div');
+    inner.style.cssText='background:#fff;color:#000;padding:40px;border-radius:20px;max-width:500px;text-align:center;';
+    inner.innerHTML='<h2 style="margin:0 0 16px;">Albany 303</h2><p style="margin:0 0 16px;">Friction is what gives life texture, flavour, meaning.</p><p style="margin:0 0 16px;">A wise woman said friction is what gives life texture, flavour, meaning. It made me think of my good friend Carla...</p><button onclick="this.parentElement.parentElement.remove()" style="padding:12px 24px;background:#f43f5e;color:#fff;border:0;border-radius:12px;font-weight:700;cursor:pointer;">Close</button>';
+    m.appendChild(inner);
+    document.body.appendChild(m);
+    alert('Step 3: modal appended to body');
   }catch(e){alert('Error: '+e.message);}
 }
 

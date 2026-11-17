@@ -320,6 +320,35 @@ function closeIntroStory(){
   }catch(e){}
 }
 
+function completeOnboarding(){
+  try{
+    ETIE.onboardingCompleted=true;
+    ETIE.cloudOnboarded=true;
+    saveState();
+    try{if(window.EtieCloud&&window.EtieCloud.syncProfile)window.EtieCloud.syncProfile();}catch(e){}
+    var sp=document.getElementById('coventrySpotlight');
+    if(sp)sp.classList.add('hidden');
+    var m=document.getElementById('albanyTestModal');if(m)m.remove();
+    var modal=document.getElementById('introStoryModal');
+    if(modal)modal.classList.add('hidden');
+    if(_map){
+      try{_map.dragPan.enable();}catch(e){}
+      try{_map.scrollZoom.enable();}catch(e){}
+      try{_map.boxZoom.enable();}catch(e){}
+      try{_map.dragRotate.enable();}catch(e){}
+      try{_map.keyboard.enable();}catch(e){}
+      try{_map.doubleClickZoom.enable();}catch(e){}
+      try{_map.touchZoomRotate.enable();}catch(e){}
+    }
+    var anchor=getAnchor();
+    if(_map){
+      try{_map.flyTo({center:[anchor.lng,anchor.lat],zoom:13,duration:3000});}catch(e){}
+    }
+    try{refreshGate();}catch(e){}
+    toast('Welcome to ETIE!');
+  }catch(e){console.error('completeOnboarding error:',e);}
+}
+
 function renderAlbanyLorePin(mapInstance){
   try{
     if(!mapInstance||!window.maplibregl)return;

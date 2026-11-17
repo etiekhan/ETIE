@@ -278,7 +278,16 @@ function showAlbany303(){
     if(sp)sp.classList.remove('hidden');
     // Show intro story modal immediately
     var modal=document.getElementById('introStoryModal');
-    if(modal){modal.classList.remove('hidden');console.log('modal shown, hidden class removed');}
+    if(modal){
+      modal.classList.remove('hidden');
+      modal.style.display='flex';
+      modal.style.zIndex='9999';
+      console.log('modal classList:', modal.className);
+      console.log('modal computed display:', getComputedStyle(modal).display);
+      console.log('modal computed visibility:', getComputedStyle(modal).visibility);
+      console.log('modal computed opacity:', getComputedStyle(modal).opacity);
+      console.log('modal offsetTop:', modal.offsetTop, 'offsetLeft:', modal.offsetLeft);
+    }
     else{console.error('introStoryModal not found!');}
     // Fly to Albany
     setTimeout(function(){

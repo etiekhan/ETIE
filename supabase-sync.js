@@ -1109,7 +1109,11 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
           status:entry.status||'confirmed',
           handshake_note:entry.handshakeNote||null,
           confirmed_at:entry.confirmedAt||null,
-          visibility:entry.visibility||'tagged'
+          visibility:entry.visibility||'tagged',
+          is_sidequest:!!entry.isSidequest,
+          challenge_prompt:entry.challengePrompt||null,
+          parent_challenge_id:entry.parentChallengeId||null,
+          challenge_expires_at:entry.challengeExpiresAt||null
         }).then(function(r){resolve(r&&!r.error);}).catch(function(){resolve(null);});
       }catch(e){resolve(null);}
     });
@@ -1989,7 +1993,77 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
 // to replace the raw supabase.co redirect URL on Google login.
 // Configure in Supabase Dashboard > Authentication > URL Configuration > Site URL & Redirect URLs.
 // Then update Google Cloud Console OAuth 2.0 Client ID > Authorized redirect URIs.
-//  // ---- Expose ----
+//  // ---- Sidequest Challenges (user-driven, built on memories) ----
+  function fetchActiveChallenges(cb){
+    try{
+      if(!client||typeof cb!=='function'){cb([]);return;}
+      var now=new Date().toISOString();
+      client.from(hangoutTable()).select('*').eq('is_sidequest',true).is('parent_challenge_id',null)
+        .gt('challenge_expires_at',now).order('created_at',{ascending:false}).limit(100).then(function(r){
+          try{cb(r&&!r.error?(r.data||[]):[]);}catch(e){cb([]);}
+        }).catch(function(){cb([]);});
+    }catch(e){try{cb([]);}catch(_){}}
+  }
+  function fetchChallenge(challengeId,cb){
+    try{
+      if(!client||!challengeId||typeof cb!=='function'){cb(null);return;}
+      client.from(hangoutTable()).select('*').eq('id',challengeId).maybeSingle().then(function(r){
+        try{cb(r&&!r.error?r.data:null);}catch(e){cb(null);}
+      }).catch(function(){cb(null);});
+    }catch(e){try{cb(null);}catch(_){}}
+  }
+  function fetchChallengeEntries(challengeId,cb){
+    try{
+      if(!client||!challengeId||typeof cb!=='function'){cb([]);return;}
+      client.from(hangoutTable()).select('*').eq('parent_challenge_id',challengeId)
+        .order('created_at',{ascending:true}).limit(200).then(function(r){
+          try{cb(r&&!r.error?(r.data||[]):[]);}catch(e){cb([]);}
+        }).catch(function(){cb([]);});
+    }catch(e){try{cb([]);}catch(_){}}
+  }
+  function fetchVotesForChallenge(challengeId,cb){
+    try{
+      if(!client||!challengeId||typeof cb!=='function'){cb([]);return;}
+      client.from('sidequest_votes').select('*').eq('challenge_id',challengeId).then(function(r){
+        try{cb(r&&!r.error?(r.data||[]):[]);}catch(e){cb([]);}
+      }).catch(function(){cb([]);});
+    }catch(e){try{cb([]);}catch(_){}}
+  }
+  function voteOnEntry(entryId, challengeId, cb){
+    // Toggle vote: if exists, delete; if not, insert. Cannot vote for own entry.
+    try{
+      if(!client||!session||!entryId||typeof cb!=='function'){if(cb)cb(false);return;}
+      var me=session.user.id;
+      client.from(hangoutTable()).select('user_id').eq('id',entryId).maybeSingle().then(function(r){
+        try{
+          var entry=r&&!r.error?r.data:null;
+          if(entry&&entry.user_id===me){if(cb)cb(false,'own_entry');return;}
+          client.from('sidequest_votes').select('id').eq('entry_memory_id',entryId).eq('user_id',me).maybeSingle().then(function(vr){
+            try{
+              var existing=vr&&!vr.error?vr.data:null;
+              if(existing){
+                client.from('sidequest_votes').delete().eq('id',existing.id).then(function(dr){cb(dr&&!dr.error);});
+              }else{
+                client.from('sidequest_votes').insert({entry_memory_id:entryId,challenge_id:challengeId,user_id:me}).then(function(ir){cb(ir&&!ir.error);});
+              }
+            }catch(e){cb(false);}
+          }).catch(function(){cb(false);});
+        }catch(e){cb(false);}
+      }).catch(function(){cb(false);});
+    }catch(e){try{cb(false);}catch(_){}}
+  }
+  function fetchMySidequestEntries(cb){
+    try{
+      if(!client||!session||typeof cb!=='function'){cb([]);return;}
+      var me=session.user.id;
+      client.from(hangoutTable()).select('*').eq('user_id',me).not('parent_challenge_id','is',null)
+        .order('created_at',{ascending:false}).limit(200).then(function(r){
+          try{cb(r&&!r.error?(r.data||[]):[]);}catch(e){cb([]);}
+        }).catch(function(){cb([]);});
+    }catch(e){try{cb([]);}catch(_){}}
+  }
+
+  // ---- Expose ----
   window.EtieCloud={
     init:init, signInWithGoogle:signInWithGoogle, signOut:signOut,
     push:push, pull:pull, status:status,
@@ -2027,7 +2101,7 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
     fetchReportedQuestions:fetchReportedQuestions, fetchAnswerMetrics:fetchAnswerMetrics,
     confirmHangout:confirmHangout, markPopupSeen:markPopupSeen, checkHangoutConfirmation:checkHangoutConfirmation,
     fetchMyConfirmations:fetchMyConfirmations,
-    pushSidequest:pushSidequest, fetchSidequest:fetchSidequest, clearSidequest:clearSidequest, fetchAllSidequests:fetchAllSidequests, deleteSidequest:deleteSidequest,
+    pushSidequest:pushSidequest, fetchSidequest:fetchSidequest, clearSidequest:clearSidequest, fetchAllSidequests:fetchAllSidequests, deleteSidequest:deleteSidequest, fetchActiveChallenges:fetchActiveChallenges, fetchChallenge:fetchChallenge, fetchChallengeEntries:fetchChallengeEntries, fetchVotesForChallenge:fetchVotesForChallenge, voteOnEntry:voteOnEntry, fetchMySidequestEntries:fetchMySidequestEntries,
     syncProfile:syncProfile, pushSharedRequest:pushSharedRequest, pushSharedMessage:pushSharedMessage, pushSharedMeetup:pushSharedMeetup,
     pushSharedReview:pushSharedReview, pushSharedReport:pushSharedReport,
     uploadPhoto:uploadPhoto,

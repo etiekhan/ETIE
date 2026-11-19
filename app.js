@@ -845,6 +845,7 @@ function renderFootprint(){
   try{
     var box=document.getElementById('footprintStrip');if(!box)return;
     box.innerHTML='';
+    var myId=null;try{myId=myUid();}catch(e){}
     // Cities logged: distinct locations from memories
     var cities=new Set();
     var totalMemories=0;
@@ -856,13 +857,57 @@ function renderFootprint(){
             if(r.location)cities.add(r.location);
             else if(r.lat!=null&&r.lng!=null)cities.add(r.lat.toFixed(2)+','+r.lng.toFixed(2));
           });
-          // Sidequests joined/won from activityDiary
-          var diary=(ETIE.traveller&&ETIE.traveller.activityDiary)||[];
+          // Sidequests joined/won from real challenge data
           var sidequestsJoined=0;var sidequestsWon=0;
-          diary.forEach(function(e){
-            if(e.sidequestJoined)sidequestsJoined++;
-            if(e.sidequestWon)sidequestsWon++;
-          });
+          try{
+            if(window.EtieCloud&&window.EtieCloud.fetchMySidequestEntries){
+              window.EtieCloud.fetchMySidequestEntries(function(entries){
+                try{
+                  if(!entries||!entries.length){return;}
+                  // Joined: distinct parent_challenge_id
+                  var joinedSet=new Set();
+                  entries.forEach(function(e){if(e.parent_challenge_id)joinedSet.add(e.parent_challenge_id);});
+                  sidequestsJoined=joinedSet.size;
+                  // Won: check each challenge for winner
+                  var challengeIds=Array.from(joinedSet);
+                  var wonCount=0, checked=0;
+                  if(!challengeIds.length){return;}
+                  challengeIds.forEach(function(cid){
+                    try{
+                      window.EtieCloud.fetchChallengeEntries(cid,function(chEntries){
+                        try{
+                          window.EtieCloud.fetchVotesForChallenge(cid,function(chVotes){
+                            try{
+                              checked++;
+                              var winner=getChallengeWinner(chEntries,chVotes);
+                              if(winner&&winner.entry&&winner.entry.user_id===myId)wonCount++;
+                              if(checked>=challengeIds.length){
+                                sidequestsWon=wonCount;
+                                // Re-render footprint with updated counts
+                                var items=[
+                                  {icon:'🏙️',label:'Cities logged',value:cities.size||0},
+                                  {icon:'⚡',label:'Sidequests joined',value:sidequestsJoined+' joined · '+sidequestsWon+' won'},
+                                  {icon:'📸',label:'Memories logged',value:totalMemories}
+                                ];
+                                box.innerHTML='';
+                                items.forEach(function(it){
+                                  var cell=document.createElement('div');cell.className='footprint-cell';
+                                  var ic=document.createElement('div');ic.className='footprint-icon';ic.textContent=it.icon;cell.appendChild(ic);
+                                  var vl=document.createElement('div');vl.className='footprint-value';vl.textContent=it.value;cell.appendChild(vl);
+                                  var lb=document.createElement('div');lb.className='footprint-label';lb.textContent=it.label;cell.appendChild(lb);
+                                  box.appendChild(cell);
+                                });
+                              }
+                            }catch(e){}
+                          });
+                        }catch(e){}
+                      });
+                    }catch(e){}
+                  });
+                }catch(e){}
+              });
+            }
+          }catch(e){}
           // Render footprint
           var items=[
             {icon:'🏙️',label:'Cities logged',value:cities.size||0},
@@ -954,6 +999,136 @@ function renderLocalSpotsReadOnly(){
       });
     }
   }catch(e){}
+}
+
+var _currentChallengeId=null;
+function openChallengeThread(challengeId){
+  try{
+    _currentChallengeId=challengeId;
+    var o=document.getElementById('challengeThreadDrawer');if(o)o.classList.remove('hidden');
+    renderChallengeThread();
+  }catch(e){console.error('openChallengeThread error:',e);}
+}
+function closeChallengeThread(){
+  try{
+    var o=document.getElementById('challengeThreadDrawer');if(o)o.classList.add('hidden');
+    _currentChallengeId=null;
+  }catch(e){}
+}
+function renderChallengeThread(){
+  try{
+    if(!_currentChallengeId)return;
+    var content=document.getElementById('challengeThreadContent');
+    var entriesBox=document.getElementById('challengeEntriesList');
+    if(!content||!entriesBox)return;
+    content.innerHTML='<div class="muted small">Loading challenge…</div>';
+    entriesBox.innerHTML='';
+    if(!window.EtieCloud||!window.EtieCloud.fetchChallenge){content.innerHTML='<div class="muted small">Cloud not ready.</div>';return;}
+    window.EtieCloud.fetchChallenge(_currentChallengeId,function(ch){
+      try{
+        if(!ch){content.innerHTML='<div class="muted small">Challenge not found.</div>';return;}
+        var prompt=ch.challenge_prompt||'Can you sidequest harder than me?';
+        var expires=ch.challenge_expires_at?new Date(ch.challenge_expires_at).getTime():0;
+        var remaining=expires>Date.now()?Math.ceil((expires-Date.now())/86400000):0;
+        var expired=expires>0&&expires<=Date.now();
+        var owner=ch.nickname||'Someone';
+        content.innerHTML=''
+          +'<div style="padding:16px;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.3);border-radius:12px;margin-bottom:12px;">'
+          +'<div style="font-size:16px;font-weight:700;color:#fff;margin-bottom:6px;">'+logEsc(prompt)+'</div>'
+          +'<div class="muted small">by '+logEsc(owner)+' · '+(ch.location||'Unknown location')+'</div>'
+          +(expired?'<div style="color:#fbbf24;font-weight:700;margin-top:8px;">⏱ Challenge ended</div>'
+            :'<div style="color:#fbbf24;font-weight:700;margin-top:8px;">⏱ '+remaining+' days left</div>')
+          +'</div>';
+        // Load entries
+        window.EtieCloud.fetchChallengeEntries(_currentChallengeId,function(entries){
+          try{
+            if(!entries||!entries.length){entriesBox.innerHTML='<div class="muted small" style="text-align:center;padding:16px;">No entries yet. Be the first to beat this sidequest!</div>';return;}
+            window.EtieCloud.fetchVotesForChallenge(_currentChallengeId,function(votes){
+              try{
+                var voteCounts={};
+                (votes||[]).forEach(function(v){voteCounts[v.entry_memory_id]=(voteCounts[v.entry_memory_id]||0)+1;});
+                var myId=null;try{myId=myUid();}catch(e){}
+                // Sort by votes desc, then earliest submission
+                var sorted=entries.slice().sort(function(a,b){
+                  var va=voteCounts[a.id]||0, vb=voteCounts[b.id]||0;
+                  if(vb!==va)return vb-va;
+                  return new Date(a.created_at)-new Date(b.created_at);
+                });
+                entriesBox.innerHTML='';
+                sorted.forEach(function(e,idx){
+                  var vc=voteCounts[e.id]||0;
+                  var isTop=idx===0&&vc>0;
+                  var card=document.createElement('div');
+                  card.style.cssText='display:flex;gap:12px;padding:10px;margin-bottom:8px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:10px;'+(isTop?'border-color:rgba(251,191,36,.5);':'');
+                  var img=document.createElement('img');img.src=e.photo_url||'';img.style.cssText='width:64px;height:64px;object-fit:cover;border-radius:8px;flex-shrink:0;';
+                  var info=document.createElement('div');info.style.flex='1';info.style.minWidth='0';
+                  info.innerHTML='<div style="font-size:13px;font-weight:600;color:#fff;">'+logEsc(e.title||e.location||'Memory')+'</div>'
+                    +'<div class="muted small">by '+logEsc(e.nickname||'Someone')+'</div>'
+                    +(isTop?'<div style="color:#fbbf24;font-size:11px;font-weight:700;margin-top:4px;">🏆 Winner · '+logEsc(prompt)+'</div>':'');
+                  var voteBtn=document.createElement('button');
+                  voteBtn.className='secondary';
+                  voteBtn.style.cssText='padding:6px 12px;font-size:12px;font-weight:700;white-space:nowrap;align-self:center;';
+                  voteBtn.innerHTML='🔥 '+vc;
+                  var myVote=(votes||[]).some(function(v){return v.entry_memory_id===e.id&&v.user_id===myId;});
+                  if(myVote){voteBtn.style.background='rgba(251,191,36,.3)';voteBtn.style.borderColor='rgba(251,191,36,.6)';}
+                  voteBtn.onclick=function(){voteEntry(e.id,_currentChallengeId);};
+                  if(e.user_id===myId){voteBtn.disabled=true;voteBtn.style.opacity='.5';voteBtn.title='Cannot vote for your own entry';}
+                  card.appendChild(img);card.appendChild(info);card.appendChild(voteBtn);
+                  entriesBox.appendChild(card);
+                });
+              }catch(e){}
+            });
+          }catch(e){}
+        });
+      }catch(e){content.innerHTML='<div class="muted small">Error loading challenge.</div>';}
+    });
+  }catch(e){}
+}
+function getChallengeWinner(entries,votes){
+  // Returns the winning entry (at least 1 vote required, ties broken by earliest submission)
+  try{
+    if(!entries||!entries.length)return null;
+    var voteCounts={};
+    (votes||[]).forEach(function(v){voteCounts[v.entry_memory_id]=(voteCounts[v.entry_memory_id]||0)+1;});
+    var sorted=entries.slice().sort(function(a,b){
+      var va=voteCounts[a.id]||0, vb=voteCounts[b.id]||0;
+      if(vb!==va)return vb-va;
+      return new Date(a.created_at)-new Date(b.created_at);
+    });
+    var top=sorted[0];
+    var topVotes=voteCounts[top.id]||0;
+    if(topVotes<1)return null; // at least 1 vote required
+    return {entry:top,votes:topVotes};
+  }catch(e){return null;}
+}
+
+function voteEntry(entryId,challengeId){
+  try{
+    if(!window.EtieCloud||!window.EtieCloud.voteOnEntry){toast('Cloud not ready.');return;}
+    window.EtieCloud.voteOnEntry(entryId,challengeId,function(ok,reason){
+      if(ok){renderChallengeThread();}
+      else if(reason==='own_entry'){toast('You must vote for someone else\'s entry.');}
+      else{toast('Vote failed.');}
+    });
+  }catch(e){}
+}
+function beatThisSidequest(){
+  try{
+    if(!_currentChallengeId){toast('No challenge selected.');return;}
+    var cid=_currentChallengeId;
+    closeChallengeThread();
+    showScreen('map');
+    toast('Tap the map to drop your entry!');
+    // Enable one-time map click to log entry
+    var handler=function(e){
+      try{
+        _map.off('click',handler);
+        var lat=e.lngLat.lat, lng=e.lngLat.lng;
+        openLogSheet(null,{lat:lat,lng:lng,label:'Challenge entry'},cid);
+      }catch(err){}
+    };
+    if(_map)_map.on('click',handler);
+  }catch(e){toast('Could not start entry.');}
 }
 
 function openSettingsModal(){
@@ -1173,10 +1348,12 @@ function groupMemoriesIntoSpots(logs){
           if(d<=MEMORY_GROUP_RADIUS_M && d<bestDist){bestDist=d;bestIdx=i;}
         }
         if(bestIdx>=0){
-          groups[bestIdx].spot.photos.push({url:l.photo_url,caption:l.title||l.location||'',timestamp:l.taken_at||l.created_at||'',logId:l.id,owner:l.nickname||'Someone',ownerId:l.user_id});
+          groups[bestIdx].spot.photos.push({url:l.photo_url,caption:l.title||l.location||'',timestamp:l.taken_at||l.created_at||'',logId:l.id,owner:l.nickname||'Someone',ownerId:l.user_id,isSidequest:l.is_sidequest,parentChallengeId:l.parent_challenge_id,challengePrompt:l.challenge_prompt,challengeExpiresAt:l.challenge_expires_at});
+          if(l.is_sidequest)groups[bestIdx].spot.isSidequest=true;
+          if(l.parent_challenge_id)groups[bestIdx].spot.parentChallengeId=l.parent_challenge_id;
         }else{
           var key=l.lat.toFixed(4)+','+l.lng.toFixed(4);
-          groups.push({anchor:{lat:l.lat,lng:l.lng},spot:{id:'spot-'+key,name:l.location||l.title||'Hangout',coords:{lat:l.lat,lng:l.lng},owner:l.nickname||'Someone',ownerId:l.user_id,photos:[{url:l.photo_url,caption:l.title||l.location||'',timestamp:l.taken_at||l.created_at||'',logId:l.id,owner:l.nickname||'Someone',ownerId:l.user_id}]}});
+          groups.push({anchor:{lat:l.lat,lng:l.lng},spot:{id:'spot-'+key,name:l.location||l.title||'Hangout',coords:{lat:l.lat,lng:l.lng},owner:l.nickname||'Someone',ownerId:l.user_id,isSidequest:l.is_sidequest,parentChallengeId:l.parent_challenge_id,challengePrompt:l.challenge_prompt,challengeExpiresAt:l.challenge_expires_at,photos:[{url:l.photo_url,caption:l.title||l.location||'',timestamp:l.taken_at||l.created_at||'',logId:l.id,owner:l.nickname||'Someone',ownerId:l.user_id,isSidequest:l.is_sidequest,parentChallengeId:l.parent_challenge_id,challengePrompt:l.challenge_prompt,challengeExpiresAt:l.challenge_expires_at}]}});
         }
       }catch(e){}
     });
@@ -1216,6 +1393,16 @@ function createMemorySpotMarker(spot,mapInstance){
     photoWrap.appendChild(img);
     el.appendChild(photoWrap);
     
+    // Sidequest challenge styling: amber border
+    if(spot.isSidequest||spot.parentChallengeId){
+      photoWrap.style.border='2px solid #FBBF24';
+      photoWrap.style.boxShadow='0 0 12px rgba(251,191,36,.5),0 4px 12px rgba(0,0,0,.4)';
+      var badgeEl=document.createElement('div');
+      badgeEl.style.cssText='position:absolute;top:-6px;left:50%;transform:translateX(-50%);background:#FBBF24;color:#000;font-size:8px;font-weight:900;padding:2px 6px;border-radius:999px;z-index:4;white-space:nowrap;letter-spacing:.03em;';
+      badgeEl.textContent=spot.isSidequest?'⚡ CHALLENGE':'⚡ ENTRY';
+      el.appendChild(badgeEl);
+    }
+    
     // Count badge for multi-photo stacks
     if(spot.photos.length>1){
       var badge=document.createElement('div');
@@ -1245,6 +1432,10 @@ function createMemorySpotMarker(spot,mapInstance){
       _pinJustClicked=true;
       setTimeout(function(){_pinJustClicked=false;},300);
       console.log('Memory marker clicked, spot:', spot.name, 'photos:', spot.photos.length);
+      if(spot.isSidequest||spot.parentChallengeId){
+        var challengeId=spot.isSidequest?(spot.photos[0]&&spot.photos[0].logId):spot.parentChallengeId;
+        if(challengeId){openChallengeThread(challengeId);return;}
+      }
       if(spot.photos.length<=1){
         window._memGroupPhotos=spot.photos;
         openMemorySingleView(0, spot);
@@ -5003,6 +5194,16 @@ function checkChallengesEnabled(cb){
 function renderChallengesScreen(){
   try{
     var box=document.getElementById('challengesContent');if(!box)return;
+    // New sidequest challenges section
+    var html='<div style="margin-bottom:20px;">'
+      +'<h3 style="color:#fff;margin:0 0 12px;font-size:18px;">⚡ Sidequest Challenges</h3>'
+      +'<div id="sidequestChallengesList"><div class="muted small">Loading...</div></div>'
+      +'</div>'
+      +'<div style="border-top:1px solid rgba(255,255,255,.1);padding-top:16px;">'
+      +'<h3 style="color:#fff;margin:0 0 12px;font-size:14px;">Demo Challenges</h3>';
+    box.innerHTML=html+'<div id="challengesList"></div></div>';
+    loadSidequestChallenges();
+    // Old demo system below
     checkChallengesEnabled(function(enabled,allowed){
       try{
         if(!enabled||!allowed){
@@ -5044,6 +5245,31 @@ function renderChallengesScreen(){
       }catch(e){box.innerHTML='<div class="muted small">Error loading challenges.</div>';}
     });
   }catch(e){box.innerHTML='<div class="muted small">Error.</div>';}
+}
+
+function loadSidequestChallenges(){
+  try{
+    var box=document.getElementById('sidequestChallengesList');if(!box)return;
+    if(!window.EtieCloud||!window.EtieCloud.fetchActiveChallenges){box.innerHTML='<div class="muted small">Cloud not ready.</div>';return;}
+    window.EtieCloud.fetchActiveChallenges(function(rows){
+      try{
+        if(!rows||!rows.length){box.innerHTML='<div class="muted small" style="text-align:center;padding:16px;">No active challenges yet. Log a memory and start one!</div>';return;}
+        box.innerHTML='';
+        rows.forEach(function(ch){
+          var card=document.createElement('div');
+          card.style.cssText='padding:12px;margin-bottom:8px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.25);border-radius:12px;cursor:pointer;';
+          card.onclick=function(){openChallengeThread(ch.id);};
+          var prompt=ch.challenge_prompt||'Can you sidequest harder than me?';
+          var expires=ch.challenge_expires_at?new Date(ch.challenge_expires_at).getTime():0;
+          var remaining=expires>Date.now()?Math.ceil((expires-Date.now())/86400000):0;
+          card.innerHTML='<div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:4px;">'+logEsc(prompt)+'</div>'
+            +'<div class="muted small">by '+logEsc(ch.nickname||'Someone')+' · '+(ch.location||'Unknown')+'</div>'
+            +'<div style="color:#fbbf24;font-size:11px;font-weight:700;margin-top:6px;">⚡ '+remaining+' days left</div>';
+          box.appendChild(card);
+        });
+      }catch(e){box.innerHTML='<div class="muted small">Error loading challenges.</div>';}
+    });
+  }catch(e){}
 }
 
 function loadDemoToolsStats(){
@@ -6144,8 +6370,18 @@ function useMapSpotForLog(){
     toast('📍 Memory pinned here.');
   }catch(e){}
 }
-function openLogSheet(pinId,spot){
+var _logParentChallengeId=null;
+function toggleSidequestChallenge(){
   try{
+    var checked=document.getElementById('logIsSidequest').checked;
+    var wrap=document.getElementById('logChallengePromptWrap');
+    if(wrap)wrap.style.display=checked?'block':'none';
+  }catch(e){}
+}
+
+function openLogSheet(pinId,spot,parentChallengeId){
+  try{
+    _logParentChallengeId=parentChallengeId||null;
     var p=pinId?findPin(pinId):null;
     if(pinId&&!p){toast('Hook not found.');return;}
     // End the hangout if still active (first log tap ends it)
@@ -6184,6 +6420,21 @@ function openLogSheet(pinId,spot){
     var pi=document.getElementById('logPhotoInput');if(pi)pi.value='';
     var btn=document.getElementById('logUploadBtn');if(btn){btn.disabled=false;btn.textContent='Upload Log';}
     updateOutboxNote();
+    var toggleWrap=document.getElementById('logSidequestToggleWrap');
+    if(toggleWrap)toggleWrap.style.display=_logParentChallengeId?'none':'block';
+    var promptWrap=document.getElementById('logChallengePromptWrap');
+    if(promptWrap)promptWrap.style.display='none';
+    var sqCheck=document.getElementById('logIsSidequest');if(sqCheck)sqCheck.checked=false;
+    var sqPrompt=document.getElementById('logChallengePrompt');if(sqPrompt)sqPrompt.value='';
+    // Show challenge context if replying
+    var titleEl=document.getElementById('logHookName');
+    if(_logParentChallengeId){
+      try{
+        window.EtieCloud.fetchChallenge(_logParentChallengeId,function(ch){
+          if(ch&&titleEl)titleEl.textContent='Replying to: '+(ch.challenge_prompt||'Challenge');
+        });
+      }catch(e){}
+    }
     var o=document.getElementById('logHangoutModal');if(o)o.classList.remove('hidden');
     searchLogPeople('');
   }catch(e){}
@@ -6241,6 +6492,10 @@ function submitHangoutLog(){
     var caption=capEl?capEl.value.trim().slice(0,120):'';
     var location=locEl?locEl.value.trim().slice(0,120):'';
     var visibility=visEl?visEl.value:'tagged';
+    var isSidequest=document.getElementById('logIsSidequest')&&document.getElementById('logIsSidequest').checked;
+    var challengePrompt=(document.getElementById('logChallengePrompt')||{}).value||'';
+    var parentChallengeId=_logParentChallengeId||null;
+    var challengeExpiresAt=isSidequest?new Date(Date.now()+7*24*60*60*1000).toISOString():null;
     // Read photo date (editable)
     var dateInput=document.getElementById('logPhotoDate');
     if(dateInput&&dateInput.value){
@@ -6262,10 +6517,10 @@ function submitHangoutLog(){
       try{
         var entries=[];
         if(!tagged.length){
-          entries.push({hookId:pid,nick:me,photoUrl:urlFor,activity:act,title:title,location:location,lat:lat,lng:lng,takenAt:new Date(taken).toISOString(),verified:ok,status:'confirmed',confirmedAt:new Date().toISOString(),visibility:visibility});
+          entries.push({hookId:pid,nick:me,photoUrl:urlFor,activity:act,title:title,location:location,lat:lat,lng:lng,takenAt:new Date(taken).toISOString(),verified:ok,status:'confirmed',confirmedAt:new Date().toISOString(),visibility:visibility,isSidequest:isSidequest,challengePrompt:isSidequest?challengePrompt.trim():null,parentChallengeId:parentChallengeId,challengeExpiresAt:challengeExpiresAt});
         }else{
           tagged.forEach(function(u){
-            entries.push({hookId:pid,nick:me,photoUrl:urlFor,activity:act,title:title,location:location,lat:lat,lng:lng,takenAt:new Date(taken).toISOString(),verified:ok,taggedUserId:u.user_id,taggedNickname:u.name||'Someone',status:'pending',visibility:visibility});
+            entries.push({hookId:pid,nick:me,photoUrl:urlFor,activity:act,title:title,location:location,lat:lat,lng:lng,takenAt:new Date(taken).toISOString(),verified:ok,taggedUserId:u.user_id,taggedNickname:u.name||'Someone',status:'pending',visibility:visibility,isSidequest:isSidequest,challengePrompt:isSidequest?challengePrompt.trim():null,parentChallengeId:parentChallengeId,challengeExpiresAt:challengeExpiresAt});
           });
         }
         var chain=Promise.resolve();
@@ -6397,25 +6652,27 @@ function saveCustomQuest(){
   }catch(e){toast('Could not set quest.');}
 }
 function refreshWeeklyBanner(){
-  // map pill for the live sidequest; hidden when none or dismissed (per quest id)
+  // Floating top pill: shows the most recent active challenge in the current city
   try{
-    var show=function(q){
+    var b=document.getElementById('weeklyQuestBanner');
+    if(!b)return;
+    if(!window.EtieCloud||!window.EtieCloud.fetchActiveChallenges){b.classList.add('hidden');return;}
+    window.EtieCloud.fetchActiveChallenges(function(rows){
       try{
-        var b=document.getElementById('weeklyQuestBanner');
-        if(!b)return;
-        var dismissed=null;try{dismissed=ETIE.dismissedWeeklyQuest;}catch(e){}
-        if(q&&q.title&&q.id!==dismissed){
-          window._weeklyQuest={id:q.id,title:q.title,desc:q.description||'',ends_at:q.ends_at||null};
-          var t=document.getElementById('weeklyQuestBannerText');if(t)t.textContent=q.title;
-          b.classList.remove('hidden');
-          try{document.body.classList.add('has-weekly-quest');}catch(e){}
-        }else{
-          b.classList.add('hidden');
-          try{document.body.classList.remove('has-weekly-quest');}catch(e){}
-        }
-      }catch(e){}
-    };
-    if(window.EtieCloud&&window.EtieCloud.fetchSidequest){try{window.EtieCloud.fetchSidequest(function(q){show(q);try{if(window._chatPinId&&typeof renderQuestBanner==='function'&&typeof findPin==='function'){var pp=findPin(window._chatPinId);if(pp&&!pp.quest)renderQuestBanner(pp);}}catch(e){}});}catch(e){show(null);}}else show(null);
+        if(!rows||!rows.length){b.classList.add('hidden');return;}
+        // Pick the most recent active challenge
+        var ch=rows[0];
+        var prompt=ch.challenge_prompt||'Can you sidequest harder than me?';
+        var expires=ch.challenge_expires_at?new Date(ch.challenge_expires_at).getTime():0;
+        var remaining=expires>Date.now()?Math.ceil((expires-Date.now())/86400000):0;
+        window._activeChallenge={id:ch.id,prompt:prompt,expiresAt:expires,location:ch.location||''};
+        var t=document.getElementById('weeklyQuestBannerText');
+        if(t)t.textContent='⚡ '+prompt+(remaining>0?' · '+remaining+'d left':'');
+        b.classList.remove('hidden');
+        b.onclick=function(){openChallengeThread(ch.id);};
+        try{document.body.classList.add('has-weekly-quest');}catch(e){}
+      }catch(e){b.classList.add('hidden');}
+    });
   }catch(e){}
 }
 function dismissWeeklyQuest(){
@@ -7017,7 +7274,7 @@ document.addEventListener('DOMContentLoaded',function(){
   // Check for wrap-up card (ended hangouts needing questions)
   try{setTimeout(function(){checkWrapupCard();},3000);}catch(e){}
   try{ window.addEventListener('online',function(){try{processPhotoOutbox();}catch(e){}}); }catch(e){}
-  document.addEventListener('keydown',function(e){if(e.key==='Escape'){try{closeQuestDrawer();}catch(e2){}try{closeAdmin();}catch(e3){}try{closeAvatarMenu();}catch(e4){}try{closeChatDrawer();}catch(e5){}try{closePinDetail();}catch(e6){}try{closeGroupModal();}catch(e7){}try{closeDropHook();}catch(e8){}try{closeLogSheet();}catch(e9){}try{closeMemoryCard();}catch(e10){}try{closeSettingsModal();}catch(e11){}try{closePinMemoryPicker();}catch(e12){}}});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'){try{closeQuestDrawer();}catch(e2){}try{closeAdmin();}catch(e3){}try{closeAvatarMenu();}catch(e4){}try{closeChatDrawer();}catch(e5){}try{closePinDetail();}catch(e6){}try{closeGroupModal();}catch(e7){}try{closeDropHook();}catch(e8){}try{closeLogSheet();}catch(e9){}try{closeMemoryCard();}catch(e10){}try{closeSettingsModal();}catch(e11){}try{closePinMemoryPicker();}catch(e12){}try{closeChallengeThread();}catch(e13){}}});
   document.addEventListener('click',function(e){try{var d=document.getElementById('avatarDropdown');var btn=document.getElementById('headerProfile');if(d&&!d.classList.contains('hidden')&&e.target!==btn&&!d.contains(e.target)&&e.target!==btn)closeAvatarMenu();}catch(err){}});
   // re-sync header whenever the tab regains focus (session may have landed elsewhere)
   try{

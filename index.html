@@ -283,6 +283,17 @@
         </select>
         <p class="muted small" style="margin:4px 0 0;">"Tagged" is the default. "Only me" keeps it private. "Connections" shares with your accepted connections.</p>
       </div>
+      <div class="field" id="logSidequestToggleWrap" style="padding:12px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.25);border-radius:12px;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+          <input type="checkbox" id="logIsSidequest" onchange="toggleSidequestChallenge()">
+          <span style="color:#fbbf24;font-weight:700;">⚡ Start a Sidequest Challenge</span>
+        </label>
+        <p class="muted small" style="margin:4px 0 0;">"Can you sidequest harder than me?" Others can beat your memory.</p>
+      </div>
+      <div class="field" id="logChallengePromptWrap" style="display:none;">
+        <label>Challenge prompt</label>
+        <input id="logChallengePrompt" maxlength="200" placeholder="e.g. Best rooftop sunset view in the city">
+      </div>
       <div class="field"><label>Where did it happen? (optional)</label>
         <div style="display:flex;gap:8px;"><input id="logLocation" maxlength="120" placeholder="Place or area" style="flex:1;"><button class="secondary" id="logUseMapSpot" onclick="useMapSpotForLog()" style="padding:10px 12px;white-space:nowrap;">📍 Use map view</button></div>
         <p class="muted small" style="margin:4px 0 0;" id="logSpotNote">Pan the map to where it happened, then tap Use map view so it shows on your Memory Map.</p>
@@ -500,6 +511,23 @@
     </div>
   </div>
 </div>
+<!-- Challenge Thread Drawer -->
+<div class="chat-overlay hidden" id="challengeThreadDrawer" onclick="if(event.target===this)closeChallengeThread()" style="align-items:center;justify-content:center;background:rgba(10,8,18,.72);backdrop-filter:blur(6px);">
+  <div class="glass-modal" role="dialog" aria-modal="true" aria-label="Challenge Thread" style="width:min(560px,calc(100vw - 32px));max-height:85vh;overflow-y:auto;padding:24px;border-radius:20px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <strong style="font-size:18px;color:#fff;">⚡ Sidequest Challenge</strong>
+      <button onclick="closeChallengeThread()" style="padding:4px 8px;background:transparent;border:0;color:rgba(255,255,255,.5);cursor:pointer;font-size:18px;" aria-label="Close">✕</button>
+    </div>
+    <div id="challengeThreadContent"></div>
+    <div style="margin-top:16px;text-align:center;">
+      <button class="primary" id="beatThisSidequestBtn" onclick="beatThisSidequest()" style="padding:13px 24px;font-size:14px;font-weight:700;border-radius:12px;width:100%;background:#FBBF24;color:#000;border-color:#FBBF24;">⚡ Beat This Sidequest</button>
+    </div>
+    <div style="margin-top:16px;">
+      <h4 style="color:#fff;margin:0 0 12px;font-size:14px;">Entries (ranked by votes)</h4>
+      <div id="challengeEntriesList"></div>
+    </div>
+  </div>
+</div>
 <!-- Settings Modal -->
 <div class="chat-overlay hidden" id="settingsModal" onclick="if(event.target===this)closeSettingsModal()" style="align-items:center;justify-content:center;background:rgba(10,8,18,.72);backdrop-filter:blur(6px);">
   <div class="glass-modal" role="dialog" aria-modal="true" aria-label="Settings" style="width:min(480px,calc(100vw - 32px));max-height:80vh;overflow-y:auto;padding:24px;border-radius:20px;">
@@ -544,7 +572,7 @@
   <script src="runtime-config.js"></script>
   <script src="runtime-config.example.js"></script>
   <script src="map-style.js"></script>
-  <script src="app.js?v=216"></script>
+  <script src="app.js?v=217"></script>
   <script src="supabase-sync.js?v=136"></script>
 </body>
 </html>

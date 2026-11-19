@@ -6060,7 +6060,18 @@ function logPeopleSuggestions(){
                   ids.forEach(function(id){
                     if(out[id]&&nameMap&&nameMap[id])out[id].name=nameMap[id];
                   });
-                  try{searchLogPeople('');}catch(_){}
+                  // Update UI directly instead of re-calling searchLogPeople (avoids infinite loop)
+                  try{
+                    var res=document.getElementById('logPeopleResults');
+                    if(res&&Object.keys(out).length){
+                      var list=Object.keys(out).map(function(k){return out[k];}).slice(0,8);
+                      _logSearchResults=list.filter(function(u){return u&&u.user_id;});
+                      res.innerHTML='<div class="muted small" style="padding:6px 8px 2px;">Suggested</div>'+_logSearchResults.map(function(u,i){
+                        return '<div class="pick-row" role="button" tabindex="0" onclick="addLogPersonByIndex('+i+')"><span>'+logEsc(u.name||'Someone')+'</span>'
+                          +(u.city?'<span class="muted small">'+logEsc(u.city)+'</span>':'')+'</div>';
+                      }).join('');
+                    }
+                  }catch(_){}
                 }catch(e){}
               });
             }
@@ -6072,7 +6083,18 @@ function logPeopleSuggestions(){
       (rows||[]).forEach(function(r){
         if(r&&r.tagged_user_id&&!out[r.tagged_user_id])out[r.tagged_user_id]={user_id:r.tagged_user_id,name:r.tagged_nickname||'Someone',city:''};
       });
-      try{searchLogPeople('');}catch(_){}
+      // Update UI directly instead of re-calling searchLogPeople (avoids infinite loop)
+      try{
+        var res=document.getElementById('logPeopleResults');
+        if(res&&Object.keys(out).length){
+          var list=Object.keys(out).map(function(k){return out[k];}).slice(0,8);
+          _logSearchResults=list.filter(function(u){return u&&u.user_id;});
+          res.innerHTML='<div class="muted small" style="padding:6px 8px 2px;">Suggested</div>'+_logSearchResults.map(function(u,i){
+            return '<div class="pick-row" role="button" tabindex="0" onclick="addLogPersonByIndex('+i+')"><span>'+logEsc(u.name||'Someone')+'</span>'
+              +(u.city?'<span class="muted small">'+logEsc(u.city)+'</span>':'')+'</div>';
+          }).join('');
+        }
+      }catch(_){}
     });}catch(e){}
     (allMapPins()||[]).forEach(function(p){
       try{

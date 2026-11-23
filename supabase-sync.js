@@ -1996,11 +1996,31 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
 //  // ---- Sidequest Challenges (user-driven, built on memories) ----
   function fetchActiveChallenges(cb){
     try{
-      if(!client||typeof cb!=='function'){cb([]);return;}
+      if(!client||!session||typeof cb!=='function'){cb([]);return;}
       var now=new Date().toISOString();
+      var me=session.user.id;
+      // Fetch all active root challenges, then filter by visibility client-side
       client.from(hangoutTable()).select('*').eq('is_sidequest',true).is('parent_challenge_id',null)
         .gt('challenge_expires_at',now).order('created_at',{ascending:false}).limit(100).then(function(r){
-          try{cb(r&&!r.error?(r.data||[]):[]);}catch(e){cb([]);}
+          try{
+            var rows=r&&!r.error?(r.data||[]):[];
+            // Get connections for visibility filtering
+            client.from('connections').select('user_low,user_high').or('user_low.eq.'+me+',user_high.eq.'+me).then(function(cr){
+              try{
+                var connIds=new Set();
+                (cr&&!cr.error?cr.data:[]).forEach(function(c){connIds.add(c.user_low===me?c.user_high:c.user_low);});
+                var filtered=rows.filter(function(ch){
+                  if(ch.user_id===me)return true; // own
+                  if(ch.visibility==='public')return true;
+                  if(ch.visibility==='connections')return connIds.has(ch.user_id);
+                  // tagged visibility: check if user was tagged
+                  if(ch.tagged_user_id===me)return true;
+                  return false;
+                });
+                cb(filtered);
+              }catch(e){cb(rows);}
+            }).catch(function(){cb(rows);});
+          }catch(e){cb([]);}
         }).catch(function(){cb([]);});
     }catch(e){try{cb([]);}catch(_){}}
   }
@@ -2017,7 +2037,18 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
       if(!client||!challengeId||typeof cb!=='function'){cb([]);return;}
       client.from(hangoutTable()).select('*').eq('parent_challenge_id',challengeId)
         .order('created_at',{ascending:true}).limit(200).then(function(r){
-          try{cb(r&&!r.error?(r.data||[]):[]);}catch(e){cb([]);}
+          try{
+            var rows=r&&!r.error?(r.data||[]):[];
+            // Filter out entries from blocked users
+            var me=session?session.user.id:null;
+            if(!me){cb(rows);return;}
+            client.from('blocks').select('blocked_id').eq('blocker_id',me).then(function(br){
+              try{
+                var blocked=new Set((br&&!br.error?br.data:[]).map(function(b){return b.blocked_id;}));
+                cb(rows.filter(function(e){return !blocked.has(e.user_id);}));
+              }catch(e){cb(rows);}
+            }).catch(function(){cb(rows);});
+          }catch(e){cb([]);}
         }).catch(function(){cb([]);});
     }catch(e){try{cb([]);}catch(_){}}
   }
@@ -2051,6 +2082,33 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
         }catch(e){cb(false);}
       }).catch(function(){cb(false);});
     }catch(e){try{cb(false);}catch(_){}}
+  }
+  function reportChallengeEntry(entryId, challengeId, reason, cb){
+    try{
+      if(!client||!session||!entryId||typeof cb!=='function'){if(cb)cb(false);return;}
+      client.from('challenge_reports').insert({
+        reporter_id:session.user.id,
+        entry_memory_id:entryId,
+        challenge_id:challengeId,
+        reason:reason||'unspecified'
+      }).then(function(r){if(cb)cb(!r||!r.error);}).catch(function(){if(cb)cb(false);});
+    }catch(e){try{if(cb)cb(false);}catch(_){}}
+  }
+function fetchChallengeReports(cb){
+    try{
+      if(!client||typeof cb!=='function'){cb([]);return;}
+      client.from('challenge_reports').select('*').order('created_at',{ascending:false}).limit(100).then(function(r){
+        try{cb(r&&!r.error?(r.data||[]):[]);}catch(e){cb([]);}
+      }).catch(function(){cb([]);});
+    }catch(e){try{cb([]);}catch(_){}}
+  }
+  function fetchBlockedUsers(cb){
+    try{
+      if(!client||typeof cb!=='function'){cb([]);return;}
+      client.from('blocks').select('*').order('created_at',{ascending:false}).limit(200).then(function(r){
+        try{cb(r&&!r.error?(r.data||[]):[]);}catch(e){cb([]);}
+      }).catch(function(){cb([]);});
+    }catch(e){try{cb([]);}catch(_){}}
   }
   function fetchMySidequestEntries(cb){
     try{
@@ -2101,7 +2159,7 @@ destination: (typeof window.ETIE!=='undefined' && window.ETIE.trip && window.ETI
     fetchReportedQuestions:fetchReportedQuestions, fetchAnswerMetrics:fetchAnswerMetrics,
     confirmHangout:confirmHangout, markPopupSeen:markPopupSeen, checkHangoutConfirmation:checkHangoutConfirmation,
     fetchMyConfirmations:fetchMyConfirmations,
-    pushSidequest:pushSidequest, fetchSidequest:fetchSidequest, clearSidequest:clearSidequest, fetchAllSidequests:fetchAllSidequests, deleteSidequest:deleteSidequest, fetchActiveChallenges:fetchActiveChallenges, fetchChallenge:fetchChallenge, fetchChallengeEntries:fetchChallengeEntries, fetchVotesForChallenge:fetchVotesForChallenge, voteOnEntry:voteOnEntry, fetchMySidequestEntries:fetchMySidequestEntries,
+    pushSidequest:pushSidequest, fetchSidequest:fetchSidequest, clearSidequest:clearSidequest, fetchAllSidequests:fetchAllSidequests, deleteSidequest:deleteSidequest, fetchActiveChallenges:fetchActiveChallenges, fetchChallenge:fetchChallenge, fetchChallengeEntries:fetchChallengeEntries, fetchVotesForChallenge:fetchVotesForChallenge, voteOnEntry:voteOnEntry, fetchMySidequestEntries:fetchMySidequestEntries, reportChallengeEntry:reportChallengeEntry, fetchChallengeReports:fetchChallengeReports, fetchBlockedUsers:fetchBlockedUsers,
     syncProfile:syncProfile, pushSharedRequest:pushSharedRequest, pushSharedMessage:pushSharedMessage, pushSharedMeetup:pushSharedMeetup,
     pushSharedReview:pushSharedReview, pushSharedReport:pushSharedReport,
     uploadPhoto:uploadPhoto,

@@ -440,7 +440,7 @@ function debugGroupsEnabled(){try{return new URLSearchParams(window.location.sea
 function isEtieAdmin(){try{var s=window.EtieCloud&&window.EtieCloud.getSession&&window.EtieCloud.getSession();var em=s&&s.user&&s.user.email;if(em&&window.ETIE_ADMINS.indexOf(em.toLowerCase())!==-1)return true;}catch(e){} try{var q=new URLSearchParams(window.location.search).get('admin');if(q==='1'&&localStorage.getItem('etie-admin-unlock')==='1')return true;}catch(e){} return false;}
 function canManagePin(p){try{var myId=myUid();if(myId&&p&&p.authorId&&myId===p.authorId)return true;}catch(e){}return false;}
 function updateAdminVisibility(){try{var b=document.getElementById('adminBtn');if(b)b.style.display=isEtieAdmin()?'':'none';if(!isEtieAdmin())closeAdmin();}catch(e){}}
-function openAdmin(){if(!isEtieAdmin()){toast('Admin restricted.');return;}try{var o=document.getElementById('adminOverlay');if(o)o.classList.remove('hidden');}catch(e){} try{ refreshAdminLive(); }catch(e){} try{ renderSidequestHistory(); }catch(e){}}
+function openAdmin(){if(!isEtieAdmin()){toast('Admin restricted.');return;}try{var o=document.getElementById('adminOverlay');if(o)o.classList.remove('hidden');}catch(e){} try{ refreshAdminLive(); }catch(e){} try{ renderSidequestHistory(); }catch(e){} try{ renderManageChallengesAdmin(); }catch(e){} try{ renderChallengeReportsAdmin(); }catch(e){} try{ renderBlockedUsersAdmin(); }catch(e){}}
 function closeAdmin(){try{var o=document.getElementById('adminOverlay');if(o)o.classList.add('hidden');}catch(e){}}
 function toggleAdmin(){if(!isEtieAdmin()){toast('Admin restricted.');return;}try{var o=document.getElementById('adminOverlay');if(!o)return;if(o.classList.contains('hidden'))openAdmin();else closeAdmin();}catch(e){}}
 
@@ -1054,10 +1054,18 @@ function renderChallengeThread(){
                   if(vb!==va)return vb-va;
                   return new Date(a.created_at)-new Date(b.created_at);
                 });
+                // Co-winners: all entries tied for top votes (at least 1 vote)
+                var topVotes=voteCounts[sorted[0].id]||0;
+                var coWinners=topVotes>0?sorted.filter(function(e){return (voteCounts[e.id]||0)===topVotes;}):[];
                 entriesBox.innerHTML='';
+                if(expired&&topVotes<1){
+                  var sad=document.createElement('div');sad.style.cssText='text-align:center;padding:16px;color:rgba(255,255,255,.5);font-size:13px;';
+                  sad.innerHTML='😬 tough crowd to please...<br><span style="font-size:24px;">😔</span>';
+                  entriesBox.appendChild(sad);
+                }
                 sorted.forEach(function(e,idx){
                   var vc=voteCounts[e.id]||0;
-                  var isTop=idx===0&&vc>0;
+                  var isTop=coWinners.indexOf(e)!==-1;
                   var card=document.createElement('div');
                   card.style.cssText='display:flex;gap:12px;padding:10px;margin-bottom:8px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:10px;'+(isTop?'border-color:rgba(251,191,36,.5);':'');
                   var img=document.createElement('img');img.src=e.photo_url||'';img.style.cssText='width:64px;height:64px;object-fit:cover;border-radius:8px;flex-shrink:0;';
@@ -1065,12 +1073,34 @@ function renderChallengeThread(){
                   info.innerHTML='<div style="font-size:13px;font-weight:600;color:#fff;">'+logEsc(e.title||e.location||'Memory')+'</div>'
                     +'<div class="muted small">by '+logEsc(e.nickname||'Someone')+'</div>'
                     +(isTop?'<div style="color:#fbbf24;font-size:11px;font-weight:700;margin-top:4px;">🏆 Winner · '+logEsc(prompt)+'</div>':'');
+                  // Report menu
+                  var menuBtn=document.createElement('button');
+                  menuBtn.style.cssText='position:absolute;top:6px;right:6px;padding:2px 6px;background:transparent;border:0;color:rgba(255,255,255,.4);cursor:pointer;font-size:12px;';
+                  menuBtn.textContent='•••';
+                  menuBtn.onclick=function(ev){
+                    ev.stopPropagation();
+                    var reason=prompt('Report this entry? Enter a reason (optional):');
+                    if(reason===null)return; // cancelled
+                    if(window.EtieCloud&&window.EtieCloud.reportChallengeEntry){
+                      window.EtieCloud.reportChallengeEntry(e.id,_currentChallengeId,reason,function(ok){
+                        if(ok){toast('Entry reported. Hidden from your view.');renderChallengeThread();}
+                        else{toast('Report failed.');}
+                      });
+                    }
+                  };
+                  card.style.position='relative';
+                  card.appendChild(menuBtn);
                   var voteBtn=document.createElement('button');
                   voteBtn.className='secondary';
                   voteBtn.style.cssText='padding:6px 12px;font-size:12px;font-weight:700;white-space:nowrap;align-self:center;';
-                  voteBtn.innerHTML='🔥 '+vc;
                   var myVote=(votes||[]).some(function(v){return v.entry_memory_id===e.id&&v.user_id===myId;});
-                  if(myVote){voteBtn.style.background='rgba(251,191,36,.3)';voteBtn.style.borderColor='rgba(251,191,36,.6)';}
+                  if(expired){
+                    voteBtn.innerHTML='🔥 '+vc;
+                    if(myVote){voteBtn.style.background='rgba(251,191,36,.3)';voteBtn.style.borderColor='rgba(251,191,36,.6)';}
+                  }else{
+                    voteBtn.innerHTML=myVote?'✓ Voted':'Vote';
+                    if(myVote){voteBtn.style.background='rgba(251,191,36,.3)';voteBtn.style.borderColor='rgba(251,191,36,.6)';}
+                  }
                   voteBtn.onclick=function(){voteEntry(e.id,_currentChallengeId);};
                   if(e.user_id===myId){voteBtn.disabled=true;voteBtn.style.opacity='.5';voteBtn.title='Cannot vote for your own entry';}
                   card.appendChild(img);card.appendChild(info);card.appendChild(voteBtn);
@@ -1085,20 +1115,16 @@ function renderChallengeThread(){
   }catch(e){}
 }
 function getChallengeWinner(entries,votes){
-  // Returns the winning entry (at least 1 vote required, ties broken by earliest submission)
+  // Returns {entries:[...], votes:N} for co-winners (at least 1 vote required)
+  // Ties broken by earliest submission for ranking, but co-winners share the badge
   try{
     if(!entries||!entries.length)return null;
     var voteCounts={};
     (votes||[]).forEach(function(v){voteCounts[v.entry_memory_id]=(voteCounts[v.entry_memory_id]||0)+1;});
-    var sorted=entries.slice().sort(function(a,b){
-      var va=voteCounts[a.id]||0, vb=voteCounts[b.id]||0;
-      if(vb!==va)return vb-va;
-      return new Date(a.created_at)-new Date(b.created_at);
-    });
-    var top=sorted[0];
-    var topVotes=voteCounts[top.id]||0;
+    var topVotes=Math.max.apply(null,entries.map(function(e){return voteCounts[e.id]||0;}));
     if(topVotes<1)return null; // at least 1 vote required
-    return {entry:top,votes:topVotes};
+    var winners=entries.filter(function(e){return (voteCounts[e.id]||0)===topVotes;});
+    return {entries:winners,votes:topVotes};
   }catch(e){return null;}
 }
 
@@ -1129,6 +1155,101 @@ function beatThisSidequest(){
     };
     if(_map)_map.on('click',handler);
   }catch(e){toast('Could not start entry.');}
+}
+
+function renderChallengeReportsAdmin(){
+  try{
+    var box=document.getElementById('challengeReportsList');if(!box)return;
+    if(!window.EtieCloud||!window.EtieCloud.fetchChallengeReports){box.innerHTML='<div class="muted small">Cloud not ready.</div>';return;}
+    window.EtieCloud.fetchChallengeReports(function(rows){
+      try{
+        box.innerHTML='';
+        if(!rows||!rows.length){box.innerHTML='<div class="muted small">No reported entries.</div>';return;}
+        rows.forEach(function(r){
+          var item=document.createElement('div');item.className='list-item';
+          item.innerHTML='<div style="flex:1;min-width:0;"><strong>Reported entry</strong>'
+            +'<div class="muted small">Challenge: '+r.challenge_id+'</div>'
+            +'<div class="muted small">Reporter: '+r.reporter_id.substring(0,8)+'...</div>'
+            +(r.reason?'<div class="muted small">Reason: '+r.reason+'</div>':'')
+            +'</div>'
+            +'<button class="secondary" style="padding:4px 8px;font-size:11px;color:#f87171;" onclick="deleteChallengeEntryAdmin(\''+r.entry_memory_id+'\')">Delete Entry</button>';
+          box.appendChild(item);
+        });
+      }catch(e){}
+    });
+  }catch(e){}
+}
+function deleteChallengeEntryAdmin(entryId){
+  try{
+    if(!confirm('Delete this reported entry?'))return;
+    if(window.EtieCloud&&window.EtieCloud.deleteHangoutLog){
+      window.EtieCloud.deleteHangoutLog(entryId).then(function(ok){
+        if(ok){toast('Entry deleted.');renderChallengeReportsAdmin();}
+        else{toast('Delete failed.');}
+      });
+    }
+  }catch(e){}
+}
+function renderBlockedUsersAdmin(){
+  try{
+    var box=document.getElementById('blockedUsersList');if(!box)return;
+    if(!window.EtieCloud||!window.EtieCloud.fetchBlockedUsers){box.innerHTML='<div class="muted small">Cloud not ready.</div>';return;}
+    window.EtieCloud.fetchBlockedUsers(function(rows){
+      try{
+        box.innerHTML='';
+        if(!rows||!rows.length){box.innerHTML='<div class="muted small">No blocked users.</div>';return;}
+        var header=document.createElement('div');header.className='muted small';header.style.marginBottom='8px';
+        header.textContent=rows.length+' block'+(rows.length===1?'':'s')+' total';
+        box.appendChild(header);
+        rows.forEach(function(r){
+          var item=document.createElement('div');item.className='list-item';
+          item.innerHTML='<div style="flex:1;min-width:0;font-size:12px;">'
+            +'<span style="color:#fff;">'+r.blocker_id.substring(0,8)+'...</span>'
+            +' <span style="color:rgba(255,255,255,.4);">→</span> '
+            +'<span style="color:#f87171;">'+r.blocked_id.substring(0,8)+'...</span>'
+            +'<div class="muted small">'+new Date(r.created_at).toLocaleDateString()+'</div>'
+            +'</div>';
+          box.appendChild(item);
+        });
+      }catch(e){}
+    });
+  }catch(e){}
+}
+
+function renderManageChallengesAdmin(){
+  try{
+    var box=document.getElementById('manageChallengesList');if(!box)return;
+    if(!window.EtieCloud||!window.EtieCloud.fetchActiveChallenges){box.innerHTML='<div class="muted small">Cloud not ready.</div>';return;}
+    window.EtieCloud.fetchActiveChallenges(function(rows){
+      try{
+        box.innerHTML='';
+        if(!rows||!rows.length){box.innerHTML='<div class="muted small">No active challenges.</div>';return;}
+        rows.forEach(function(ch){
+          var item=document.createElement('div');item.className='list-item';
+          var prompt=ch.challenge_prompt||'Challenge';
+          var entries=0;
+          item.innerHTML='<div style="flex:1;min-width:0;"><strong>'+logEsc(prompt)+'</strong>'
+            +'<div class="muted small">by '+logEsc(ch.nickname||'Someone')+' · '+(ch.location||'Unknown')+'</div>'
+            +'<div class="muted small">'+(ch.challenge_expires_at?new Date(ch.challenge_expires_at).toLocaleDateString():'No expiry')+'</div>'
+            +'</div>'
+            +'<button class="secondary" style="padding:4px 8px;font-size:11px;" onclick="openChallengeThread(\''+ch.id+'\')">View</button>'
+            +' <button class="secondary" style="padding:4px 8px;font-size:11px;color:#f87171;" onclick="deleteChallengeAdmin(\''+ch.id+'\')">🗑 Delete</button>';
+          box.appendChild(item);
+        });
+      }catch(e){}
+    });
+  }catch(e){}
+}
+function deleteChallengeAdmin(id){
+  try{
+    if(!confirm('Delete this challenge and all its entries/votes?'))return;
+    if(window.EtieCloud&&window.EtieCloud.deleteHangoutLog){
+      window.EtieCloud.deleteHangoutLog(id).then(function(ok){
+        if(ok){toast('Challenge deleted.');renderManageChallengesAdmin();refreshWeeklyBanner();}
+        else{toast('Delete failed.');}
+      });
+    }
+  }catch(e){}
 }
 
 function openSettingsModal(){
@@ -6371,11 +6492,31 @@ function useMapSpotForLog(){
   }catch(e){}
 }
 var _logParentChallengeId=null;
+var _logChallengeVisibility='public';
 function toggleSidequestChallenge(){
   try{
     var checked=document.getElementById('logIsSidequest').checked;
     var wrap=document.getElementById('logChallengePromptWrap');
     if(wrap)wrap.style.display=checked?'block':'none';
+    if(checked){
+      _logChallengeVisibility='public';
+      var cityBtn=document.getElementById('visCitywide');if(cityBtn)cityBtn.classList.add('active');
+      var friendsBtn=document.getElementById('visFriends');if(friendsBtn)friendsBtn.classList.remove('active');
+    }
+  }catch(e){}
+}
+function setChallengeVisibility(vis){
+  try{
+    _logChallengeVisibility=vis||'public';
+    var cityBtn=document.getElementById('visCitywide');
+    var friendsBtn=document.getElementById('visFriends');
+    if(vis==='public'){
+      if(cityBtn){cityBtn.classList.add('active');cityBtn.style.background='rgba(251,191,36,.15)';cityBtn.style.color='#fbbf24';cityBtn.style.borderColor='rgba(251,191,36,.4)';}
+      if(friendsBtn){friendsBtn.classList.remove('active');friendsBtn.style.background='rgba(255,255,255,.05)';friendsBtn.style.color='rgba(255,255,255,.6)';friendsBtn.style.borderColor='rgba(255,255,255,.16)';}
+    }else{
+      if(friendsBtn){friendsBtn.classList.add('active');friendsBtn.style.background='rgba(251,191,36,.15)';friendsBtn.style.color='#fbbf24';friendsBtn.style.borderColor='rgba(251,191,36,.4)';}
+      if(cityBtn){cityBtn.classList.remove('active');cityBtn.style.background='rgba(255,255,255,.05)';cityBtn.style.color='rgba(255,255,255,.6)';cityBtn.style.borderColor='rgba(255,255,255,.16)';}
+    }
   }catch(e){}
 }
 
@@ -6426,6 +6567,8 @@ function openLogSheet(pinId,spot,parentChallengeId){
     if(promptWrap)promptWrap.style.display='none';
     var sqCheck=document.getElementById('logIsSidequest');if(sqCheck)sqCheck.checked=false;
     var sqPrompt=document.getElementById('logChallengePrompt');if(sqPrompt)sqPrompt.value='';
+    _logChallengeVisibility='public';
+    setChallengeVisibility('public');
     // Show challenge context if replying
     var titleEl=document.getElementById('logHookName');
     if(_logParentChallengeId){
@@ -6484,6 +6627,31 @@ function submitHangoutLog(){
     var p=_logStandalone?null:findPin(_logPinId);
     if(!_logStandalone&&!p){toast('Hook not found.');return;}
     if(!_logFile){toast('Choose a photo first.');return;}
+    var isSidequestNow=document.getElementById('logIsSidequest')&&document.getElementById('logIsSidequest').checked;
+    if(isSidequestNow&&!_logParentChallengeId){
+      // Cap check: max 3 active root challenges per user
+      if(window.EtieCloud&&window.EtieCloud.fetchActiveChallenges){
+        window.EtieCloud.fetchActiveChallenges(function(rows){
+          try{
+            var myId=myUid();
+            var myActive=(rows||[]).filter(function(r){return r.user_id===myId;}).length;
+            if(myActive>=3){toast('Max 3 active challenges. Complete or wait for one to expire.');return;}
+            // Proceed with upload
+            _doSubmitHangoutLog();
+          }catch(e){_doSubmitHangoutLog();}
+        });
+        return; // async, exit early
+      }
+    }
+    _doSubmitHangoutLog();
+    return;
+  }catch(e){}
+}
+function _doSubmitHangoutLog(){
+  try{
+    var p=_logStandalone?null:findPin(_logPinId);
+    if(!_logStandalone&&!p){toast('Hook not found.');return;}
+    if(!_logFile){toast('Choose a photo first.');return;}
     var sel=document.getElementById('logActivity');
     var act=sel?sel.options[sel.selectedIndex].text:'';
     var capEl=document.getElementById('logCaption');
@@ -6496,6 +6664,11 @@ function submitHangoutLog(){
     var challengePrompt=(document.getElementById('logChallengePrompt')||{}).value||'';
     var parentChallengeId=_logParentChallengeId||null;
     var challengeExpiresAt=isSidequest?new Date(Date.now()+7*24*60*60*1000).toISOString():null;
+    // Challenge visibility overrides memory visibility
+    if(isSidequest||parentChallengeId){
+      visibility=_logChallengeVisibility==='friends'?'connections':'public';
+    }
+
     // Read photo date (editable)
     var dateInput=document.getElementById('logPhotoDate');
     if(dateInput&&dateInput.value){
@@ -6652,27 +6825,48 @@ function saveCustomQuest(){
   }catch(e){toast('Could not set quest.');}
 }
 function refreshWeeklyBanner(){
-  // Floating top pill: shows the most recent active challenge in the current city
+  // Floating top pill: shows active challenges as expandable list
   try{
-    var b=document.getElementById('weeklyQuestBanner');
-    if(!b)return;
-    if(!window.EtieCloud||!window.EtieCloud.fetchActiveChallenges){b.classList.add('hidden');return;}
+    var wrap=document.getElementById('challengeBannerWrap');
+    if(!wrap)return;
+    if(!window.EtieCloud||!window.EtieCloud.fetchActiveChallenges){wrap.classList.add('hidden');return;}
     window.EtieCloud.fetchActiveChallenges(function(rows){
       try{
-        if(!rows||!rows.length){b.classList.add('hidden');return;}
-        // Pick the most recent active challenge
-        var ch=rows[0];
-        var prompt=ch.challenge_prompt||'Can you sidequest harder than me?';
-        var expires=ch.challenge_expires_at?new Date(ch.challenge_expires_at).getTime():0;
-        var remaining=expires>Date.now()?Math.ceil((expires-Date.now())/86400000):0;
-        window._activeChallenge={id:ch.id,prompt:prompt,expiresAt:expires,location:ch.location||''};
-        var t=document.getElementById('weeklyQuestBannerText');
-        if(t)t.textContent='⚡ '+prompt+(remaining>0?' · '+remaining+'d left':'');
-        b.classList.remove('hidden');
-        b.onclick=function(){openChallengeThread(ch.id);};
+        if(!rows||!rows.length){wrap.classList.add('hidden');return;}
+        var countEl=document.getElementById('challengeBannerCount');
+        if(countEl)countEl.textContent=rows.length;
+        var listEl=document.getElementById('challengeBannerList');
+        if(listEl){
+          listEl.innerHTML='';
+          rows.slice(0,5).forEach(function(ch){
+            var prompt=ch.challenge_prompt||'Can you sidequest harder than me?';
+            var expires=ch.challenge_expires_at?new Date(ch.challenge_expires_at).getTime():0;
+            var remaining=expires>Date.now()?Math.ceil((expires-Date.now())/86400000):0;
+            var item=document.createElement('div');
+            item.style.cssText='padding:8px 10px;border-radius:8px;cursor:pointer;margin-bottom:4px;background:rgba(255,255,255,.05);';
+            item.onclick=function(){openChallengeThread(ch.id);toggleChallengeBannerList(true);};
+            item.innerHTML='<div style="font-size:12px;font-weight:700;color:#fff;">'+logEsc(prompt)+'</div>'
+              +'<div class="muted small">by '+logEsc(ch.nickname||'Someone')+' · '+(remaining>0?remaining+'d left':'expired')+'</div>';
+            listEl.appendChild(item);
+          });
+        }
+        wrap.classList.remove('hidden');
         try{document.body.classList.add('has-weekly-quest');}catch(e){}
-      }catch(e){b.classList.add('hidden');}
+      }catch(e){wrap.classList.add('hidden');}
     });
+  }catch(e){}
+}
+function toggleChallengeBannerList(forceClose){
+  try{
+    var list=document.getElementById('challengeBannerList');
+    var chevron=document.getElementById('challengeBannerChevron');
+    if(!list)return;
+    if(forceClose){list.style.display='none';if(chevron)chevron.textContent='▾';return;}
+    if(list.style.display==='none'||!list.style.display){
+      list.style.display='block';if(chevron)chevron.textContent='▴';
+    }else{
+      list.style.display='none';if(chevron)chevron.textContent='▾';
+    }
   }catch(e){}
 }
 function dismissWeeklyQuest(){

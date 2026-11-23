@@ -49,7 +49,14 @@
   <div class="map-stack">
     <div id="mapFilterBar" class="map-filter"></div>
     <div id="mapRoleBar" class="map-filter"></div>
-    <button id="weeklyQuestBanner" class="weekly-quest-banner hidden" onclick="openQuestDrawer()" aria-label="Sidequest of the week"><span aria-hidden="true">⚡</span><span id="weeklyQuestBannerText">Sidequest of the week</span><span aria-hidden="true">→</span><span id="weeklyQuestDismiss" role="button" aria-label="Dismiss" onclick="event.stopPropagation();dismissWeeklyQuest()" style="margin-left:6px;opacity:.7;">✕</span></button>
+    <div id="challengeBannerWrap" class="hidden" style="position:absolute;left:50%;transform:translateX(-50%);top:calc(var(--nav-h) + 64px);z-index:var(--z-filter);max-width:94vw;">
+      <button id="challengeBannerPill" onclick="toggleChallengeBannerList()" style="display:flex;gap:8px;align-items:center;padding:9px 14px;background:rgba(251,191,36,.12);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(251,191,36,.5);border-radius:999px;color:#fff;font-weight:700;font-size:13px;cursor:pointer;box-shadow:0 0 16px rgba(251,191,36,.25);white-space:nowrap;">
+        <span>⚡ <span id="challengeBannerCount">0</span> Active Challenges</span>
+        <span id="challengeBannerChevron" style="font-size:10px;">▾</span>
+      </button>
+      <div id="challengeBannerList" style="display:none;margin-top:6px;background:rgba(18,18,20,.92);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(251,191,36,.3);border-radius:12px;padding:8px;max-height:200px;overflow-y:auto;">
+      </div>
+    </div>
     <div class="map-wrap2">
       <div id="hkMap"></div>
       <div id="coventrySpotlight" class="hidden" style="position:absolute;inset:0;pointer-events:none;z-index:2;background:radial-gradient(circle 120px at 50% 50%, transparent 0%, rgba(11,11,14,0.3) 40%, rgba(11,11,14,0.85) 100%);"></div>
@@ -181,7 +188,9 @@
       <div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="secondary" onclick="saveSidequest()" style="padding:10px 16px;">Publish</button><button class="secondary" onclick="clearSidequestLive()" style="padding:10px 16px;">Clear live</button></div><p class="muted small" id="sqStatus">No live sidequest.</p>
       <h4 style="color:#fff;margin:12px 0 6px;font-size:13px;">Sidequest History</h4>
       <div id="sqHistoryList" class="list" style="max-height:240px;overflow-y:auto;"><div class="muted small">Loading…</div></div>
-      <h3 style="color:#fff;">Safety</h3><p class="muted">Reports, block history, manual review and match intervention live here. This layer is essential for an MVP involving strangers.</p><div class="list" id="adminReportsList" style="margin-top:8px;"><div class="muted small">Loading reports…</div></div><h3 style="color:#fff;margin-top:16px;">Reported questions</h3><div class="list" id="adminReportedQuestions"><div class="muted small">Loading…</div></div>
+      <h3 style="color:#fff;">Manage Challenges (For the Lore?)</h3><div class="list" id="manageChallengesList" style="margin-top:8px;"><div class="muted small">Loading…</div></div>
+      <h3 style="color:#fff;margin-top:16px;">Blocked Users</h3><div class="list" id="blockedUsersList" style="margin-top:8px;"><div class="muted small">Loading…</div></div>
+      <h3 style="color:#fff;margin-top:16px;">Safety</h3><p class="muted">Reports, block history, manual review and match intervention live here. This layer is essential for an MVP involving strangers.</p><div class="list" id="adminReportsList" style="margin-top:8px;"><div class="muted small">Loading reports…</div></div><h3 style="color:#fff;margin-top:16px;">Reported Challenge Entries</h3><div class="list" id="challengeReportsList" style="margin-top:8px;"><div class="muted small">Loading…</div></div><h3 style="color:#fff;margin-top:16px;">Reported questions</h3><div class="list" id="adminReportedQuestions"><div class="muted small">Loading…</div></div>
       <h3 style="color:#fff;">Test data</h3><p class="muted small">Wipe local or cloud rows for this login during 2-phone realtime tests.</p><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="secondary" onclick="wipeLocalEtie()">Wipe local chat/history</button><button class="secondary" style="background:#fff0f0!important;border-color:#e8b4b4!important;color:#b00020!important;" onclick="wipeEverything()">☠️ Wipe everything (this login)</button></div><p class="muted small">Central kill: tap on each phone while signed in as that user — deletes that login’s cloud rows + local profile/trips/chats.</p>
       <p class="muted small" id="adminLegacyAnchor" style="display:none;">legacy anchor for JS compat</p>
     </div>
@@ -286,13 +295,17 @@
       <div class="field" id="logSidequestToggleWrap" style="padding:12px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.25);border-radius:12px;">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
           <input type="checkbox" id="logIsSidequest" onchange="toggleSidequestChallenge()">
-          <span style="color:#fbbf24;font-weight:700;">⚡ Start a Sidequest Challenge</span>
+          <span style="color:#fbbf24;font-weight:700;">⚡ For the Lore? Start a Challenge</span>
         </label>
         <p class="muted small" style="margin:4px 0 0;">"Can you sidequest harder than me?" Others can beat your memory.</p>
       </div>
       <div class="field" id="logChallengePromptWrap" style="display:none;">
         <label>Challenge prompt</label>
         <input id="logChallengePrompt" maxlength="200" placeholder="e.g. Best rooftop sunset view in the city">
+        <div style="display:flex;gap:6px;margin-top:8px;">
+          <button type="button" class="challenge-vis-pill active" id="visCitywide" onclick="setChallengeVisibility('public')" style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid rgba(251,191,36,.4);background:rgba(251,191,36,.15);color:#fbbf24;font-weight:700;font-size:12px;cursor:pointer;">🌍 Citywide</button>
+          <button type="button" class="challenge-vis-pill" id="visFriends" onclick="setChallengeVisibility('friends')" style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.05);color:rgba(255,255,255,.6);font-weight:600;font-size:12px;cursor:pointer;">🔒 Friends Only</button>
+        </div>
       </div>
       <div class="field"><label>Where did it happen? (optional)</label>
         <div style="display:flex;gap:8px;"><input id="logLocation" maxlength="120" placeholder="Place or area" style="flex:1;"><button class="secondary" id="logUseMapSpot" onclick="useMapSpotForLog()" style="padding:10px 12px;white-space:nowrap;">📍 Use map view</button></div>
@@ -515,7 +528,7 @@
 <div class="chat-overlay hidden" id="challengeThreadDrawer" onclick="if(event.target===this)closeChallengeThread()" style="align-items:center;justify-content:center;background:rgba(10,8,18,.72);backdrop-filter:blur(6px);">
   <div class="glass-modal" role="dialog" aria-modal="true" aria-label="Challenge Thread" style="width:min(560px,calc(100vw - 32px));max-height:85vh;overflow-y:auto;padding:24px;border-radius:20px;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-      <strong style="font-size:18px;color:#fff;">⚡ Sidequest Challenge</strong>
+      <strong style="font-size:18px;color:#fff;">⚡ For the Lore?</strong>
       <button onclick="closeChallengeThread()" style="padding:4px 8px;background:transparent;border:0;color:rgba(255,255,255,.5);cursor:pointer;font-size:18px;" aria-label="Close">✕</button>
     </div>
     <div id="challengeThreadContent"></div>
@@ -572,7 +585,7 @@
   <script src="runtime-config.js"></script>
   <script src="runtime-config.example.js"></script>
   <script src="map-style.js"></script>
-  <script src="app.js?v=217"></script>
+  <script src="app.js?v=218"></script>
   <script src="supabase-sync.js?v=136"></script>
 </body>
 </html>

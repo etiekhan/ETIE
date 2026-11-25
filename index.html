@@ -151,6 +151,7 @@
       <div class="field"><label>Pinned Memories <span class="small muted">(up to 3)</span></label><div id="pinnedMemories" class="pinned-grid"></div></div>
       <div class="field"><label>Footprint</label><div id="footprintStrip" class="footprint-strip"></div></div>
       <div class="field" id="doneSpotsWrap"><label id="doneSpotsTitle">Local Spots <span class="small muted">(up to 3)</span></label><div id="doneSpots" class="spot-grid spot-readonly"></div></div>
+      <div class="field"><label>Hall of Lore</label><div id="hallOfLore" class="hall-of-lore"></div></div>
       <div style="display:flex;gap:8px;margin-top:12px;"><button class="secondary" onclick="editProfile()">Edit Profile</button></div>
     </div>
     <!-- Passport Tab -->
@@ -189,6 +190,7 @@
       <h4 style="color:#fff;margin:12px 0 6px;font-size:13px;">Sidequest History</h4>
       <div id="sqHistoryList" class="list" style="max-height:240px;overflow-y:auto;"><div class="muted small">Loading…</div></div>
       <h3 style="color:#fff;">Manage Challenges (For the Lore?)</h3><div class="list" id="manageChallengesList" style="margin-top:8px;"><div class="muted small">Loading…</div></div>
+      <div style="margin-top:8px;"><button class="secondary" onclick="resetAllChallenges()" style="padding:8px 14px;font-size:11px;background:rgba(255,60,60,.1);border-color:rgba(255,60,60,.2);color:#f87171;">☠️ Reset All Challenges</button><p class="muted small" style="margin:4px 0 0;">Deletes all challenge rows, votes, reports, comments, reactions, saves. Does NOT touch memories.</p></div>
       <h3 style="color:#fff;margin-top:16px;">Blocked Users</h3><div class="list" id="blockedUsersList" style="margin-top:8px;"><div class="muted small">Loading…</div></div>
       <h3 style="color:#fff;margin-top:16px;">Safety</h3><p class="muted">Reports, block history, manual review and match intervention live here. This layer is essential for an MVP involving strangers.</p><div class="list" id="adminReportsList" style="margin-top:8px;"><div class="muted small">Loading reports…</div></div><h3 style="color:#fff;margin-top:16px;">Reported Challenge Entries</h3><div class="list" id="challengeReportsList" style="margin-top:8px;"><div class="muted small">Loading…</div></div><h3 style="color:#fff;margin-top:16px;">Reported questions</h3><div class="list" id="adminReportedQuestions"><div class="muted small">Loading…</div></div>
       <h3 style="color:#fff;">Test data</h3><p class="muted small">Wipe local or cloud rows for this login during 2-phone realtime tests.</p><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="secondary" onclick="wipeLocalEtie()">Wipe local chat/history</button><button class="secondary" style="background:#fff0f0!important;border-color:#e8b4b4!important;color:#b00020!important;" onclick="wipeEverything()">☠️ Wipe everything (this login)</button></div><p class="muted small">Central kill: tap on each phone while signed in as that user — deletes that login’s cloud rows + local profile/trips/chats.</p>
@@ -305,6 +307,11 @@
         <div style="display:flex;gap:6px;margin-top:8px;">
           <button type="button" class="challenge-vis-pill active" id="visCitywide" onclick="setChallengeVisibility('public')" style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid rgba(251,191,36,.4);background:rgba(251,191,36,.15);color:#fbbf24;font-weight:700;font-size:12px;cursor:pointer;">🌍 Citywide</button>
           <button type="button" class="challenge-vis-pill" id="visFriends" onclick="setChallengeVisibility('friends')" style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.05);color:rgba(255,255,255,.6);font-weight:600;font-size:12px;cursor:pointer;">🔒 Friends Only</button>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:8px;align-items:center;">
+          <span class="muted small" style="white-space:nowrap;">Duration:</span>
+          <button type="button" class="challenge-dur-pill active" id="dur3" onclick="setChallengeDuration(3)" style="flex:1;padding:6px 8px;border-radius:6px;border:1px solid rgba(251,191,36,.4);background:rgba(251,191,36,.15);color:#fbbf24;font-weight:700;font-size:11px;cursor:pointer;">3 days</button>
+          <button type="button" class="challenge-dur-pill" id="dur7" onclick="setChallengeDuration(7)" style="flex:1;padding:6px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.05);color:rgba(255,255,255,.6);font-weight:600;font-size:11px;cursor:pointer;">7 days</button>
         </div>
       </div>
       <div class="field"><label>Where did it happen? (optional)</label>
@@ -533,12 +540,32 @@
     </div>
     <div id="challengeThreadContent"></div>
     <div style="margin-top:16px;text-align:center;">
-      <button class="primary" id="beatThisSidequestBtn" onclick="beatThisSidequest()" style="padding:13px 24px;font-size:14px;font-weight:700;border-radius:12px;width:100%;background:#FBBF24;color:#000;border-color:#FBBF24;">⚡ Beat This Sidequest</button>
+      <button class="primary" id="beatThisSidequestBtn" onclick="beatThisSidequest()" style="padding:13px 24px;font-size:14px;font-weight:700;border-radius:12px;width:100%;background:#FBBF24;color:#000;border-color:#FBBF24;">⚡ Beat this</button>
     </div>
     <div style="margin-top:16px;">
       <h4 style="color:#fff;margin:0 0 12px;font-size:14px;">Entries (ranked by votes)</h4>
       <div id="challengeEntriesList"></div>
     </div>
+  </div>
+</div>
+<!-- Option A: Pick Existing Memory Modal -->
+<div class="chat-overlay hidden" id="pickMemoryModal" onclick="if(event.target===this)closePickMemoryModal()" style="align-items:center;justify-content:center;background:rgba(10,8,18,.72);backdrop-filter:blur(6px);">
+  <div class="glass-modal" role="dialog" aria-modal="true" aria-label="Pick a Memory" style="width:min(520px,calc(100vw - 32px));max-height:80vh;overflow-y:auto;padding:24px;border-radius:20px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <strong style="font-size:18px;color:#fff;">📸 Dig Through Your Archives</strong>
+      <button onclick="closePickMemoryModal()" style="padding:4px 8px;background:transparent;border:0;color:rgba(255,255,255,.5);cursor:pointer;font-size:18px;" aria-label="Close">✕</button>
+    </div>
+    <p class="muted small" style="margin-bottom:12px;">Select a memory to enter as your challenge submission. It will be visible to the challenge audience.</p>
+    <div id="pickMemoryGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;"></div>
+  </div>
+</div>
+<!-- Lore Concluded Modal -->
+<div class="chat-overlay hidden" id="loreConcludedModal" onclick="if(event.target===this)closeLoreConcluded()" style="align-items:center;justify-content:center;background:rgba(10,8,18,.85);backdrop-filter:blur(8px);">
+  <div class="glass-modal" role="dialog" aria-modal="true" aria-label="Lore Concluded" style="width:min(480px,calc(100vw - 32px));max-height:85vh;overflow-y:auto;padding:32px 24px;border-radius:24px;text-align:center;">
+    <div style="font-size:48px;margin-bottom:12px;">🏆</div>
+    <h2 style="color:#fff;margin:0 0 8px;font-size:24px;">Lore Concluded</h2>
+    <div id="loreConcludedContent"></div>
+    <button class="primary" onclick="closeLoreConcluded()" style="margin-top:20px;padding:12px 24px;border-radius:12px;background:#FBBF24;color:#000;border-color:#FBBF24;font-weight:700;">Got it</button>
   </div>
 </div>
 <!-- Settings Modal -->
@@ -585,7 +612,7 @@
   <script src="runtime-config.js"></script>
   <script src="runtime-config.example.js"></script>
   <script src="map-style.js"></script>
-  <script src="app.js?v=218"></script>
+  <script src="app.js?v=219"></script>
   <script src="supabase-sync.js?v=136"></script>
 </body>
 </html>

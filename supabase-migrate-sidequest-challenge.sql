@@ -1,68 +1,110 @@
--- "For the Lore?" sidequest challenge system
--- Run once in Supabase SQL Editor
+-- ============================================================
+-- Merge: "For the Lore?" Challenge System on demo_challenge_* schema
+-- Run in Supabase SQL Editor on a DEV project first.
+-- ============================================================
 
--- 1. Extend hangout_logs with sidequest challenge fields
-alter table public.hangout_logs add column if not exists is_sidequest boolean not null default false;
-alter table public.hangout_logs add column if not exists challenge_prompt text;
-alter table public.hangout_logs add column if not exists parent_challenge_id uuid references public.hangout_logs(id) on delete cascade;
-alter table public.hangout_logs add column if not exists challenge_expires_at timestamptz;
+-- 1. EXTEND demo_challenge_challenges with new columns
+alter table public.demo_challenge_challenges
+  add column if not exists challenge_prompt text,
+  add column if not exists visibility text not null default 'public'
+    check (visibility in ('public','friends')),
+  add column if not exists expires_at timestamptz,
+  add column if not exists winner_entry_id uuid
+    references public.demo_challenge_challenge_entries(id) on delete set null,
+  add column if not exists lat double precision,
+  add column if not exists lng double precision,
+  add column if not exists location text,
+  add column if not exists photo_url text,
+  add column if not exists creator_nickname text,
+  add column if not exists is_invite_only boolean not null default false;
 
--- Index for finding active challenges and entries
-create index if not exists hangout_logs_sidequest_idx on public.hangout_logs(is_sidequest, challenge_expires_at);
-create index if not exists hangout_logs_parent_challenge_idx on public.hangout_logs(parent_challenge_id);
+-- 2. EXTEND demo_challenge_challenge_entries (add photo/location for map)
+alter table public.demo_challenge_challenge_entries
+  add column if not exists photo_url text,
+  add column if not exists location text,
+  add column if not exists lat double precision,
+  add column if not exists lng double precision,
+  add column if not exists caption text,
+  add column if not exists visibility text not null default 'public';
 
--- 2. Votes table: 1 vote per user per entry
-create table if not exists public.sidequest_votes (
-  id uuid primary key default gen_random_uuid(),
-  entry_memory_id uuid not null references public.hangout_logs(id) on delete cascade,
-  challenge_id uuid not null references public.hangout_logs(id) on delete cascade,
-  user_id uuid not null references auth.users(id) on delete cascade,
-  created_at timestamptz not null default now(),
-  unique(entry_memory_id, user_id)
-);
-
-alter table public.sidequest_votes enable row level security;
-
-drop policy if exists "sidequest votes read all" on public.sidequest_votes;
-create policy "sidequest votes read all" on public.sidequest_votes for select using (true);
-
-drop policy if exists "sidequest votes insert own" on public.sidequest_votes;
-create policy "sidequest votes insert own" on public.sidequest_votes for insert with check (auth.uid() = user_id);
-
-drop policy if exists "sidequest votes delete own" on public.sidequest_votes;
-create policy "sidequest votes delete own" on public.sidequest_votes for delete using (auth.uid() = user_id);
-
-create index if not exists sidequest_votes_entry_idx on public.sidequest_votes(entry_memory_id);
-create index if not exists sidequest_votes_challenge_idx on public.sidequest_votes(challenge_id);
-
--- 3. Challenge reports table (lightweight)
-create table if not exists public.challenge_reports (
+-- 3. CREATE challenge_reports table
+create table if not exists public.demo_challenge_reports (
   id uuid primary key default gen_random_uuid(),
   reporter_id uuid not null references auth.users(id) on delete cascade,
-  entry_memory_id uuid not null references public.hangout_logs(id) on delete cascade,
-  challenge_id uuid not null references public.hangout_logs(id) on delete cascade,
+  entry_id uuid not null references public.demo_challenge_challenge_entries(id) on delete cascade,
+  challenge_id uuid not null references public.demo_challenge_challenges(id) on delete cascade,
   reason text,
   created_at timestamptz not null default now()
 );
+alter table public.demo_challenge_reports enable row level security;
+drop policy if exists "challenge reports read own" on public.demo_challenge_reports;
+create policy "challenge reports read own" on public.demo_challenge_reports
+  for select using (auth.uid() = reporter_id);
+drop policy if exists "challenge reports insert own" on public.demo_challenge_reports;
+create policy "challenge reports insert own" on public.demo_challenge_reports
+  for insert with check (auth.uid() = reporter_id);
+create index if not exists demo_challenge_reports_challenge_idx
+  on public.demo_challenge_reports(challenge_id);
 
-alter table public.challenge_reports enable row level security;
+-- 4. INDEXES
+create index if not exists demo_challenge_challenges_active_idx
+  on public.demo_challenge_challenges(status, expires_at);
+create index if not exists demo_challenge_entries_challenge_idx
+  on public.demo_challenge_challenge_entries(challenge_id);
 
-drop policy if exists "challenge reports read own" on public.challenge_reports;
-create policy "challenge reports read own" on public.challenge_reports for select using (auth.uid() = reporter_id);
-
-drop policy if exists "challenge reports insert own" on public.challenge_reports;
-create policy "challenge reports insert own" on public.challenge_reports for insert with check (auth.uid() = reporter_id);
-
-create index if not exists challenge_reports_challenge_idx on public.challenge_reports(challenge_id);
-
--- 4. Realtime for votes and reports
+-- 5. REALTIME for reports
 do $$ begin
-  if not exists (select 1 from pg_publication_tables where pubname='supabase_realtime' and tablename='sidequest_votes') then
-    alter publication supabase_realtime add table public.sidequest_votes;
+  if not exists (select 1 from pg_publication_tables where pubname='supabase_realtime' and tablename='demo_challenge_reports') then
+    alter publication supabase_realtime add table public.demo_challenge_reports;
   end if;
 end $$;
-do $$ begin
-  if not exists (select 1 from pg_publication_tables where pubname='supabase_realtime' and tablename='challenge_reports') then
-    alter publication supabase_realtime add table public.challenge_reports;
-  end if;
-end $$;
+
+-- 6. RLS for challenges (public read, insert own, update own, delete own)
+drop policy if exists "ch read" on public.demo_challenge_challenges;
+create policy "ch read" on public.demo_challenge_challenges for select using (true);
+
+drop policy if exists "ch insert" on public.demo_challenge_challenges;
+create policy "ch insert" on public.demo_challenge_challenges for insert with check (auth.uid() = creator_id);
+
+drop policy if exists "ch update" on public.demo_challenge_challenges;
+create policy "ch update" on public.demo_challenge_challenges for update using (auth.uid() = creator_id);
+
+drop policy if exists "ch delete" on public.demo_challenge_challenges;
+create policy "ch delete" on public.demo_challenge_challenges for delete using (auth.uid() = creator_id);
+
+-- 7. RLS for entries (public read, insert own, delete own)
+drop policy if exists "ce read" on public.demo_challenge_challenge_entries;
+create policy "ce read" on public.demo_challenge_challenge_entries for select using (true);
+
+drop policy if exists "ce insert" on public.demo_challenge_challenge_entries;
+create policy "ce insert" on public.demo_challenge_challenge_entries for insert with check (auth.uid() = player_id);
+
+drop policy if exists "ce delete" on public.demo_challenge_challenge_entries;
+create policy "ce delete" on public.demo_challenge_challenge_entries for delete using (auth.uid() = player_id);
+
+-- 8. RLS for votes (public read, insert/delete own)
+drop policy if exists "cv read" on public.demo_challenge_challenge_votes;
+create policy "cv read" on public.demo_challenge_challenge_votes for select using (true);
+
+drop policy if exists "cv insert" on public.demo_challenge_challenge_votes;
+create policy "cv insert" on public.demo_challenge_challenge_votes for insert with check (auth.uid() = voter_id);
+
+drop policy if exists "cv delete" on public.demo_challenge_challenge_votes;
+create policy "cv delete" on public.demo_challenge_challenge_votes for delete using (auth.uid() = voter_id);
+
+-- 9. RLS for challenge_members (public read, insert/update own)
+drop policy if exists "cm read" on public.demo_challenge_challenge_members;
+create policy "cm read" on public.demo_challenge_challenge_members for select using (true);
+
+drop policy if exists "cm insert" on public.demo_challenge_challenge_members;
+create policy "cm insert" on public.demo_challenge_challenge_members for insert with check (auth.uid() = user_id);
+
+drop policy if exists "cm update" on public.demo_challenge_challenge_members;
+create policy "cm update" on public.demo_challenge_challenge_members for update using (auth.uid() = user_id);
+
+-- 10. RLS for challenge_reports (reporter reads own, insert own)
+drop policy if exists "cr read" on public.demo_challenge_reports;
+create policy "cr read" on public.demo_challenge_reports for select using (auth.uid() = reporter_id);
+
+drop policy if exists "cr insert" on public.demo_challenge_reports;
+create policy "cr insert" on public.demo_challenge_reports for insert with check (auth.uid() = reporter_id);

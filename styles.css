@@ -1628,3 +1628,10 @@ body.has-open-card .map-foot { display: none; }
   .footprint-strip{grid-template-columns:repeat(3,1fr);gap:6px;}
   .polaroid-card img{height:80px;}
 }
+
+/* Hall of Lore */
+.hall-of-lore{display:flex;flex-direction:column;gap:6px;margin-top:8px;}
+.hall-of-lore .muted{padding:8px 0;}
+
+/* Visibility pills */
+.challenge-vis-pill.active{background:rgba(251,191,36,.15)!important;color:#fbbf24!important;border-color:rgba(251,191,36,.4)!important;}
